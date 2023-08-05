@@ -5,10 +5,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 
 // Add CORS
-var MyAllowSpecificOrgins = "_myAllowSpecificOrigins";
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 builder.Services.AddCors(options => 
     {
-        options.AddPolicy(name: MyAllowSpecificOrgins,
+        options.AddPolicy(name: MyAllowSpecificOrigins,
             policy => 
                 {
                     policy.AllowAnyHeader().AllowAnyMethod().AllowAnyOrigin();
@@ -33,7 +33,7 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    app.UseCors(MyAllowSpecificOrgins);
+    app.UseCors(MyAllowSpecificOrigins);
 }
 
 app.UseHttpsRedirection();
