@@ -1,5 +1,8 @@
 namespace FactoryOps.Domain.Models;
 
+/// <summary>
+/// Product representation
+/// </summary>
 public class WorkItem
 {
 	/// <summary>
