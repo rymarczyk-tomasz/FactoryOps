@@ -25,8 +25,8 @@ public class WorkItem
 	/// <summary>
 	/// Normative unit which describe how mach time human can work during 8 hour shift
 	/// </summary>
-	public float TechnologicalWorkingFactor{ get; set;} = 7.2f;
-	
+	public float TechnologicalWorkingFactor{ get; set;} = 7.2f; // TODO: this should be in some service - probably, it depends from factory/ settings
+
 	/// <summary>
 	/// Date when item need to be finished.
 	/// </summary> 
@@ -36,6 +36,4 @@ public class WorkItem
 	/// Date and Time when user plan to start working on item.
 	/// </summary>
 	public DateTime PlanedStart { get; set; }
-	
-
 }
