@@ -1,7 +1,7 @@
 namespace FactoryOps.Domain.Models;
 
 /// <summary>
-/// Representation workingUnit set. 
+/// Representation WorkingUnit set. 
 /// </summary>
 public class Department
 {
