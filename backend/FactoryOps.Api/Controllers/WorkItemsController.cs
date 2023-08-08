@@ -30,10 +30,18 @@ public class WorkItemsController : ControllerBase
 	}
 
 	[HttpPatch]
-	[Route("update")]
+	[Route("{id}/update")]
 	public async Task<IActionResult> UpdateWorkItemById([FromQuery] string id, [FromBody] WorkItem newWorkItem)
 	{
 		await this.workItemsRepository.UpdateWorkItem(id, newWorkItem);
+		return Ok();
+	}
+
+	[HttpDelete]
+	[Route("{id}/delete")]
+	public async Task<IActionResult> DeleteWorkItemById([FromQuery] string id)
+	{
+		await this.workItemsRepository.DeleteWorkItem(id);
 		return Ok();
 	}
 

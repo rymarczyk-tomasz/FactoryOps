@@ -5,9 +5,9 @@ namespace FactoryOps.Api.Mocks;
 public class WorkItemRepository : IWorkItemsRepository
 {
 	private readonly List<WorkItem> mockMemoryDb;
-	public WorkItemRepository(List<WorkItem> memoryDb)
+	public WorkItemRepository()
 	{
-		this.mockMemoryDb = memoryDb;
+		this.mockMemoryDb = new List<WorkItem>();
 	}
 	public Task AddWorkItem(WorkItem item)
 	{
