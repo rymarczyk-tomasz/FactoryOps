@@ -25,6 +25,7 @@ builder.Services.AddSwaggerGen(); // http://<ip>:<port>/swagger/index.html
 
 // Add Repository
 builder.Services.AddSingleton<IWorkItemsRepository, WorkItemRepository>();
+builder.Services.AddSingleton<IWorkingUnitsRepository, WorkingUnitsRepository>();
 
 var app = builder.Build();
 
