@@ -15,7 +15,7 @@ public class WorkingUnit
 
 	public WorkingUnitState State { get; set; } = WorkingUnitState.Working;
 
-	public WorkItem? CurrentDoing { get; set; }
+	public WorkItem CurrentDoing { get; set; } = new WorkItem();
 
 	public Queue<WorkItem>? NextItemToDo { get; set; }
 }

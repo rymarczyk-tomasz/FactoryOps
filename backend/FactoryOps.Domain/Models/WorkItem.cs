@@ -8,7 +8,7 @@ public class WorkItem
 	/// <summary>
 	/// Unique ID.
 	/// </summary>
-	public Guid Id { get; set; }
+	public Guid Id { get; set; } // TODO: to delete?
 
 	/// <summary>
 	/// User specific item name.
