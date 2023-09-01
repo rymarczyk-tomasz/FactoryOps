@@ -1,3 +1,3 @@
 # FactoryOps
 
-Projekt poświęcony aplikacji, która ma na celu wspomaganie planowania produkcji
+FactoryOps will be a program to support production planning
