@@ -1,5 +1,5 @@
-using FactoryOps.Domain.Models;
-using FactoryOps.Domain.Ports;
+﻿using FactoryOps.Entity.Repositories;
+using FactoryOps.Entity.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FactoryOps.Api.Controllers;
@@ -8,15 +8,15 @@ namespace FactoryOps.Api.Controllers;
 [Route("units")]
 public class WorkingUnitsController : ControllerBase
 {
-	private readonly IWorkingUnitsRepository workingUnitsRepository;
-	public WorkingUnitsController(IWorkingUnitsRepository workingUnitsRepository)
+	private readonly IRepository<WorkingUnit> workingUnitsRepository;
+	public WorkingUnitsController(IRepository<WorkingUnit> workingUnitsRepository)
 	{
 		this.workingUnitsRepository = workingUnitsRepository;
 	}
 
 	[HttpGet]
-	public async Task<ActionResult<IEnumerable<WorkingUnit>>> GetWorkItems() => Ok(await this.workingUnitsRepository.GetWorkItems());
-	
+	public async Task<ActionResult<IEnumerable<WorkingUnit>>> GetWorkItems() => Ok(await this.workingUnitsRepository.GetAll());
+
 	[HttpGet]
 	[Route("{id}")]
 	public async Task<ActionResult<WorkItem>> GetWorkItem(string id) => Ok(await this.workingUnitsRepository.GetWorkItem(id));

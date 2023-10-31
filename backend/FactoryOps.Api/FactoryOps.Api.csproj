@@ -8,11 +8,17 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="7.0.9" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="7.0.12">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="7.0.9" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\FactoryOps.Domain\FactoryOps.Domain.csproj" />
+    <ProjectReference Include="..\FactoryOps.Entity\FactoryOps.Entity.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,4 +1,4 @@
-namespace FactoryOps.Domain.Models;
+﻿namespace FactoryOps.Domain.Models;
 
 /// <summary>
 /// Product representation
@@ -8,7 +8,7 @@ public class WorkItem
 	/// <summary>
 	/// Unique ID.
 	/// </summary>
-	public Guid Id { get; set; } // TODO: to delete?
+	public string Id { get; set; }
 
 	/// <summary>
 	/// User specific item name.
@@ -26,7 +26,7 @@ public class WorkItem
 	public float TechnologicalHour { get; set; } = 0;
 	
 	/// <summary>
-	/// Normative unit which describe how mach time human can work during 8 hour shift
+	/// Normative unit which describe how much time human can work during 8 hour shift
 	/// </summary>
 	public float TechnologicalWorkingFactor{ get; set;} = 7.2f; // TODO: this should be in some service - probably, it depends from factory/ settings
 
