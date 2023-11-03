@@ -15,33 +15,33 @@ public class WorkingUnitsController : ControllerBase
 	}
 
 	[HttpGet]
-	public async Task<ActionResult<IEnumerable<WorkingUnit>>> GetWorkItems() => Ok(await this.workingUnitsRepository.GetAll());
+	public ActionResult<IAsyncEnumerable<WorkingUnit>> GetWorkItems() => Ok(this.workingUnitsRepository.GetAll());
 
 	[HttpGet]
 	[Route("{id}")]
-	public async Task<ActionResult<WorkItem>> GetWorkItem(string id) => Ok(await this.workingUnitsRepository.GetWorkItem(id));
+	public async Task<ActionResult<WorkingUnit>> GetWorkItem(string id) => Ok(await this.workingUnitsRepository.Get(id));
 
 	[HttpPost]
 	[Route("create")]
-	public async Task<IActionResult> CreateWorkItem([FromBody] WorkingUnit workingUnit)
+	public async Task<IActionResult> CreateWorkItem([FromBody] WorkingUnit workItem)
 	{
-		await this.workingUnitsRepository.AddWorkItem(workingUnit);
+		await this.workingUnitsRepository.Insert(workItem);
 		return Ok();
 	}
 
 	[HttpPatch]
 	[Route("{id}/update")]
-	public async Task<IActionResult> UpdateWorkItemById([FromQuery] string id, [FromBody] WorkingUnit newWorkingUnit)
+	public async Task<IActionResult> UpdateWorkItemById([FromBody] WorkingUnit workItem)
 	{
-		await this.workingUnitsRepository.UpdateWorkItem(id, newWorkingUnit);
+		await this.workingUnitsRepository.Update(workItem);
 		return Ok();
 	}
 
 	[HttpDelete]
 	[Route("{id}/delete")]
-	public async Task<IActionResult> DeleteWorkItemById([FromQuery] string id)
+	public async Task<IActionResult> DeleteWorkItemById([FromBody] WorkingUnit item)
 	{
-		await this.workingUnitsRepository.DeleteWorkItem(id);
+		await this.workingUnitsRepository.Delete(item);
 		return Ok();
 	}
 

@@ -12,11 +12,14 @@ public class FactoryOpsContext : DbContext
 	}
 
 	internal DbSet<WorkItem> WorkItems { get; set; }
+	internal DbSet<WorkingUnit> WorkingUnits { get; set; }
+	internal DbSet<Department> Departments { get; set; }
 
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
 		base.OnModelCreating(modelBuilder);
 
+		modelBuilder.ApplyConfiguration(new DepartmentConfiguration());
 		modelBuilder.ApplyConfiguration(new WorkItemDtoConfiguration());
 	}
 }

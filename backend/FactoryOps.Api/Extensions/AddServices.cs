@@ -28,7 +28,7 @@ public static partial class ServiceCollectionExtensions
 
 	private static IServiceCollection AddInMemoryDatabase(this IServiceCollection services)
 	{
-		services.AddDbContext<FactoryOpsContext>(opt => opt.UseInMemoryDatabase("WorkItemList"));
+		services.AddDbContext<FactoryOpsContext>(opt => opt.UseInMemoryDatabase("FactoryOps"));
 		return services;
 	}
 }
