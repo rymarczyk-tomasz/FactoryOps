@@ -1,47 +1,41 @@
-using FactoryOps.Domain.Models;
-using FactoryOps.Domain.Ports;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using FactoryOps.Api.Database.Models;
+using FactoryOps.Api.Database.Repositories;
 
 namespace FactoryOps.Api.Controllers;
 
 [ApiController]
 [Route("units")]
-public class WorkingUnitsController : ControllerBase
+public class WorkingUnitsController(IRepository<WorkingUnit> workingUnitsRepository) : ControllerBase
 {
-	private readonly IWorkingUnitsRepository workingUnitsRepository;
-	public WorkingUnitsController(IWorkingUnitsRepository workingUnitsRepository)
-	{
-		this.workingUnitsRepository = workingUnitsRepository;
-	}
+	[HttpGet]
+	public ActionResult<IAsyncEnumerable<WorkingUnit>> GetWorkItems() => Ok(workingUnitsRepository.GetAll());
 
 	[HttpGet]
-	public async Task<ActionResult<IEnumerable<WorkingUnit>>> GetWorkItems() => Ok(await this.workingUnitsRepository.GetWorkItems());
-	
-	[HttpGet]
 	[Route("{id}")]
-	public async Task<ActionResult<WorkItem>> GetWorkItem(string id) => Ok(await this.workingUnitsRepository.GetWorkItem(id));
+	public async Task<ActionResult<WorkingUnit>> GetWorkItem(int id) => Ok(await workingUnitsRepository.Get(id));
 
 	[HttpPost]
 	[Route("create")]
-	public async Task<IActionResult> CreateWorkItem([FromBody] WorkingUnit workingUnit)
+	public async Task<IActionResult> CreateWorkItem([FromBody] WorkingUnit workItem)
 	{
-		await this.workingUnitsRepository.AddWorkItem(workingUnit);
+		await workingUnitsRepository.Insert(workItem);
 		return Ok();
 	}
 
 	[HttpPatch]
 	[Route("{id}/update")]
-	public async Task<IActionResult> UpdateWorkItemById([FromQuery] string id, [FromBody] WorkingUnit newWorkingUnit)
+	public async Task<IActionResult> UpdateWorkItemById([FromBody] WorkingUnit workItem)
 	{
-		await this.workingUnitsRepository.UpdateWorkItem(id, newWorkingUnit);
+		await workingUnitsRepository.Update(workItem);
 		return Ok();
 	}
 
 	[HttpDelete]
 	[Route("{id}/delete")]
-	public async Task<IActionResult> DeleteWorkItemById([FromQuery] string id)
+	public async Task<IActionResult> DeleteWorkItemById([FromBody] WorkingUnit item)
 	{
-		await this.workingUnitsRepository.DeleteWorkItem(id);
+		await workingUnitsRepository.Delete(item);
 		return Ok();
 	}
 
