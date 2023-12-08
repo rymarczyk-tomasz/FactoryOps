@@ -1,31 +1,25 @@
-﻿using FactoryOps.Entity.Repositories;
-using FactoryOps.Entity.Models;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using FactoryOps.Api.Database.Models;
+using FactoryOps.Api.Database.Repositories;
 
 namespace FactoryOps.Api.Controllers;
 
 [ApiController]
 [Route("units")]
-public class WorkingUnitsController : ControllerBase
+public class WorkingUnitsController(IRepository<WorkingUnit> workingUnitsRepository) : ControllerBase
 {
-	private readonly IRepository<WorkingUnit> workingUnitsRepository;
-	public WorkingUnitsController(IRepository<WorkingUnit> workingUnitsRepository)
-	{
-		this.workingUnitsRepository = workingUnitsRepository;
-	}
-
 	[HttpGet]
-	public ActionResult<IAsyncEnumerable<WorkingUnit>> GetWorkItems() => Ok(this.workingUnitsRepository.GetAll());
+	public ActionResult<IAsyncEnumerable<WorkingUnit>> GetWorkItems() => Ok(workingUnitsRepository.GetAll());
 
 	[HttpGet]
 	[Route("{id}")]
-	public async Task<ActionResult<WorkingUnit>> GetWorkItem(string id) => Ok(await this.workingUnitsRepository.Get(id));
+	public async Task<ActionResult<WorkingUnit>> GetWorkItem(int id) => Ok(await workingUnitsRepository.Get(id));
 
 	[HttpPost]
 	[Route("create")]
 	public async Task<IActionResult> CreateWorkItem([FromBody] WorkingUnit workItem)
 	{
-		await this.workingUnitsRepository.Insert(workItem);
+		await workingUnitsRepository.Insert(workItem);
 		return Ok();
 	}
 
@@ -33,7 +27,7 @@ public class WorkingUnitsController : ControllerBase
 	[Route("{id}/update")]
 	public async Task<IActionResult> UpdateWorkItemById([FromBody] WorkingUnit workItem)
 	{
-		await this.workingUnitsRepository.Update(workItem);
+		await workingUnitsRepository.Update(workItem);
 		return Ok();
 	}
 
@@ -41,7 +35,7 @@ public class WorkingUnitsController : ControllerBase
 	[Route("{id}/delete")]
 	public async Task<IActionResult> DeleteWorkItemById([FromBody] WorkingUnit item)
 	{
-		await this.workingUnitsRepository.Delete(item);
+		await workingUnitsRepository.Delete(item);
 		return Ok();
 	}
 

@@ -1,4 +1,4 @@
-﻿namespace FactoryOps.Entity.Models;
+﻿namespace FactoryOps.Api.Database.Models;
 
 public class WorkItem : BaseEntity
 {

@@ -1,10 +1,10 @@
-﻿using FactoryOps.Entity.Models;
+﻿using FactoryOps.Api.Database.Models;
 
-namespace FactoryOps.Entity.Repositories;
+namespace FactoryOps.Api.Database.Repositories;
 
 public interface IRepository<T> where T : BaseEntity
 {
-	Task<T?> Get(string id);
+	Task<T?> Get(int id);
 	IAsyncEnumerable<T> GetAll();
 	IQueryable<T> GetAllQueryable();
 	Task Insert(T entity);

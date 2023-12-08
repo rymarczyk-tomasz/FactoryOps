@@ -1,31 +1,25 @@
-﻿using FactoryOps.Entity.Repositories;
-using FactoryOps.Entity.Models;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using FactoryOps.Api.Database.Models;
+using FactoryOps.Api.Database.Repositories;
 
 namespace FactoryOps.Api.Controllers;
 
 [ApiController]
 [Route("departments")]
-public class DepartmentController : ControllerBase
+public class DepartmentController(IRepository<Department> departmentRepository) : ControllerBase
 {
-	private readonly IRepository<Department> departmentRepository;
-	public DepartmentController(IRepository<Department> departmentRepository)
-	{
-		this.departmentRepository = departmentRepository;
-	}
-
 	[HttpGet]
-	public ActionResult<IAsyncEnumerable<Department>> GetWorkItems() => Ok(this.departmentRepository.GetAll());
+	public ActionResult<IAsyncEnumerable<Department>> GetWorkItems() => Ok(departmentRepository.GetAll());
 
 	[HttpGet]
 	[Route("{id}")]
-	public async Task<ActionResult<Department>> GetWorkItem(string id) => Ok(await this.departmentRepository.Get(id));
+	public async Task<ActionResult<Department>> GetWorkItem(int id) => Ok(await departmentRepository.Get(id));
 
 	[HttpPost]
 	[Route("create")]
 	public async Task<IActionResult> CreateWorkItem([FromBody] Department department)
 	{
-		await this.departmentRepository.Insert(department);
+		await departmentRepository.Insert(department);
 		return Ok();
 	}
 
@@ -33,7 +27,7 @@ public class DepartmentController : ControllerBase
 	[Route("{id}/update")]
 	public async Task<IActionResult> UpdateWorkItemById([FromBody] Department department)
 	{
-		await this.departmentRepository.Update(department);
+		await departmentRepository.Update(department);
 		return Ok();
 	}
 
@@ -41,7 +35,7 @@ public class DepartmentController : ControllerBase
 	[Route("{id}/delete")]
 	public async Task<IActionResult> DeleteWorkItemById([FromBody] Department department)
 	{
-		await this.departmentRepository.Delete(department);
+		await departmentRepository.Delete(department);
 		return Ok();
 	}
 

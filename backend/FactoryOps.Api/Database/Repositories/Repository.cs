@@ -1,8 +1,8 @@
-﻿using FactoryOps.Entity.Contexts;
-using FactoryOps.Entity.Models;
+﻿using FactoryOps.Api.Database.Contexts;
+using FactoryOps.Api.Database.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace FactoryOps.Entity.Repositories;
+namespace FactoryOps.Api.Database.Repositories;
 public class Repository<T> : IRepository<T> where T : BaseEntity
 {
 
@@ -16,7 +16,7 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
 	}
 
 
-	public async Task<T?> Get(string id)
+	public async Task<T?> Get(int id)
 	{
 		return await this.entities.SingleOrDefaultAsync(s => s.Id == id);
 	}
@@ -34,23 +34,21 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
 
 	public async Task Insert(T entity)
 	{
-		if (entity is null)
-			throw new ArgumentNullException("Provided entity is null.");
-		
+		if (entity is null) throw new ArgumentNullException("Provided entity is null.");
+
 		this.entities.Add(entity);
 		await this.context.SaveChangesAsync();
 	}
 
 	public async Task Update(T entity)
 	{
-		if (entity is null)
-			throw new ArgumentNullException("Provided entity is null.");
+		if (entity is null) throw new ArgumentNullException("Provided entity is null.");
+		this.context.Update(entity);
 		await this.context.SaveChangesAsync();
 	}
 	public async Task Delete(T entity)
 	{
-		if (entity is null)
-			throw new ArgumentNullException("Provided entity is null.");
+		if (entity is null) throw new ArgumentNullException("Provided entity is null.");
 
 		this.entities.Remove(entity);
 		await this.context.SaveChangesAsync();

@@ -1,31 +1,25 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using FactoryOps.Entity.Repositories;
-using FactoryOps.Entity.Models;
+using FactoryOps.Api.Database.Models;
+using FactoryOps.Api.Database.Repositories;
 
 namespace FactoryOps.Api.Controllers;
 
 [ApiController]
 [Route("items")]
-public class WorkItemsController : ControllerBase
+public class WorkItemsController(IRepository<WorkItem> workItemsRepository) : ControllerBase
 {
-	private readonly IRepository<WorkItem> workItemsRepository;
-	public WorkItemsController(IRepository<WorkItem> workItemsRepository)
-	{
-		this.workItemsRepository = workItemsRepository;
-	}
-
 	[HttpGet]
-	public ActionResult<IAsyncEnumerable<WorkItem>> GetWorkItems() => Ok(this.workItemsRepository.GetAll());
+	public ActionResult<IAsyncEnumerable<WorkItem>> GetWorkItems() => Ok(workItemsRepository.GetAll());
 	
 	[HttpGet]
 	[Route("{id}")]
-	public async Task<ActionResult<WorkItem>> GetWorkItem(string id) => Ok(await this.workItemsRepository.Get(id));
+	public async Task<ActionResult<WorkItem>> GetWorkItem(int id) => Ok(await workItemsRepository.Get(id));
 
 	[HttpPost]
 	[Route("create")]
 	public async Task<IActionResult> CreateWorkItem([FromBody] WorkItem workItem)
 	{
-		await this.workItemsRepository.Insert(workItem);
+		await workItemsRepository.Insert(workItem);
 		return Ok();
 	}
 
@@ -33,7 +27,7 @@ public class WorkItemsController : ControllerBase
 	[Route("{id}/update")]
 	public async Task<IActionResult> UpdateWorkItemById([FromBody] WorkItem workItem)
 	{
-		await this.workItemsRepository.Update(workItem);
+		await workItemsRepository.Update(workItem);
 		return Ok();
 	}
 
@@ -41,7 +35,7 @@ public class WorkItemsController : ControllerBase
 	[Route("{id}/delete")]
 	public async Task<IActionResult> DeleteWorkItemById([FromBody] WorkItem item)
 	{
-		await this.workItemsRepository.Delete(item);
+		await workItemsRepository.Delete(item);
 		return Ok();
 	}
 
