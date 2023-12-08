@@ -1,0 +1,37 @@
+version: "3.9"
+
+services:
+  factory-ops-api:
+    container_name: factory-ops-api
+    image: factory-ops:0.2
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - 5005:8080
+    volumes:
+      - /var/wordpress/data:/var/www/html
+    networks:
+      - factoryOpsNetwork
+
+  db:
+    container_name: postgres
+    image: postgres:16.1
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_DB: "factoryopsdb"
+      POSTGRES_USER: "factoryops"
+      POSTGRES_PASSWORD: "somerandompassword"
+    volumes:
+      - factory-ops-data:/var/lib/postgresql/data/
+    networks:
+      - factoryOpsNetwork
+
+networks:
+  factoryOpsNetwork:
+    driver: bridge
+
+volumes:
+  factory-ops-data:
