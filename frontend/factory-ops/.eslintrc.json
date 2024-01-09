@@ -1,0 +1,41 @@
+{
+    "env": {
+        "browser": true,
+        "es2021": true
+    },
+    "extends": [
+        "eslint:recommended",
+        "plugin:@typescript-eslint/recommended",
+        "plugin:react/recommended"
+    ],
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+		"ecmaFeatures": {
+            "jsx": true
+        },
+        "ecmaVersion": "latest",
+        "sourceType": "module"
+    },
+    "plugins": [
+        "@typescript-eslint",
+        "react"
+    ],
+	"settings": {
+		"react": {
+			"version": "18.2.0"
+		}
+	},
+    "rules": {
+        "indent": [ "error", "tab", { "SwitchCase": 1, "ignoredNodes": ["JSXAttribute"]} ],
+        "quotes": [ "error", "single" ],
+        "jsx-quotes": [ "error", "prefer-double" ],
+        "semi": [ "error", "always" ],
+        "no-trailing-spaces": "error",
+        "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+				"@typescript-eslint/no-non-null-assertion": "off"
+    },
+    "ignorePatterns": [
+        "**/*.scss",
+        "node_modules/*"
+    ]
+}
