@@ -1,7 +1,6 @@
 ﻿using FactoryOps.Api.Database.Contexts;
 using FactoryOps.Api.Database.Repositories;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 
 namespace FactoryOps.Api.Extensions;
 

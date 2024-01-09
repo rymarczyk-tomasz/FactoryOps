@@ -34,7 +34,7 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
 
 	public async Task Insert(T entity)
 	{
-		if (entity is null) throw new ArgumentNullException("Provided entity is null.");
+		ArgumentNullException.ThrowIfNull(entity);
 
 		this.entities.Add(entity);
 		await this.context.SaveChangesAsync();
@@ -42,13 +42,13 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
 
 	public async Task Update(T entity)
 	{
-		if (entity is null) throw new ArgumentNullException("Provided entity is null.");
+		ArgumentNullException.ThrowIfNull(entity);
 		this.context.Update(entity);
 		await this.context.SaveChangesAsync();
 	}
 	public async Task Delete(T entity)
 	{
-		if (entity is null) throw new ArgumentNullException("Provided entity is null.");
+		ArgumentNullException.ThrowIfNull(entity);
 
 		this.entities.Remove(entity);
 		await this.context.SaveChangesAsync();
