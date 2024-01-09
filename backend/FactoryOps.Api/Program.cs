@@ -9,6 +9,7 @@ builder.Services.AddMyCORS(MyAllowSpecificOrigins);
 
 // Add services to the container.
 builder.Services.AddControllers();
+// builder.Services.AddControllers().AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 // Add EntityFramework context
 builder.Services.AddEntityModule(configuration);

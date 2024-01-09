@@ -9,9 +9,8 @@ public class FactoryOpsContext : DbContext
 	{
 	}
 
-	public DbSet<WorkItem> WorkItems { get; set; }
-	public DbSet<WorkingUnit> WorkingUnits { get; set; }
-	public DbSet<Department> Departments { get; set; }
+	public DbSet<Item> WorkItems { get; set; }
+	public DbSet<Groups> WorkingUnits { get; set; }
 
 	protected override void OnConfiguring(DbContextOptionsBuilder options)
 	{
