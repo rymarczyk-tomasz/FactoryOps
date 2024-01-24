@@ -8,21 +8,7 @@ function App() {
 	return (
 		<div className="App">
 			<FactoryOpsTimeline />
-			<>
-				<table className="table">
-					<thead>
-						<tr>
-							<th>ID</th>
-							<th>Name</th>
-							<th>Start Time</th>
-							<th>Grupa</th>
-						</tr>
-					</thead>
-					<tbody>
-						<ItemLists />
-					</tbody>
-				</table>
-			</>
+			<ItemLists />
 		</div>
 	);
 }
