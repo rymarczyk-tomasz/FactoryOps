@@ -31,7 +31,7 @@ const AddNewItemModal: FC<AddNewItemProperties> = (props: AddNewItemProperties) 
 			group: 0,
 			title: 'put item title',
 			start_time: new Date(),
-			length: 0,
+			length: 120,
 			canMove: true,
 			canResize: true,
 			canChangeGroup: true
@@ -41,19 +41,17 @@ const AddNewItemModal: FC<AddNewItemProperties> = (props: AddNewItemProperties) 
 	const handleClose = () => setShowModal(false);
 
 	const onSubmitAction = (data: AddNewItemForm) => {
-		console.log(data);
-		console.log('(Number(data.length) * 60 * 60 * 1000)', (Number(data.length) * 60 * 60 * 1000));
-		console.log('data.start_time', new Date(data.start_time).getTime());
+		const startTime = new Date(data.start_time).getTime();
 		const item: Item = {
 			id: props.nextId,
 			group: data.group,
 			title: data.title,
-			start_time: new Date(data.start_time.valueOf()).valueOf(),
-			end_time: new Date(Number(data.length) * 60 * 60 * 1000 + new Date(data.start_time).getTime()).valueOf(),
+			start_time: startTime,
+			end_time: new Date(startTime + data.length * 60 * 60 * 1000).getTime(),
 			length: data.length,
-			canMove: data.canMove,
-			canResize: data.canResize,
-			canChangeGroup: data.canChangeGroup
+			canMove: true,
+			canResize: false,
+			canChangeGroup: true
 		};
 		console.log(item);
 		props.createNewItem(item);
@@ -96,18 +94,12 @@ const AddNewItemModal: FC<AddNewItemProperties> = (props: AddNewItemProperties) 
 									}
 								})} className="form-control" />
 								<label className="form-label" htmlFor="end_time">Length</label>
-								<input type="number" id="length" {...register('length', {
+								<input type="number" id="end_time" {...register('length', {
 									required: {
 										value: true,
 										message: 'Length is required',
 									}
-								})} className="form-control" />
-								<label className="form-label" htmlFor="canMove">Can move</label>
-								<input type="checkbox" id="canMove" {...register('canMove')}
-									className="form-check-input" />
-								<label className="form-label" htmlFor="canChangeGroup">Can change group</label>
-								<input type="checkbox" id="canChangeGroup" {...register('canChangeGroup')}
-									className="form-check-input" />
+								})} className="form-control date" />
 							</form>
 						</div>
 					</div>
