@@ -7,19 +7,21 @@ export default function ItemLists() {
 			<table className="table">
 				<thead>
 					<tr>
-						<th>ID</th>
-						<th>Name</th>
-						<th>Start Time</th>
-						<th>Grupa</th>
+						<th>Date</th>
+						<th>Project</th>
+						<th>Machine</th>
+						<th>Machine Group</th>
+						<th>Programmer</th>
 					</tr>
 				</thead>
 				<tbody>
 					{ITEM.map((item) => (
 						<tr key={item.id}>
-							<td>{item.id}</td>
-							<td>{item.name}</td>
-							<td>{item.startTime}</td>
-							<td>{item.group}</td>
+							<td>{item.date}</td>
+							<td>{item.project}</td>
+							<td>{item.machine}</td>
+							<td>{item.machine_gropu}</td>
+							<td>{item.programmer}</td>
 						</tr>
 					))}
 				</tbody>
