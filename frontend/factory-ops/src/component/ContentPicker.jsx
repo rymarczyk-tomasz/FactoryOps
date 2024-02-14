@@ -6,12 +6,24 @@ export default function ContentPicker({ onViewChange }) {
 	};
 
 	return (
-		<div>
-			<button className="btn btn-primary btn-lg btn-block m-3" onClick={() => handleButtonClick('PLAN')}>
+		<div className="btn-group-vertical mt-5">
+			<button className="btn btn-outline-primary btn-lg" onClick={() => handleButtonClick('PLAN')}>
 				PLAN
 			</button>
-			<button className="btn btn-primary btn-lg btn-block m-3" onClick={() => handleButtonClick('ITEM')}>
+			<button className="btn btn-outline-primary btn-lg" onClick={() => handleButtonClick('ITEM')}>
 				ItemList
+			</button>
+			<button className="btn btn-outline-primary btn-lg" onClick={() => handleButtonClick('PLAN')}>
+				3-axis
+			</button>
+			<button className="btn btn-outline-primary btn-lg" onClick={() => handleButtonClick('ITEM')}>
+				5-axis
+			</button>
+			<button className="btn btn-outline-primary btn-lg" onClick={() => handleButtonClick('PLAN')}>
+				HTSM500
+			</button>
+			<button className="btn btn-outline-primary btn-lg" onClick={() => handleButtonClick('ITEM')}>
+				HTSM300
 			</button>
 		</div>
 	);
