@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './App.css';
 import ItemLists from './component/ItemList';
-import DashBoard from './component/DashBoard';
+import DashBoard from './component/ContentPicker';
 const FactoryOpsTimeline = React.lazy(() => import('./component/FactoryOpsTimeline'));
 
 function App() {
