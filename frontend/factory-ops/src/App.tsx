@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import './App.css';
 import ItemLists from './component/ItemList';
 import DashBoard from './component/ContentPicker';
+import ContentPicker from './component/ContentPicker';
 const FactoryOpsTimeline = React.lazy(() => import('./component/FactoryOpsTimeline'));
 
 function App() {
@@ -14,7 +15,7 @@ function App() {
 	return (
 		<div className="App row">
 			<div className="col-1">
-				<DashBoard onViewChange={handleViewChange} />
+				<ContentPicker onViewChange={handleViewChange} />
 			</div>
 			<div className={`col-11 ${view === 'PLAN' ? 'd-block' : 'd-none'}`}>
 				<FactoryOpsTimeline />
