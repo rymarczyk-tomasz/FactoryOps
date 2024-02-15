@@ -50,4 +50,4 @@ export const ITEM = [
 	}
 ];
 
-export const programmerList = ['Marcin Mielewczyk', 'Krzysztof Jaciubek', 'Mariusz', 'Mariusz', 'Koksu', 'Popakul'];
+export const programmers = ['Marcin Mielewczyk', 'Krzysztof Jaciubek', 'Mariusz', 'Mariusz', 'Koksu', 'Popakul'];

@@ -1,5 +1,6 @@
 import { ITEM } from '../data';
 import React from 'react';
+import { programmers } from '../data';
 
 export default function ItemLists() {
 	return (
@@ -21,7 +22,14 @@ export default function ItemLists() {
 							<td>{item.project}</td>
 							<td>{item.machine}</td>
 							<td>{item.machine_gropu}</td>
-							<td>{item.programmer}</td>
+							<td>
+								<select>
+									<option>Select Programmer</option>
+									{programmers.map((programmer, index) => (
+										<option key={index}>{programmer}</option>
+									))}
+								</select>
+							</td>
 						</tr>
 					))}
 				</tbody>
