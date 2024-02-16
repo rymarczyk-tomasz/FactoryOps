@@ -98,7 +98,7 @@ const AddNewItemModal: FC<AddNewItemProperties> = (props: AddNewItemProperties) 
 										message: 'Length is required',
 									}
 								})} className="form-control date" />
-</form>
+							</form>
 						</div>
 					</div>
 				</Modal.Body>
