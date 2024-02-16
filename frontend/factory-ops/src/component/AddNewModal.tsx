@@ -2,8 +2,7 @@ import React, { FC, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Modal from 'react-bootstrap/Modal';
 import { Item } from '../models/Item';
-import { Button, ModalHeader, } from 'react-bootstrap';
-
+import { Button, ModalHeader } from 'react-bootstrap';
 
 interface AddNewItemProperties {
 	nextId: number;
@@ -24,7 +23,7 @@ const AddNewItemModal: FC<AddNewItemProperties> = (props: AddNewItemProperties) 
 	const [showModal, setShowModal] = useState<boolean>(false);
 	const {
 		handleSubmit,
-		register,
+		register
 		// formState: { errors }
 	} = useForm<AddNewItemForm>({
 		defaultValues: {
@@ -64,7 +63,6 @@ const AddNewItemModal: FC<AddNewItemProperties> = (props: AddNewItemProperties) 
 				Add
 			</Button>
 			<Modal show={showModal} onHide={handleClose}>
-
 				<ModalHeader>
 					<div>Add new Item</div>
 				</ModalHeader>
@@ -100,19 +98,18 @@ const AddNewItemModal: FC<AddNewItemProperties> = (props: AddNewItemProperties) 
 										message: 'Length is required',
 									}
 								})} className="form-control date" />
-							</form>
+</form>
 						</div>
 					</div>
 				</Modal.Body>
 				<Modal.Footer>
 					<Button variant="light" onClick={handleClose}>
-					Close
+						Close
 					</Button>
-					<Button type="submit" form="addNewItem" variant="primary" onClick={() => onSubmitAction} >
-					Add
+					<Button type="submit" form="addNewItem" variant="primary" onClick={() => onSubmitAction}>
+						Add
 					</Button>
 				</Modal.Footer>
-
 			</Modal>
 		</>
 	);
