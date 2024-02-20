@@ -11,7 +11,7 @@ export default function ContentPicker({ onViewChange }) {
 				PLAN
 			</button>
 			<button className="btn btn-outline-primary btn-lg" onClick={() => handleButtonClick('ITEM')}>
-				ItemList
+				ItemList - prog
 			</button>
 			<button className="btn btn-outline-primary btn-lg" onClick={() => handleButtonClick('PLAN')}>
 				3-axis
