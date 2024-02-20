@@ -1,38 +1,53 @@
-export const ITEM = [
+export const mixedObject  = [
 	{
-		id: 1,
-		name: 'Banan',
-		startTime: '12.12.2024',
-		group: 'owoc'
+		startDate: '12.12.2024',
+		project: 'Manzanillo',
+		machine: 'HSTM 305',
+		machine_gropu: 'HSTM 300',
+		programmer: ''
 	},
 	{
-		id: 2,
-		name: 'Kiwi',
-		startTime: '10.12.2024',
-		group: 'owoc'
+		startDate: '12.12.2024',
+		project: 'HPC',
+		machine: 'HSTM 502',
+		machine_gropu: 'HSTM 500',
+		programmer: ''
 	},
 	{
-		id: 3,
-		name: 'Jabłko',
-		startTime: '08.12.2024',
-		group: 'owoc'
+		startDate: '12.12.2024',
+		project: 'KOSOVO',
+		machine: 'HSTM 308',
+		machine_gropu: 'HSTM 300',
+		programmer: ''
 	},
 	{
-		id: 4,
-		name: 'Ogórek',
-		startTime: '25.12.2024',
-		group: 'warzywo'
+		startDate: '12.12.2024',
+		project: 'KOSOVO',
+		machine: 'HSTM 305',
+		machine_gropu: 'HSTM 300',
+		programmer: ''
 	},
 	{
-		id: 5,
-		name: 'Marchewka',
-		startTime: '30.12.2024',
-		group: 'warzywo'
+		startDate: '12.12.2024',
+		project: 'Manzanillo',
+		machine: 'HSTM 305',
+		machine_gropu: 'HSTM 300',
+		programmer: ''
 	},
 	{
-		id: 6,
-		name: 'Arbuz',
-		startTime: '01.12.2024',
-		group: 'owoc'
+		startDate: '12.12.2024',
+		project: 'Manzanillo',
+		machine: 'HSTM 305',
+		machine_gropu: 'HSTM 300',
+		programmer: ''
+	},
+	{
+		startDate: '12.12.2024',
+		project: 'Manzanillo',
+		machine: 'HSTM 305',
+		machine_gropu: 'HSTM 300',
+		programmer: ''
 	}
 ];
+
+export const programmers = ['Marcin Mielewczyk', 'Krzysztof Jaciubek', 'Mariusz', 'Mariusz', 'Koksu', 'Popakul'];
