@@ -54,7 +54,7 @@ const FactoryOpsTimeline = () => {
 
 	const addNewItem = (item: Item) => {
 		console.log(item);
-		console.log('item',item.start_time);
+		console.log('item', item.start_time);
 		console.log('date', Date.now());
 		// setItems([...items, {
 		// 	id: items.length,
@@ -66,10 +66,7 @@ const FactoryOpsTimeline = () => {
 		// 	canResize: item.canResize,
 		// 	canChangeGroup: item.canChangeGroup
 		// }]);
-		setItems([
-			...items,
-			item
-		]);
+		setItems([...items, item]);
 	};
 
 	return (
@@ -77,7 +74,7 @@ const FactoryOpsTimeline = () => {
 			<div>
 				{/* <button onClick={addGroup}>Add group</button> */}
 				{/* <button onClick={testRequest}>Test request</button> */}
-				<AddNewItemModal nextId={items.length} createNewItem={addNewItem}/>
+				<AddNewItemModal nextId={items.length} createNewItem={addNewItem} />
 				<Timeline
 					groups={groups}
 					items={items}

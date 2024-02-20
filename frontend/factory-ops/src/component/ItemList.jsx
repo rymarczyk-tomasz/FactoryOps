@@ -1,4 +1,4 @@
-import { ITEM } from '../data';
+import { mixedObject } from '../data';
 import React from 'react';
 import { programmers } from '../data';
 
@@ -8,7 +8,7 @@ export default function ItemLists() {
 			<table className="table">
 				<thead>
 					<tr>
-						<th>Date</th>
+						<th>Start Date</th>
 						<th>Project</th>
 						<th>Machine</th>
 						<th>Machine Group</th>
@@ -16,9 +16,9 @@ export default function ItemLists() {
 					</tr>
 				</thead>
 				<tbody>
-					{ITEM.map((item) => (
+					{mixedObject.map((item) => (
 						<tr key={item.id}>
-							<td>{item.date}</td>
+							<td>{item.startDate}</td>
 							<td>{item.project}</td>
 							<td>{item.machine}</td>
 							<td>{item.machine_gropu}</td>

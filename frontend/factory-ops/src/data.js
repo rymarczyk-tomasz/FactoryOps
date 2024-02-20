@@ -1,52 +1,52 @@
-export const ITEM = [
+export const mixedObject  = [
 	{
-		date: '12.12.2024',
+		startDate: '12.12.2024',
 		project: 'Manzanillo',
 		machine: 'HSTM 305',
 		machine_gropu: 'HSTM 300',
-		programmer: 'Patryk Wiśniewski'
+		programmer: ''
 	},
 	{
-		date: '12.12.2024',
+		startDate: '12.12.2024',
 		project: 'HPC',
 		machine: 'HSTM 502',
 		machine_gropu: 'HSTM 500',
-		programmer: 'Krzysztof Jebaka'
+		programmer: ''
 	},
 	{
-		date: '12.12.2024',
+		startDate: '12.12.2024',
 		project: 'KOSOVO',
 		machine: 'HSTM 308',
 		machine_gropu: 'HSTM 300',
-		programmer: 'Marcin Mielewczyk'
+		programmer: ''
 	},
 	{
-		date: '12.12.2024',
+		startDate: '12.12.2024',
 		project: 'KOSOVO',
 		machine: 'HSTM 305',
 		machine_gropu: 'HSTM 300',
-		programmer: 'Popakul'
+		programmer: ''
 	},
 	{
-		date: '12.12.2024',
+		startDate: '12.12.2024',
 		project: 'Manzanillo',
 		machine: 'HSTM 305',
 		machine_gropu: 'HSTM 300',
-		programmer: 'Koksu'
+		programmer: ''
 	},
 	{
-		date: '12.12.2024',
+		startDate: '12.12.2024',
 		project: 'Manzanillo',
 		machine: 'HSTM 305',
 		machine_gropu: 'HSTM 300',
-		programmer: 'Marian'
+		programmer: ''
 	},
 	{
-		date: '12.12.2024',
+		startDate: '12.12.2024',
 		project: 'Manzanillo',
 		machine: 'HSTM 305',
 		machine_gropu: 'HSTM 300',
-		programmer: 'Patryk Wiśniewski'
+		programmer: ''
 	}
 ];
 
