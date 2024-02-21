@@ -1,3 +1,15 @@
 {
+	"editor.insertSpaces": false,
+	"eslint.enable": true,
+	"[html]": {
+		"editor.defaultFormatter": "esbenp.prettier-vscode"
+	},
+	"[javascript]": {
+		"editor.defaultFormatter": "esbenp.prettier-vscode"
+	},
+	"[typescript]": {
+		"editor.defaultFormatter": "esbenp.prettier-vscode"
+	},
+
 	"dotnet.defaultSolution": "backend/FactoryOps.sln"
 }

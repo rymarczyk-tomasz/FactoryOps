@@ -50,6 +50,8 @@
 		]
 	},
 	"devDependencies": {
+		"@html-eslint/eslint-plugin": "^0.23.1",
+		"@html-eslint/parser": "^0.23.0",
 		"@types/file-saver": "^2.0.5",
 		"@types/react": "^18.0.28",
 		"@types/react-calendar-timeline": "^0.28.6",
@@ -58,7 +60,7 @@
 		"@typescript-eslint/eslint-plugin": "^5.54.1",
 		"@typescript-eslint/parser": "^5.54.1",
 		"axios": "^1.6.3",
-		"eslint": "^8.35.0",
+		"eslint": "^8.56.0",
 		"eslint-import-resolver-typescript": "^3.5.3",
 		"eslint-plugin-import": "^2.27.5",
 		"eslint-plugin-react": "^7.32.2",
