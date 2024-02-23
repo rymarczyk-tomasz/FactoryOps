@@ -60,7 +60,6 @@ const EditItemModal: FC<EditItemProperties> = (props: EditItemProperties) => {
 		<>
 			<Button variant="primary" size={'sm'} onClick={() =>
 			{
-				console.log('props', props.item);
 				setShowModal(true);
 			}}>
 				Edit
