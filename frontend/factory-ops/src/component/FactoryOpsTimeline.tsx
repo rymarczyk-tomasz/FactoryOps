@@ -53,14 +53,12 @@ const FactoryOpsTimeline = () => {
 	// 	]);
 	// };
 
-	const onSelect = (itemId: number, a: unknown, time:number) => {
-		console.log('onSelect: ', 'itemId=', itemId, 'event=', a, 'time=', time);
+	const onSelect = (itemId: number) => {
 		const selectedItem = getItemByItemId(itemId);
 		setSelectedItem(selectedItem);
 	};
 
-	const onDeselect = (e: any) => {
-		console.log('onDeselect:', 'e', e);
+	const onDeselect = () => {
 		setSelectedItem(undefined);
 	};
 
@@ -82,9 +80,8 @@ const FactoryOpsTimeline = () => {
 		);
 	};
 
-	const getItemByItemId = (itemId: number | undefined) => {
-		console.log('getItemByItemId: ', 'itemId=', itemId);
-		return items.at(items.findIndex(i => i.id === itemId));
+	const getItemByItemId = (itemId: number | undefined) : Item | undefined => {
+		return items.find((item: Item) => item.id === itemId);
 	};
 
 	return (
@@ -92,9 +89,7 @@ const FactoryOpsTimeline = () => {
 			<div>
 				<div className="d-flex flex-row mb-3">
 					<button>{selectedItemId?.id}</button>
-					{/* <button onClick={addGroup}>Add group</button> */}
-					{/* <button onClick={testRequest}>Test request</button> */}
-					<AddNewItemModal nextId={items.length} createNewItem={addNewItem}/>
+					<AddNewItemModal nextId={items.length + 1} createNewItem={addNewItem}/>
 					<EditItemModal item={selectedItemId} UpdateItem={editItem}/>
 				</div>
 				<Timeline
