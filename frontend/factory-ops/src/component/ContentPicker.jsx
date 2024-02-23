@@ -6,12 +6,12 @@ export default function ContentPicker({ onViewChange }) {
 	};
 
 	return (
-		<div>
-			<button className="btn btn-primary btn-lg btn-block m-3" onClick={() => handleButtonClick('PLAN')}>
-				PLAN
+		<div className="btn-group-vertical mt-5">
+			<button className="btn btn-outline-primary btn-lg" onClick={() => handleButtonClick('PLAN')}>
+				Plan produkcji
 			</button>
-			<button className="btn btn-primary btn-lg btn-block m-3" onClick={() => handleButtonClick('ITEM')}>
-				ItemList
+			<button className="btn btn-outline-primary btn-lg" onClick={() => handleButtonClick('ITEM')}>
+				Lista projektów
 			</button>
 		</div>
 	);
