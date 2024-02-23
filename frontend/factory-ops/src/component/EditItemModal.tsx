@@ -13,11 +13,8 @@ interface EditItemProperties {
 interface EditItemForm {
 	group: number;
 	title: string;
-	start_time: Date;
-	end_time: Date;
-	canMove: boolean;
-	canResize: boolean;
-	canChangeGroup: boolean;
+	start_time: number;
+	length: number;
 }
 
 const EditItemModal: FC<EditItemProperties> = (props: EditItemProperties) => {
@@ -30,35 +27,42 @@ const EditItemModal: FC<EditItemProperties> = (props: EditItemProperties) => {
 		defaultValues: {
 			group: props.item?.group,
 			title: props.item?.title,
-			start_time: new Date(props.item?.start_time ?? Date.now()),
-			end_time: new Date(props.item?.end_time ?? Date.now()),
-			canMove: props.item?.canMove,
-			canResize: props.item?.canResize,
-			canChangeGroup: props.item?.canChangeGroup
+			start_time: props.item?.start_time,
+			length: props.item?.length,
 		}
 	});
 
 	const handleClose = () => setShowModal(false);
 
 	const onSubmitAction = (data: EditItemForm) => {
+		const startTime = new Date(data.start_time).getTime();
 		const item: Item = {
 			id: props.item?.id ?? 0,
 			group: data.group,
 			title: data.title,
 			start_time: new Date(data.start_time.valueOf()).valueOf(),
-			end_time: new Date(data.end_time.valueOf()).valueOf(),
-			length: data.end_time.valueOf() - data.start_time.valueOf(),
-			canMove: data.canMove,
-			canResize: data.canResize,
-			canChangeGroup: data.canChangeGroup
+			end_time: new Date(startTime + data.length * 60 * 60 * 1000).getTime(),
+			length: data.length,
+			canMove: true,
+			canResize: false,
+			canChangeGroup: true
 		};
 		props.UpdateItem(item);
 		handleClose();
 	};
 
+	function dateString() {
+		const date = new Date(props.item?.start_time ?? 0);
+		return date.toISOString().substring(0, 16);
+	}
+
 	return (
 		<>
-			<Button variant="primary" size={'sm'} onClick={() => setShowModal(true)}>
+			<Button variant="primary" size={'sm'} onClick={() =>
+			{
+				console.log('props', props.item);
+				setShowModal(true);
+			}}>
 				Edit
 			</Button>
 			<Modal show={showModal} onHide={handleClose}>
@@ -93,20 +97,14 @@ const EditItemModal: FC<EditItemProperties> = (props: EditItemProperties) => {
 											value: true,
 											message: 'Start time is required',
 										}
-									})} className="form-control" defaultValue={props.item.start_time}/>
-									<label className="form-label" htmlFor="end_time">End time</label>
-									<input type="datetime-local" id="end_time" {...register('end_time', {
+									})} className="form-control" defaultValue={dateString()}/>
+									<label className="form-label" htmlFor="length">Length</label>
+									<input type="number" id="length" {...register('length', {
 										required: {
 											value: true,
-											message: 'End time is required',
+											message: 'Length is required',
 										}
-									})} className="form-control date" defaultValue={props.item.end_time}/>
-									<label className="form-label" htmlFor="canMove">Can move</label>
-									<input type="checkbox" id="canMove" {...register('canMove')}
-										className="form-check-input" defaultChecked={props.item.canMove}/>
-									<label className="form-label" htmlFor="canChangeGroup">Can change group</label>
-									<input type="checkbox" id="canChangeGroup" {...register('canChangeGroup')}
-										className="form-check-input" defaultChecked={props.item.canChangeGroup}/>
+									})} className="form-control date" defaultValue={props.item.length}/>
 								</form>
 							</div>
 						</div>
