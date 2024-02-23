@@ -1,3 +1,4 @@
+import React from 'react';
 import { useEffect, useState } from 'react';
 import Timeline, { TimelineMarkers } from 'react-calendar-timeline';
 import { TimelineHeaders, SidebarHeader, DateHeader, TodayMarker } from 'react-calendar-timeline';
@@ -7,7 +8,6 @@ import { Item } from '../models/Item';
 import { Group } from '../models/Group';
 import { GroupService, ItemService } from '../services/Services';
 import AddNewItemModal from './AddNewModal';
-import React from 'react';
 import EditItemModal from './EditItemModal';
 
 const FactoryOpsTimeline = () => {
@@ -63,10 +63,7 @@ const FactoryOpsTimeline = () => {
 	};
 
 	const addNewItem = (item: Item) => {
-		setItems([
-			...items,
-			item
-		]);
+		setItems([...items, item]);
 	};
 
 	const editItem = (item: Item) => {
@@ -80,7 +77,7 @@ const FactoryOpsTimeline = () => {
 		);
 	};
 
-	const getItemByItemId = (itemId: number | undefined) : Item | undefined => {
+	const getItemByItemId = (itemId: number | undefined): Item | undefined => {
 		return items.find((item: Item) => item.id === itemId);
 	};
 
@@ -89,8 +86,8 @@ const FactoryOpsTimeline = () => {
 			<div>
 				<div className="d-flex flex-row mb-3">
 					<button>{selectedItemId?.id}</button>
-					<AddNewItemModal nextId={items.length + 1} createNewItem={addNewItem}/>
-					<EditItemModal item={selectedItemId} UpdateItem={editItem}/>
+					<AddNewItemModal nextId={items.length + 1} createNewItem={addNewItem} />
+					<EditItemModal item={selectedItemId} UpdateItem={editItem} />
 				</div>
 				<Timeline
 					groups={groups}
