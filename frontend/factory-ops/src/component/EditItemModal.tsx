@@ -22,7 +22,6 @@ const EditItemModal: FC<EditItemProperties> = (props: EditItemProperties) => {
 	const {
 		handleSubmit,
 		register,
-		// formState: { errors }
 	} = useForm<EditItemForm>({
 		defaultValues: {
 			group: props.item?.group,
