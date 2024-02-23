@@ -26,6 +26,7 @@ const FactoryOpsTimeline = () => {
 		fetchData();
 	}, []);
 
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const handleItemMove = (itemId: number, dragTime: number, newGroupOrder: any) => {
 		const group = groups[newGroupOrder];
 		setItems(
