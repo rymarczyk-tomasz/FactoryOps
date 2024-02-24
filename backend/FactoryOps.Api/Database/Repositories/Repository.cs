@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 namespace FactoryOps.Api.Database.Repositories;
 public class Repository<T> : IRepository<T> where T : BaseEntity
 {
-
 	private readonly FactoryOpsContext context;
 	private readonly DbSet<T> entities;
 
@@ -15,22 +14,11 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
 		this.entities = this.context.Set<T>();
 	}
 
+	public async Task<T?> Get(int id) => await this.entities.SingleOrDefaultAsync(s => s.Id == id);
 
-	public async Task<T?> Get(int id)
-	{
-		return await this.entities.SingleOrDefaultAsync(s => s.Id == id);
-	}
+	public IAsyncEnumerable<T> GetAll() => this.entities.AsAsyncEnumerable();
 
-	public IAsyncEnumerable<T> GetAll()
-	{
-		return this.entities.AsAsyncEnumerable();
-	}
-
-
-	public IQueryable<T> GetAllQueryable()
-	{
-		return this.entities.AsQueryable();
-	}
+	public IQueryable<T> GetAllQueryable() => this.entities.AsQueryable();
 
 	public async Task Insert(T entity)
 	{
@@ -46,6 +34,7 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
 		this.context.Update(entity);
 		await this.context.SaveChangesAsync();
 	}
+
 	public async Task Delete(T entity)
 	{
 		ArgumentNullException.ThrowIfNull(entity);

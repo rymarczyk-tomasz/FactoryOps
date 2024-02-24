@@ -3,14 +3,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FactoryOps.Api.Database.Contexts;
 
-public class FactoryOpsContext : DbContext
+public class FactoryOpsContext(DbContextOptions<FactoryOpsContext> options) : DbContext(options)
 {
-	public FactoryOpsContext(DbContextOptions<FactoryOpsContext> options) : base(options)
-	{
-	}
-
 	public DbSet<Item> WorkItems { get; set; }
 	public DbSet<Groups> WorkingUnits { get; set; }
+	public DbSet<Programmer> Programmers { get; set; }
 
 	protected override void OnConfiguring(DbContextOptionsBuilder options)
 	{
