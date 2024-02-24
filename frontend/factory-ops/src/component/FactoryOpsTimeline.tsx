@@ -76,7 +76,7 @@ const FactoryOpsTimeline = () => {
 					canMove
 					canChangeGroup
 					minZoom={1000 * 60 * 60 * 24}
-					dragSnap={1000 * 60 * 60 * 8}
+					dragSnap={1000 * 60}
 					onItemMove={handleItemMove}>
 					<TimelineHeaders className="sticky">
 						<SidebarHeader>
