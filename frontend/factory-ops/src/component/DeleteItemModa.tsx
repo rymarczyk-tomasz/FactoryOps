@@ -4,8 +4,8 @@ import { Button } from 'react-bootstrap';
 
 interface DeleteItemProperties {
 	onDelete: () => void;
+	itemName: string;
 }
-
 const DeleteItemModal: FC<DeleteItemProperties> = (props: DeleteItemProperties) => {
 	const [showModal, setShowModal] = useState<boolean>(false);
 
@@ -25,7 +25,7 @@ const DeleteItemModal: FC<DeleteItemProperties> = (props: DeleteItemProperties) 
 				<Modal.Header closeButton>
 					<Modal.Title>Confirm Deletion</Modal.Title>
 				</Modal.Header>
-				<Modal.Body>Are you sure you want to delete this item?</Modal.Body>
+				<Modal.Body>Are you sure you want to delete {props.itemName} item?</Modal.Body>
 				<Modal.Footer>
 					<Button variant="secondary" onClick={handleClose}>
 						Cancel

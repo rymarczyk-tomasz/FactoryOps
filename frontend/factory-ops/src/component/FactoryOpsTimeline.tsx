@@ -63,7 +63,7 @@ const FactoryOpsTimeline = () => {
 				<div className="d-flex flex-row mb-3">
 					<AddNewItemModal nextId={items.length + 1} createNewItem={(item: Item) => setItems([...items, item])} />
 					<EditItemModal item={getItemById(selectedItemId)} UpdateItem={(item: Item) => setItems(items.map((i) => (i.id === item.id ? item : i)))} />
-					<DeleteItemModal onDelete={() => handleDeleteItem(selectedItemId!)} />
+					<DeleteItemModal onDelete={() => handleDeleteItem(selectedItemId!)} itemName={getItemById(selectedItemId)?.title || ''} />
 				</div>
 				<Timeline
 					groups={groups}
