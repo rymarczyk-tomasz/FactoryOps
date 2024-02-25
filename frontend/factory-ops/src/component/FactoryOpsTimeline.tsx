@@ -8,7 +8,7 @@ import { Group } from '../models/Group';
 import { GroupService, ItemService } from '../services/Services';
 import AddNewItemModal from './AddNewModal';
 import EditItemModal from './EditItemModal';
-import DeleteItemModal from './DeleteItemModa';
+import DeleteItemModal from './DeleteItemModal';
 
 const FactoryOpsTimeline = () => {
 	const [groups, setGroups] = useState<Group[]>([]);
