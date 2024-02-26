@@ -4,6 +4,7 @@ export interface Item {
 	title: string;
 	start_time: number;
 	end_time: number;
+	length: number;
 	canMove: boolean;
 	canResize: boolean;
 	canChangeGroup: boolean;

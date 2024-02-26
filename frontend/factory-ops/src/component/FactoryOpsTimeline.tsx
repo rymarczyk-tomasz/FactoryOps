@@ -1,18 +1,19 @@
+import React from 'react';
 import { useEffect, useState } from 'react';
 import Timeline, { TimelineMarkers } from 'react-calendar-timeline';
 import { TimelineHeaders, SidebarHeader, DateHeader, TodayMarker } from 'react-calendar-timeline';
 import 'react-calendar-timeline/lib/Timeline.css';
 import moment from 'moment';
-
 import { Item } from '../models/Item';
 import { Group } from '../models/Group';
 import { GroupService, ItemService } from '../services/Services';
 import AddNewItemModal from './AddNewModal';
-import React from 'react';
+import EditItemModal from './EditItemModal';
 
 const FactoryOpsTimeline = () => {
 	const [groups, setGroups] = useState<Group[]>([]);
 	const [items, setItems] = useState<Item[]>([]);
+	const [selectedItemId, setSelectedItem] = useState<Item | undefined>();
 
 	useEffect(() => {
 		async function fetchData() {
@@ -25,6 +26,7 @@ const FactoryOpsTimeline = () => {
 		fetchData();
 	}, []);
 
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const handleItemMove = (itemId: number, dragTime: number, newGroupOrder: any) => {
 		const group = groups[newGroupOrder];
 		setItems(
@@ -52,35 +54,50 @@ const FactoryOpsTimeline = () => {
 	// 	]);
 	// };
 
+	const onSelect = (itemId: number) => {
+		const selectedItem = getItemByItemId(itemId);
+		setSelectedItem(selectedItem);
+	};
+
+	const onDeselect = () => {
+		setSelectedItem(undefined);
+	};
+
 	const addNewItem = (item: Item) => {
-		console.log(item);
-		console.log('item', item.start_time);
-		console.log('date', Date.now());
-		// setItems([...items, {
-		// 	id: items.length,
-		// 	group: 0,
-		// 	title: item.title,
-		// 	start_time: item.start_time,
-		// 	end_time: item.end_time,
-		// 	canMove: item.canMove,
-		// 	canResize: item.canResize,
-		// 	canChangeGroup: item.canChangeGroup
-		// }]);
 		setItems([...items, item]);
+	};
+
+	const editItem = (item: Item) => {
+		setItems(
+			items.map((i: Item) => {
+				if (i.id === item.id) {
+					i = item;
+				}
+				return i;
+			})
+		);
+	};
+
+	const getItemByItemId = (itemId: number | undefined): Item | undefined => {
+		return items.find((item: Item) => item.id === itemId);
 	};
 
 	return (
 		<>
 			<div>
-				{/* <button onClick={addGroup}>Add group</button> */}
-				{/* <button onClick={testRequest}>Test request</button> */}
-				<AddNewItemModal nextId={items.length} createNewItem={addNewItem} />
+				<div className="d-flex flex-row mb-3">
+					<button>{selectedItemId?.id}</button>
+					<AddNewItemModal nextId={items.length + 1} createNewItem={addNewItem} />
+					<EditItemModal item={selectedItemId} UpdateItem={editItem} />
+				</div>
 				<Timeline
 					groups={groups}
 					items={items}
 					defaultTimeStart={moment().startOf('day').toDate()}
 					defaultTimeEnd={moment().startOf('day').add(1, 'day').toDate()}
 					// itemTouchSendsClick={false}
+					onItemSelect={onSelect}
+					onItemDeselect={onDeselect}
 					stackItems={true}
 					canMove={true}
 					canChangeGroup={true}
