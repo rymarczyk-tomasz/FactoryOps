@@ -1,8 +1,7 @@
-import { mixedObject } from '../data';
 import React from 'react';
-import { programmers } from '../data';
+import { mixedObject, programmers } from '../data';
 
-export default function ItemLists() {
+const ItemLists: React.FC = () => {
 	return (
 		<>
 			<table className="table">
@@ -16,12 +15,12 @@ export default function ItemLists() {
 					</tr>
 				</thead>
 				<tbody>
-					{mixedObject.map((item) => (
-						<tr key={item.id}>
+					{mixedObject.map((item, index) => (
+						<tr key={index}>
 							<td>{item.startDate}</td>
 							<td>{item.project}</td>
 							<td>{item.machine}</td>
-							<td>{item.machine_gropu}</td>
+							<td>{item.machine_group}</td>
 							<td>
 								<select>
 									<option>Select Programmer</option>
@@ -36,4 +35,6 @@ export default function ItemLists() {
 			</table>
 		</>
 	);
-}
+};
+
+export default ItemLists;
