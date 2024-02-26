@@ -9,4 +9,5 @@ public class Item : BaseEntity
 	public bool CanMove { get; set; }
 	public bool CanResize { get; set; }
 	public bool CanChangeGroup { get; set; }
+	public Programmer? Programmer { get; set; }
 }
