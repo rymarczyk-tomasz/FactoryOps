@@ -9,6 +9,9 @@ namespace FactoryOps.Api.Controllers;
 public class ProgrammesController(IRepository<Programmer> programmersRepository) : ControllerBase
 {
 	[HttpGet]
+	public ActionResult<IAsyncEnumerable<Programmer>> GetProgrammers() => Ok(programmersRepository.GetAll());
+
+	[HttpGet]
 	[Route("{id}")]
 	public async Task<ActionResult<Programmer>> GetProgrammer(int id) => Ok(await programmersRepository.Get(id));
 

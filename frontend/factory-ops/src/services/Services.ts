@@ -1,6 +1,7 @@
 import { Item } from '../models/Item';
 import axios from 'axios';
 import { Group } from '../models/Group';
+import { Programmer } from '../models/Programmer';
 
 export class ItemService {
 	static getAllItems = async (): Promise<Item[]> => {
@@ -26,5 +27,11 @@ export class GroupService {
 				]);
 			}, 1000);
 		});
+	};
+}
+
+export class ProgrammerService {
+	public static getAllProgrammers = async (): Promise<Programmer[]> => {
+		return axios.get<Programmer[]>('https://localhost:5005/programmers/').then((x) => x.data);
 	};
 }
