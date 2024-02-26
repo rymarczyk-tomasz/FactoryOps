@@ -1,4 +1,4 @@
-export interface Programmer {
+export type Programmer = {
 	id: number;
 	name: string;
 	surname: string;

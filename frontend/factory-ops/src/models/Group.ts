@@ -1,4 +1,4 @@
-export interface Group {
+export type Group = {
 	id: number;
 	title: React.ReactNode;
 	rightTitle?: React.ReactNode | undefined;

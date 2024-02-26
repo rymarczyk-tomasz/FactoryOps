@@ -1,6 +1,6 @@
 import { Programmer } from './Programmer';
 
-export interface Item {
+export type Item = {
 	id: number;
 	group: number;
 	title: string;
@@ -10,5 +10,5 @@ export interface Item {
 	canMove: boolean;
 	canResize: boolean;
 	canChangeGroup: boolean;
-	programmer: Programmer;
+	programmer?: Programmer;
 }
