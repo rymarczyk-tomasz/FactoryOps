@@ -1,18 +1,9 @@
-import { Item } from '../models/Item';
 import axios from 'axios';
 import { Group } from '../models/Group';
-import { Programmer } from '../models/Programmer';
 
-export class ItemService {
-	static getAllItems = async (): Promise<Item[]> => {
-		const url = 'https://localhost:5005/items/';
-		const result = await axios.get<Item[]>(url).then((x) => x.data);
-		return result;
-	};
-}
 
 export class GroupService {
-	public static getAllGroups = (): Promise<Group[]> => {
+	public static getAllGroups = async (): Promise<Group[]> => {
 		return axios.get<Group[]>('').then((x) => x.data);
 	};
 	public static getAllGroupsMock = (): Promise<Group[]> => {
@@ -27,11 +18,5 @@ export class GroupService {
 				]);
 			}, 1000);
 		});
-	};
-}
-
-export class ProgrammerService {
-	public static getAllProgrammers = async (): Promise<Programmer[]> => {
-		return axios.get<Programmer[]>('https://localhost:5005/programmers/').then((x) => x.data);
 	};
 }
