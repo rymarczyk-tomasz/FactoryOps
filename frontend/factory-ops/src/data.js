@@ -11,7 +11,7 @@ export const mockedData  = [
 		project: 'HPC',
 		machine: 'HSTM 502',
 		machine_group: 'HSTM 500',
-		programmer: ''
+		programmer: {id: 2, name: 'John', surname: 'Doe'}
 	},
 	{
 		startDate: '12.12.2024',

@@ -38,7 +38,7 @@ export default function ItemLists() {
 								<select>
 									<option>Select Programmer</option>
 									{programmers.map((programmer, index) => (
-										<option key={index}>{programmer.name} {programmer.surname}</option>
+										<option key={index} selected={programmer.id === item.programmer.id} >{programmer.name} {programmer.surname}</option>
 									))}
 								</select>
 							</td>
