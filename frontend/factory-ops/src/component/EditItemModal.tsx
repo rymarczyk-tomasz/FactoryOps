@@ -7,7 +7,7 @@ import { Button, ModalHeader, } from 'react-bootstrap';
 
 interface EditItemProperties {
 	item: Item | undefined;
-	updateItem: (item: Item) => void;
+	UpdateItem: (item: Item) => void;
 }
 
 interface EditItemForm {
@@ -46,7 +46,7 @@ const EditItemModal: FC<EditItemProperties> = (props: EditItemProperties) => {
 			canResize: false,
 			canChangeGroup: true
 		};
-		props.updateItem(item);
+		props.UpdateItem(item);
 		handleClose();
 	};
 

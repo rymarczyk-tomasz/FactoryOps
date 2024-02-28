@@ -11,5 +11,9 @@
 		"editor.defaultFormatter": "esbenp.prettier-vscode"
 	},
 
-	"dotnet.defaultSolution": "backend/FactoryOps.sln"
+	"dotnet.defaultSolution": "backend/FactoryOps.sln",
+	"cSpell.words": [
+		"HSTM",
+		"Manzanillo"
+	]
 }
