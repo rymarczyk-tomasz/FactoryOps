@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { ProgrammerService } from '../services/ProgrammerService';
 import { mockedData } from '../data';
+import { ItemListModel } from '../services/ItemListModel';
+import { Programmer } from '../models/Programmer';
 
-export default function ItemLists() {
-	const [programmers, setProgrammers] = useState([]);
-	const [mockData, setMockData] = useState([]);
+const ItemLists: React.FC = () => {
+	const [programmers, setProgrammers] = useState<Programmer[]>([]);
+	const [mockData, setMockData] = useState<ItemListModel[]>([]);
 
 	useEffect(() => {
 		async function fetchData(){
@@ -28,7 +30,7 @@ export default function ItemLists() {
 					</tr>
 				</thead>
 				<tbody>
-					{mockData.map((item) => (
+					{ mockData.map((item) => (
 						<tr key={item.id}>
 							<td>{item.startDate}</td>
 							<td>{item.project}</td>
@@ -38,7 +40,7 @@ export default function ItemLists() {
 								<select>
 									<option>Select Programmer</option>
 									{programmers.map((programmer, index) => (
-										<option key={index} selected={programmer.id === item.programmer.id} >{programmer.name} {programmer.surname}</option>
+										<option key={index} selected={programmer.id === item.programmer?.id} >{programmer.name} {programmer.surname}</option>
 									))}
 								</select>
 							</td>
@@ -48,4 +50,6 @@ export default function ItemLists() {
 			</table>
 		</>
 	);
-}
+};
+
+export default ItemLists;

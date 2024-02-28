@@ -1,7 +1,11 @@
-import React from 'react';
+import React, { FC } from 'react';
 
-export default function ContentPicker({ onViewChange }) {
-	const handleButtonClick = (view) => {
+interface ContentPickerProps {
+	onViewChange: (view: string) => void;
+}
+
+const ContentPicker: FC<ContentPickerProps> = ({ onViewChange }) => {
+	const handleButtonClick = (view: string) => {
 		onViewChange(view);
 	};
 
@@ -15,4 +19,6 @@ export default function ContentPicker({ onViewChange }) {
 			</button>
 		</div>
 	);
-}
+};
+
+export default ContentPicker;

@@ -5,9 +5,9 @@ import ContentPicker from './component/ContentPicker';
 const FactoryOpsTimeline = React.lazy(() => import('./component/FactoryOpsTimeline'));
 
 function App() {
-	const [view, setView] = useState('PLAN');
+	const [view, setView] = useState<string>('PLAN');
 
-	const handleViewChange = (view) => {
+	const handleViewChange = (view: string) => {
 		setView(view);
 	};
 

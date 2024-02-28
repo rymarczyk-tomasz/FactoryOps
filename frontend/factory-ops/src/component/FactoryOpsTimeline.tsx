@@ -1,5 +1,4 @@
-import React from 'react';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Timeline, { TimelineMarkers } from 'react-calendar-timeline';
 import { TimelineHeaders, SidebarHeader, DateHeader, TodayMarker } from 'react-calendar-timeline';
 import 'react-calendar-timeline/lib/Timeline.css';
@@ -10,11 +9,12 @@ import { ItemService } from '../services/ItemService';
 import { GroupService } from '../services/GroupService';
 import AddNewItemModal from './AddNewModal';
 import EditItemModal from './EditItemModal';
+import DeleteItemModal from './DeleteItemModal';
 
 const FactoryOpsTimeline = () => {
 	const [groups, setGroups] = useState<Group[]>([]);
 	const [items, setItems] = useState<Item[]>([]);
-	const [selectedItemId, setSelectedItem] = useState<Item | undefined>();
+	const [selectedItem, setSelectedItem] = useState<Item | undefined>();
 
 	useEffect(() => {
 		async function fetchData() {
@@ -30,11 +30,11 @@ const FactoryOpsTimeline = () => {
 	const handleItemMove = (itemId: number, dragTime: number, newGroupOrder: number) => {
 		const group = groups[newGroupOrder];
 		setItems(
-			items.map((item: Item) => {
+			items.map((item) => {
 				if (item.id === itemId) {
-					const dur = item.end_time - item.start_time;
+					const duration = item.end_time - item.start_time;
 					item.start_time = dragTime;
-					item.end_time = dragTime + dur;
+					item.end_time = dragTime + duration;
 					item.group = group.id;
 				}
 				return item;
@@ -42,67 +42,42 @@ const FactoryOpsTimeline = () => {
 		);
 	};
 
-	// const addGroup = () => {
-	// 	setGroups([
-	// 		...groups,
-	// 		{
-	// 			id: groups.length,
-	// 			title: 'group ' + groups.length,
-	// 			rightTitle: 'right_group_' + groups.length,
-	// 			stackItems: true
-	// 		}
-	// 	]);
-	// };
-
-	const onSelect = (itemId: number) => {
-		const selectedItem = getItemByItemId(itemId);
-		setSelectedItem(selectedItem);
+	const onSelectItem = (itemId: number) => {
+		setSelectedItem(getItemById(itemId));
 	};
 
-	const onDeselect = () => {
+	const onDeselectItem = () => {
 		setSelectedItem(undefined);
 	};
 
-	const addNewItem = (item: Item) => {
-		setItems([...items, item]);
+	const handleDeleteItem = (item: Item) => {
+		setItems(items.filter((i) => i.id !== item.id));
 	};
 
-	const editItem = (item: Item) => {
-		setItems(
-			items.map((i: Item) => {
-				if (i.id === item.id) {
-					i = item;
-				}
-				return i;
-			})
-		);
-	};
-
-	const getItemByItemId = (itemId: number | undefined): Item | undefined => {
-		return items.find((item: Item) => item.id === itemId);
+	const getItemById = (itemId: number | undefined): Item | undefined => {
+		return items.find((item) => item.id === itemId);
 	};
 
 	return (
 		<>
 			<div>
 				<div className="d-flex flex-row mb-3">
-					<button>{selectedItemId?.id}</button>
-					<AddNewItemModal nextId={items.length + 1} createNewItem={addNewItem} />
-					<EditItemModal item={selectedItemId} updateItem={editItem} />
+					<AddNewItemModal nextId={items.length + 1} createNewItem={(item: Item) => setItems([...items, item])} />
+					<EditItemModal item={selectedItem} UpdateItem={(item: Item) => setItems(items.map((i) => (i.id === item.id ? item : i)))} />
+					<DeleteItemModal onDelete={() => handleDeleteItem(selectedItem!)} itemName={selectedItem?.title || ''} />
 				</div>
 				<Timeline
 					groups={groups}
 					items={items}
 					defaultTimeStart={moment().startOf('day').toDate()}
 					defaultTimeEnd={moment().startOf('day').add(1, 'day').toDate()}
-					// itemTouchSendsClick={false}
-					onItemSelect={onSelect}
-					onItemDeselect={onDeselect}
-					stackItems={true}
-					canMove={true}
-					canChangeGroup={true}
+					onItemSelect={onSelectItem}
+					onItemDeselect={onDeselectItem}
+					stackItems
+					canMove
+					canChangeGroup
 					minZoom={1000 * 60 * 60 * 24}
-					dragSnap={1000 * 60 * 60 * 8}
+					dragSnap={1000 * 60 * 60}
 					onItemMove={handleItemMove}>
 					<TimelineHeaders className="sticky">
 						<SidebarHeader>
