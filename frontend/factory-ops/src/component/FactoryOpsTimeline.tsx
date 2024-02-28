@@ -6,7 +6,8 @@ import 'react-calendar-timeline/lib/Timeline.css';
 import moment from 'moment';
 import { Item } from '../models/Item';
 import { Group } from '../models/Group';
-import { GroupService, ItemService } from '../services/Services';
+import { ItemService } from '../services/ItemService';
+import { GroupService } from '../services/GroupService';
 import AddNewItemModal from './AddNewModal';
 import EditItemModal from './EditItemModal';
 
@@ -87,7 +88,7 @@ const FactoryOpsTimeline = () => {
 				<div className="d-flex flex-row mb-3">
 					<button>{selectedItemId?.id}</button>
 					<AddNewItemModal nextId={items.length + 1} createNewItem={addNewItem} />
-					<EditItemModal item={selectedItemId} UpdateItem={editItem} />
+					<EditItemModal item={selectedItemId} updateItem={editItem} />
 				</div>
 				<Timeline
 					groups={groups}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ProgrammerService } from '../services/Services';
+import { ProgrammerService } from '../services/ProgrammerService';
 import { mockedData } from '../data';
 
 export default function ItemLists() {
