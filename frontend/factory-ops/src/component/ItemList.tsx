@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ProgrammerService } from '../services/ProgrammerService';
 import { mockedData } from '../data';
-import { ItemListModel } from '../services/ItemListModel';
+import { ItemListModel } from '../models/ItemListModel';
 import { Programmer } from '../models/Programmer';
 
 const ItemLists: React.FC = () => {

@@ -1,4 +1,4 @@
-import { Programmer } from '../models/Programmer';
+import { Programmer } from './Programmer';
 
 
 export interface ItemListModel {
