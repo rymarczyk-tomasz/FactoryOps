@@ -59,7 +59,7 @@ namespace FactoryOps.Api.Migrations
                     Deadline = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     PlanedStart = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     WorkingUnitId = table.Column<int>(type: "integer", nullable: true),
-                    CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    CreatedDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "getUtcDate()")
                 },
                 constraints: table =>
                 {
