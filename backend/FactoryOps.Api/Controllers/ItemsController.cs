@@ -16,7 +16,7 @@ public class WorkItemsController(IRepository<Item> itemsRepository) : Controller
 	public async Task<ActionResult<Item>> GetWorkItem(int id) => Ok(await itemsRepository.Get(id));
 
 	[HttpPost]
-	[Route("create")]
+	[Route("insertOrUpdate")]
 	public async Task<IActionResult> CreateWorkItem([FromBody] Item workItem)
 	{
 		await itemsRepository.InsertOrUpdate(workItem);
@@ -24,7 +24,7 @@ public class WorkItemsController(IRepository<Item> itemsRepository) : Controller
 	}
 
 	[HttpDelete]
-	[Route("{id}/delete")]
+	[Route("delete")]
 	public async Task<IActionResult> DeleteWorkItemById([FromBody] Item item)
 	{
 		await itemsRepository.Delete(item);

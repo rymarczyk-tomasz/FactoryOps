@@ -16,7 +16,7 @@ public class WorkingUnitsController(IRepository<Groups> workingUnitsRepository) 
 	public async Task<ActionResult<Groups>> GetWorkItem(int id) => Ok(await workingUnitsRepository.Get(id));
 
 	[HttpPost]
-	[Route("create")]
+	[Route("insertOrUpdate")]
 	public async Task<IActionResult> CreateWorkItem([FromBody] Groups workItem)
 	{
 		await workingUnitsRepository.InsertOrUpdate(workItem);
@@ -24,7 +24,7 @@ public class WorkingUnitsController(IRepository<Groups> workingUnitsRepository) 
 	}
 
 	[HttpDelete]
-	[Route("{id}/delete")]
+	[Route("/delete")]
 	public async Task<IActionResult> DeleteWorkItemById([FromBody] Groups item)
 	{
 		await workingUnitsRepository.Delete(item);
