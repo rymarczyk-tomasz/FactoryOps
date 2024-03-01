@@ -7,6 +7,7 @@ public class FactoryOpsContext(DbContextOptions<FactoryOpsContext> options) : Db
 {
 	public DbSet<Item> WorkItems { get; set; }
 	public DbSet<Groups> WorkingUnits { get; set; }
+	public DbSet<Programmer> Programmers { get; set; }
 
 	protected override void OnConfiguring(DbContextOptionsBuilder options)
 	{

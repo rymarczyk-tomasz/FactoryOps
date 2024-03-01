@@ -50,7 +50,8 @@ const AddNewItemModal: FC<AddNewItemProperties> = (props: AddNewItemProperties) 
 			length: data.length,
 			canMove: true,
 			canResize: false,
-			canChangeGroup: true
+			canChangeGroup: true,
+			programmer: undefined,
 		};
 		props.createNewItem(item);
 		handleClose();

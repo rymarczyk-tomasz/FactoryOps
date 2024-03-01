@@ -1,17 +1,9 @@
-import { Item } from '../models/Item';
 import axios from 'axios';
 import { Group } from '../models/Group';
 
-export class ItemService {
-	static getAllItems = async (): Promise<Item[]> => {
-		const url = 'https://localhost:5005/items/';
-		const result = await axios.get<Item[]>(url).then((x) => x.data);
-		return result;
-	};
-}
 
 export class GroupService {
-	public static getAllGroups = (): Promise<Group[]> => {
+	public static getAllGroups = async (): Promise<Group[]> => {
 		return axios.get<Group[]>('').then((x) => x.data);
 	};
 	public static getAllGroupsMock = (): Promise<Group[]> => {

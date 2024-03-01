@@ -5,7 +5,8 @@ import 'react-calendar-timeline/lib/Timeline.css';
 import moment from 'moment';
 import { Item } from '../models/Item';
 import { Group } from '../models/Group';
-import { GroupService, ItemService } from '../services/Services';
+import { ItemService } from '../services/ItemService';
+import { GroupService } from '../services/GroupService';
 import AddNewItemModal from './AddNewModal';
 import EditItemModal from './EditItemModal';
 import DeleteItemModal from './DeleteItemModal';
@@ -13,7 +14,7 @@ import DeleteItemModal from './DeleteItemModal';
 const FactoryOpsTimeline = () => {
 	const [groups, setGroups] = useState<Group[]>([]);
 	const [items, setItems] = useState<Item[]>([]);
-	const [selectedItemId, setSelectedItem] = useState<number | undefined>();
+	const [selectedItem, setSelectedItem] = useState<Item | undefined>();
 
 	useEffect(() => {
 		async function fetchData() {
@@ -42,15 +43,15 @@ const FactoryOpsTimeline = () => {
 	};
 
 	const onSelectItem = (itemId: number) => {
-		setSelectedItem(itemId);
+		setSelectedItem(getItemById(itemId));
 	};
 
 	const onDeselectItem = () => {
 		setSelectedItem(undefined);
 	};
 
-	const handleDeleteItem = (itemId: number) => {
-		setItems(items.filter((item) => item.id !== itemId));
+	const handleDeleteItem = (item: Item) => {
+		setItems(items.filter((i) => i.id !== item.id));
 	};
 
 	const getItemById = (itemId: number | undefined): Item | undefined => {
@@ -62,8 +63,8 @@ const FactoryOpsTimeline = () => {
 			<div>
 				<div className="d-flex flex-row mb-3">
 					<AddNewItemModal nextId={items.length + 1} createNewItem={(item: Item) => setItems([...items, item])} />
-					<EditItemModal item={getItemById(selectedItemId)} UpdateItem={(item: Item) => setItems(items.map((i) => (i.id === item.id ? item : i)))} />
-					<DeleteItemModal onDelete={() => handleDeleteItem(selectedItemId!)} itemName={getItemById(selectedItemId)?.title || ''} />
+					<EditItemModal item={selectedItem} UpdateItem={(item: Item) => setItems(items.map((i) => (i.id === item.id ? item : i)))} />
+					<DeleteItemModal onDelete={() => handleDeleteItem(selectedItem!)} itemName={selectedItem?.title || ''} />
 				</div>
 				<Timeline
 					groups={groups}

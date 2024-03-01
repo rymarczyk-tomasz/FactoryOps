@@ -1,7 +1,22 @@
-import React from 'react';
-import { mixedObject, programmers } from '../data';
+import React, { useEffect, useState } from 'react';
+import { ProgrammerService } from '../services/ProgrammerService';
+import { mockedData } from '../data';
+import { ItemListModel } from '../models/ItemListModel';
+import { Programmer } from '../models/Programmer';
 
 const ItemLists: React.FC = () => {
+	const [programmers, setProgrammers] = useState<Programmer[]>([]);
+	const [mockData, setMockData] = useState<ItemListModel[]>([]);
+
+	useEffect(() => {
+		async function fetchData(){
+			const programmers = await ProgrammerService.getAllProgrammers();
+			setProgrammers(programmers);
+			setMockData(mockedData);
+		}
+		fetchData();
+	}, []);
+
 	return (
 		<>
 			<table className="table">
@@ -15,8 +30,8 @@ const ItemLists: React.FC = () => {
 					</tr>
 				</thead>
 				<tbody>
-					{mixedObject.map((item, index) => (
-						<tr key={index}>
+					{ mockData.map((item) => (
+						<tr key={item.id}>
 							<td>{item.startDate}</td>
 							<td>{item.project}</td>
 							<td>{item.machine}</td>
@@ -25,7 +40,7 @@ const ItemLists: React.FC = () => {
 								<select>
 									<option>Select Programmer</option>
 									{programmers.map((programmer, index) => (
-										<option key={index}>{programmer}</option>
+										<option key={index} selected={programmer.id === item.programmer?.id} >{programmer.name} {programmer.surname}</option>
 									))}
 								</select>
 							</td>

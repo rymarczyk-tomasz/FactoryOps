@@ -3,6 +3,7 @@ using System;
 using FactoryOps.Api.Database.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FactoryOps.Api.Migrations
 {
     [DbContext(typeof(FactoryOpsContext))]
-    partial class FactoryOpsContextModelSnapshot : ModelSnapshot
+    [Migration("20240224001216_ProgrammersEndpointData")]
+    partial class ProgrammersEndpointData
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -31,7 +34,6 @@ namespace FactoryOps.Api.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedDate")
-                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("RightTitle")
@@ -70,15 +72,12 @@ namespace FactoryOps.Api.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<DateTime>("CreatedDate")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("now()");
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("EndTime")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Group")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Length");
-                    b.Property<int?>("ProgrammerId")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("StartTime")
@@ -89,9 +88,6 @@ namespace FactoryOps.Api.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
-
-                    b.ToTable("WorkItems", (string)null);
-                    b.HasIndex("ProgrammerId");
 
                     b.ToTable("WorkItems");
                 });
@@ -111,22 +107,9 @@ namespace FactoryOps.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("Surname")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
                     b.ToTable("Programmers");
-                });
-
-            modelBuilder.Entity("FactoryOps.Api.Database.Models.Item", b =>
-                {
-                    b.HasOne("FactoryOps.Api.Database.Models.Programmer", "Programmer")
-                        .WithMany()
-                        .HasForeignKey("ProgrammerId");
-
-                    b.Navigation("Programmer");
                 });
 #pragma warning restore 612, 618
         }
