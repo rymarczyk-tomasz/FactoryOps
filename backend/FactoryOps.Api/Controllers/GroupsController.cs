@@ -19,15 +19,7 @@ public class WorkingUnitsController(IRepository<Groups> workingUnitsRepository) 
 	[Route("create")]
 	public async Task<IActionResult> CreateWorkItem([FromBody] Groups workItem)
 	{
-		await workingUnitsRepository.Insert(workItem);
-		return Ok();
-	}
-
-	[HttpPatch]
-	[Route("{id}/update")]
-	public async Task<IActionResult> UpdateWorkItemById([FromBody] Groups workItem)
-	{
-		await workingUnitsRepository.Update(workItem);
+		await workingUnitsRepository.InsertOrUpdate(workItem);
 		return Ok();
 	}
 

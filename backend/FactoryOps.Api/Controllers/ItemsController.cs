@@ -19,15 +19,7 @@ public class WorkItemsController(IRepository<Item> itemsRepository) : Controller
 	[Route("create")]
 	public async Task<IActionResult> CreateWorkItem([FromBody] Item workItem)
 	{
-		await itemsRepository.Insert(workItem);
-		return Ok();
-	}
-
-	[HttpPatch]
-	[Route("{id}/update")]
-	public async Task<IActionResult> UpdateWorkItemById([FromBody] Item workItem)
-	{
-		await itemsRepository.Update(workItem);
+		await itemsRepository.InsertOrUpdate(workItem);
 		return Ok();
 	}
 

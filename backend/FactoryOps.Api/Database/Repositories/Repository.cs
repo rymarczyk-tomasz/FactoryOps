@@ -32,20 +32,15 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
 		return this.entities.AsQueryable();
 	}
 
-	public async Task Insert(T entity)
+	public async Task InsertOrUpdate(T entity)
 	{
 		ArgumentNullException.ThrowIfNull(entity);
 
-		this.entities.Add(entity);
+		this.context.Entry(entity).State = entity.Id == 0 ? EntityState.Added : EntityState.Modified;
+
 		await this.context.SaveChangesAsync();
 	}
 
-	public async Task Update(T entity)
-	{
-		ArgumentNullException.ThrowIfNull(entity);
-		this.context.Update(entity);
-		await this.context.SaveChangesAsync();
-	}
 	public async Task Delete(T entity)
 	{
 		ArgumentNullException.ThrowIfNull(entity);
