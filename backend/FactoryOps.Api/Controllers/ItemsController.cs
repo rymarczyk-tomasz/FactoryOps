@@ -9,15 +9,15 @@ namespace FactoryOps.Api.Controllers;
 public class WorkItemsController(IRepository<Item> itemsRepository) : ControllerBase
 {
 	[HttpGet]
-	public ActionResult<IAsyncEnumerable<Item>> GetWorkItems() => Ok(itemsRepository.GetAll());
+	public ActionResult<IAsyncEnumerable<Item>> GetAll() => Ok(itemsRepository.GetAll());
 	
 	[HttpGet]
 	[Route("{id}")]
-	public async Task<ActionResult<Item>> GetWorkItem(int id) => Ok(await itemsRepository.Get(id));
+	public async Task<ActionResult<Item>> Get(int id) => Ok(await itemsRepository.Get(id));
 
 	[HttpPost]
 	[Route("insertOrUpdate")]
-	public async Task<IActionResult> CreateWorkItem([FromBody] Item workItem)
+	public async Task<IActionResult> InsertOrUpdate([FromBody] Item workItem)
 	{
 		await itemsRepository.InsertOrUpdate(workItem);
 		return Ok();
@@ -25,7 +25,7 @@ public class WorkItemsController(IRepository<Item> itemsRepository) : Controller
 
 	[HttpDelete]
 	[Route("delete")]
-	public async Task<IActionResult> DeleteWorkItemById([FromBody] Item item)
+	public async Task<IActionResult> Delete([FromBody] Item item)
 	{
 		await itemsRepository.Delete(item);
 		return Ok();

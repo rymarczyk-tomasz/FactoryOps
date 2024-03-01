@@ -9,23 +9,23 @@ namespace FactoryOps.Api.Controllers;
 public class WorkingUnitsController(IRepository<Groups> workingUnitsRepository) : ControllerBase
 {
 	[HttpGet]
-	public ActionResult<IAsyncEnumerable<Groups>> GetWorkItems() => Ok(workingUnitsRepository.GetAll());
+	public ActionResult<IAsyncEnumerable<Groups>> GetAll() => Ok(workingUnitsRepository.GetAll());
 
 	[HttpGet]
 	[Route("{id}")]
-	public async Task<ActionResult<Groups>> GetWorkItem(int id) => Ok(await workingUnitsRepository.Get(id));
+	public async Task<ActionResult<Groups>> Get(int id) => Ok(await workingUnitsRepository.Get(id));
 
 	[HttpPost]
 	[Route("insertOrUpdate")]
-	public async Task<IActionResult> CreateWorkItem([FromBody] Groups workItem)
+	public async Task<IActionResult> InsertOrUpdate([FromBody] Groups workItem)
 	{
 		await workingUnitsRepository.InsertOrUpdate(workItem);
 		return Ok();
 	}
 
 	[HttpDelete]
-	[Route("/delete")]
-	public async Task<IActionResult> DeleteWorkItemById([FromBody] Groups item)
+	[Route("delete")]
+	public async Task<IActionResult> Delete([FromBody] Groups item)
 	{
 		await workingUnitsRepository.Delete(item);
 		return Ok();

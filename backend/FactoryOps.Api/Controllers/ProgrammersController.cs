@@ -9,32 +9,24 @@ namespace FactoryOps.Api.Controllers;
 public class ProgrammesController(IRepository<Programmer> programmersRepository) : ControllerBase
 {
 	[HttpGet]
-	public ActionResult<IAsyncEnumerable<Programmer>> GetProgrammers() => Ok(programmersRepository.GetAll());
+	public ActionResult<IAsyncEnumerable<Programmer>> GetAll() => Ok(programmersRepository.GetAll());
 
 	[HttpGet]
 	[Route("{id}")]
-	public async Task<ActionResult<Programmer>> GetProgrammer(int id) => Ok(await programmersRepository.Get(id));
+	public async Task<ActionResult<Programmer>> Get(int id) => Ok(await programmersRepository.Get(id));
 
 	
 	[HttpPost]
-	[Route("create")]
-	public async Task<IActionResult> CreateWorkItem([FromBody] Programmer programmer)
+	[Route("insertOrUpdate")]
+	public async Task<IActionResult> InsertOrUpdate ([FromBody] Programmer programmer)
 	{
-		await programmersRepository.Insert(programmer);
-		return Ok();
-	}
-
-	[HttpPatch]
-	[Route("{id}/update")]
-	public async Task<IActionResult> UpdateWorkItemById([FromBody] Programmer programmer)
-	{
-		await programmersRepository.Update(programmer);
+		await programmersRepository.InsertOrUpdate(programmer);
 		return Ok();
 	}
 
 	[HttpDelete]
-	[Route("{id}/delete")]
-	public async Task<IActionResult> DeleteWorkItemById([FromBody] Programmer programmer)
+	[Route("delete")]
+	public async Task<IActionResult> Delete([FromBody] Programmer programmer)
 	{
 		await programmersRepository.Delete(programmer);
 		return Ok();
