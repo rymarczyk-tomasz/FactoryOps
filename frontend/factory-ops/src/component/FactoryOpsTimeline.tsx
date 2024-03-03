@@ -10,6 +10,8 @@ import { GroupService } from '../services/GroupService';
 import AddNewItemModal from './AddNewModal';
 import EditItemModal from './EditItemModal';
 import DeleteItemModal from './DeleteItemModal';
+import { CreateItem } from '../models/CreateItemModel';
+import { ItemDto } from '../models/ItemDto';
 
 const FactoryOpsTimeline = () => {
 	const [groups, setGroups] = useState<Group[]>([]);
@@ -18,9 +20,13 @@ const FactoryOpsTimeline = () => {
 
 	useEffect(() => {
 		async function fetchData() {
-			const items = await ItemService.getAllItems();
+			const items = (await ItemService.getAll()).map((item) =>{
+				console.log('itemDto', item);
+				return mapItemDtoToItem(item);
+			});
+			console.log('items', items);
 			setItems(items);
-			const groups = await GroupService.getAllGroupsMock();
+			const groups = await GroupService.getAllGroups();
 			setGroups(groups);
 		}
 
@@ -50,6 +56,11 @@ const FactoryOpsTimeline = () => {
 		setSelectedItem(undefined);
 	};
 
+	const handleAddNewItem = async (createItem: CreateItem) => {
+		const newItem = mapItemDtoToItem(await ItemService.create(createItem));
+		setItems([...items, newItem]);
+	};
+
 	const handleDeleteItem = (item: Item) => {
 		setItems(items.filter((i) => i.id !== item.id));
 	};
@@ -58,11 +69,27 @@ const FactoryOpsTimeline = () => {
 		return items.find((item) => item.id === itemId);
 	};
 
+	function mapItemDtoToItem(item: ItemDto): Item {
+		const newItem = {
+			id: item.id,
+			group: item.group,
+			title: item.title,
+			start_time: new Date(item.startTime).valueOf(),
+			end_time: new Date(item.startTime).valueOf() + (item.length * 60 * 60 * 1000),
+			length: item.length,
+			canMove: true,
+			canResize: true,
+			canChangeGroup: true,
+			programmer: item.programmer
+		};
+		return newItem;
+	}
+
 	return (
 		<>
 			<div>
 				<div className="d-flex flex-row mb-3">
-					<AddNewItemModal nextId={items.length + 1} createNewItem={(item: Item) => setItems([...items, item])} />
+					<AddNewItemModal createNewItem={handleAddNewItem} />
 					<EditItemModal item={selectedItem} UpdateItem={(item: Item) => setItems(items.map((i) => (i.id === item.id ? item : i)))} />
 					<DeleteItemModal onDelete={() => handleDeleteItem(selectedItem!)} itemName={selectedItem?.title || ''} />
 				</div>
@@ -73,11 +100,13 @@ const FactoryOpsTimeline = () => {
 					defaultTimeEnd={moment().startOf('day').add(1, 'day').toDate()}
 					onItemSelect={onSelectItem}
 					onItemDeselect={onDeselectItem}
-					stackItems
-					canMove
-					canChangeGroup
+					stackItems={true}
+					canMove={true}
+					canChangeGroup={true}
 					minZoom={1000 * 60 * 60 * 24}
-					dragSnap={1000 * 60 * 60}
+					dragSnap={1000 * 60 * 60  * 24}
+					itemHeightRatio={0.75}
+					lineHeight={50}
 					onItemMove={handleItemMove}>
 					<TimelineHeaders className="sticky">
 						<SidebarHeader>

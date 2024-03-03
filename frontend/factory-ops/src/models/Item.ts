@@ -1,6 +1,6 @@
 import { Programmer } from './Programmer';
 
-export type Item = {
+export interface Item {
 	id: number;
 	group: number;
 	title: string;

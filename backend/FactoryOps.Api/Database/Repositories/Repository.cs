@@ -16,17 +16,15 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
 
 	public async Task<T?> Get(int id) => await this.entities.SingleOrDefaultAsync(s => s.Id == id);
 
-	public IAsyncEnumerable<T> GetAll() => this.entities.AsAsyncEnumerable();
+	public IQueryable<T> GetAll() => this.entities.AsQueryable();
 
-	public IQueryable<T> GetAllQueryable() => this.entities.AsQueryable();
-
-	public async Task InsertOrUpdate(T entity)
+	public async Task<T?> InsertOrUpdate(T entity)
 	{
 		ArgumentNullException.ThrowIfNull(entity);
 
 		this.context.Entry(entity).State = entity.Id == 0 ? EntityState.Added : EntityState.Modified;
-
 		await this.context.SaveChangesAsync();
+		return this.context.Entry(entity).Entity;
 	}
 
 	public async Task Delete(T entity)

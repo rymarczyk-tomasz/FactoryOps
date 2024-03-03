@@ -16,5 +16,7 @@ public class FactoryOpsContext(DbContextOptions<FactoryOpsContext> options) : Db
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
 		modelBuilder.Entity<Item>().ToTable("WorkItems").Property(p => p.CreatedDate).HasDefaultValueSql("now()");
+		modelBuilder.Entity<Groups>().ToTable("WorkingUnits").Property(p => p.CreatedDate).HasDefaultValueSql("now()");
+		modelBuilder.Entity<Programmer>().ToTable("Programmers").Property(p => p.CreatedDate).HasDefaultValueSql("now()");
 	}
 }
