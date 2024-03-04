@@ -1,3 +1,5 @@
+import { Programmer } from './Programmer';
+
 export interface Item {
 	id: number;
 	group: number;
@@ -8,4 +10,5 @@ export interface Item {
 	canMove: boolean;
 	canResize: boolean;
 	canChangeGroup: boolean;
+	programmer?: Programmer;
 }

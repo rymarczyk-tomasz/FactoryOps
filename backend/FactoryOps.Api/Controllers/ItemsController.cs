@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using FactoryOps.Api.Database.Models;
+using FactoryOps.Api.Database.Models.Frontend;
 using FactoryOps.Api.Database.Repositories;
 
 namespace FactoryOps.Api.Controllers;
@@ -9,31 +10,42 @@ namespace FactoryOps.Api.Controllers;
 public class WorkItemsController(IRepository<Item> itemsRepository) : ControllerBase
 {
 	[HttpGet]
-	public ActionResult<IAsyncEnumerable<Item>> GetWorkItems() => Ok(itemsRepository.GetAll());
-	
-	[HttpGet]
-	[Route("{id}")]
-	public async Task<ActionResult<Item>> GetWorkItem(int id) => Ok(await itemsRepository.Get(id));
-
-	[HttpPost]
-	[Route("create")]
-	public async Task<IActionResult> CreateWorkItem([FromBody] Item workItem)
+	public ActionResult<IAsyncEnumerable<ItemDto>> GetAll()
 	{
-		await itemsRepository.Insert(workItem);
-		return Ok();
+		return Ok(itemsRepository.GetAll()
+			.Select(item => new ItemDto(
+				item.Id,
+				item.Group,
+				item.Title,
+				item.StartTime.ToString("yyyy-MM-dd:HH:mm:ss"),
+				item.Length,
+				item.Programmer)));
 	}
 
-	[HttpPatch]
-	[Route("{id}/update")]
-	public async Task<IActionResult> UpdateWorkItemById([FromBody] Item workItem)
+	[HttpGet]
+	[Route("{id}")]
+	public async Task<ActionResult<Item>> Get(int id) => Ok(await itemsRepository.Get(id));
+
+	[HttpPost]
+	[Route("insertOrUpdate")]
+	public async Task<IActionResult> InsertOrUpdate([FromBody] CreateItemModel workItem)
 	{
-		await itemsRepository.Update(workItem);
-		return Ok();
+		var item = new Item
+		{
+			Group = workItem.Group,
+			Title = workItem.Title,
+			StartTime = DateTime.Parse(workItem.StartTime).ToUniversalTime(),
+			Length = workItem.Length,
+			Programmer = workItem.Programmer
+		};
+
+		var newItem = await itemsRepository.InsertOrUpdate(item);
+		return Ok(newItem);
 	}
 
 	[HttpDelete]
-	[Route("{id}/delete")]
-	public async Task<IActionResult> DeleteWorkItemById([FromBody] Item item)
+	[Route("delete")]
+	public async Task<IActionResult> Delete([FromBody] Item item)
 	{
 		await itemsRepository.Delete(item);
 		return Ok();

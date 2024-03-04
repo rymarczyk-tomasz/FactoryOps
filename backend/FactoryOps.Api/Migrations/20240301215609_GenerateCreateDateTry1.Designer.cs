@@ -3,6 +3,7 @@ using System;
 using FactoryOps.Api.Database.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FactoryOps.Api.Migrations
 {
     [DbContext(typeof(FactoryOpsContext))]
-    partial class FactoryOpsContextModelSnapshot : ModelSnapshot
+    [Migration("20240301215609_GenerateCreateDateTry1")]
+    partial class GenerateCreateDateTry1
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -38,7 +41,7 @@ namespace FactoryOps.Api.Migrations
                     b.Property<string>("RightTitle")
                         .HasColumnType("text");
 
-                    b.Property<bool>("StackItems")
+                    b.Property<bool?>("StackItems")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Title")

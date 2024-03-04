@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 namespace FactoryOps.Api.Database.Repositories;
 public class Repository<T> : IRepository<T> where T : BaseEntity
 {
-
 	private readonly FactoryOpsContext context;
 	private readonly DbSet<T> entities;
 
@@ -15,37 +14,19 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
 		this.entities = this.context.Set<T>();
 	}
 
+	public async Task<T?> Get(int id) => await this.entities.SingleOrDefaultAsync(s => s.Id == id);
 
-	public async Task<T?> Get(int id)
-	{
-		return await this.entities.SingleOrDefaultAsync(s => s.Id == id);
-	}
+	public IQueryable<T> GetAll() => this.entities.AsQueryable();
 
-	public IAsyncEnumerable<T> GetAll()
-	{
-		return this.entities.AsAsyncEnumerable();
-	}
-
-
-	public IQueryable<T> GetAllQueryable()
-	{
-		return this.entities.AsQueryable();
-	}
-
-	public async Task Insert(T entity)
+	public async Task<T?> InsertOrUpdate(T entity)
 	{
 		ArgumentNullException.ThrowIfNull(entity);
 
-		this.entities.Add(entity);
+		this.context.Entry(entity).State = entity.Id == 0 ? EntityState.Added : EntityState.Modified;
 		await this.context.SaveChangesAsync();
+		return this.context.Entry(entity).Entity;
 	}
 
-	public async Task Update(T entity)
-	{
-		ArgumentNullException.ThrowIfNull(entity);
-		this.context.Update(entity);
-		await this.context.SaveChangesAsync();
-	}
 	public async Task Delete(T entity)
 	{
 		ArgumentNullException.ThrowIfNull(entity);

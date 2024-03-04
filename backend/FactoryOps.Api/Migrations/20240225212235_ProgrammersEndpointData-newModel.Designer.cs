@@ -3,6 +3,7 @@ using System;
 using FactoryOps.Api.Database.Contexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FactoryOps.Api.Migrations
 {
     [DbContext(typeof(FactoryOpsContext))]
-    partial class FactoryOpsContextModelSnapshot : ModelSnapshot
+    [Migration("20240225212235_ProgrammersEndpointData-newModel")]
+    partial class ProgrammersEndpointDatanewModel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -31,14 +34,12 @@ namespace FactoryOps.Api.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedDate")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("now()");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("RightTitle")
                         .HasColumnType("text");
 
-                    b.Property<bool>("StackItems")
+                    b.Property<bool?>("StackItems")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Title")
@@ -50,7 +51,7 @@ namespace FactoryOps.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("WorkingUnits", (string)null);
+                    b.ToTable("WorkingUnits");
                 });
 
             modelBuilder.Entity("FactoryOps.Api.Database.Models.Item", b =>
@@ -71,17 +72,12 @@ namespace FactoryOps.Api.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<DateTime>("CreatedDate")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("now()");
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("EndTime")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Group")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Length")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("ProgrammerId")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("StartTime")
@@ -93,9 +89,7 @@ namespace FactoryOps.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ProgrammerId");
-
-                    b.ToTable("WorkItems", (string)null);
+                    b.ToTable("WorkItems");
                 });
 
             modelBuilder.Entity("FactoryOps.Api.Database.Models.Programmer", b =>
@@ -107,9 +101,7 @@ namespace FactoryOps.Api.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedDate")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("now()");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -121,16 +113,7 @@ namespace FactoryOps.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Programmers", (string)null);
-                });
-
-            modelBuilder.Entity("FactoryOps.Api.Database.Models.Item", b =>
-                {
-                    b.HasOne("FactoryOps.Api.Database.Models.Programmer", "Programmer")
-                        .WithMany()
-                        .HasForeignKey("ProgrammerId");
-
-                    b.Navigation("Programmer");
+                    b.ToTable("Programmers");
                 });
 #pragma warning restore 612, 618
         }

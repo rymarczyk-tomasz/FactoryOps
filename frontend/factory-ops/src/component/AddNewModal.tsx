@@ -1,12 +1,11 @@
 import React, { FC, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Modal from 'react-bootstrap/Modal';
-import { Item } from '../models/Item';
 import { Button, ModalHeader } from 'react-bootstrap';
+import { CreateItem } from '../models/CreateItemModel';
 
 interface AddNewItemProperties {
-	nextId: number;
-	createNewItem: (item: Item) => void;
+	createNewItem: (item: CreateItem) => void;
 }
 
 interface AddNewItemForm {
@@ -41,16 +40,12 @@ const AddNewItemModal: FC<AddNewItemProperties> = (props: AddNewItemProperties) 
 
 	const onSubmitAction = (data: AddNewItemForm) => {
 		const startTime = new Date(data.start_time).getTime();
-		const item: Item = {
-			id: props.nextId,
+		const item: CreateItem = {
 			group: data.group,
 			title: data.title,
-			start_time: startTime,
-			end_time: new Date(startTime + data.length * 60 * 60 * 1000).getTime(),
+			startTime: new Date(startTime),
 			length: data.length,
-			canMove: true,
-			canResize: false,
-			canChangeGroup: true
+			programmer: undefined,
 		};
 		props.createNewItem(item);
 		handleClose();
