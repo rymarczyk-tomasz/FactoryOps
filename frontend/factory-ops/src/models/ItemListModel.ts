@@ -1,6 +1,5 @@
 import { Programmer } from './Programmer';
 
-
 export interface ItemListModel {
 	id: number;
 	startDate: string;

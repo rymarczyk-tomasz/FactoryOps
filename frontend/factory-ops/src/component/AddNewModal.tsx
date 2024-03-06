@@ -45,7 +45,7 @@ const AddNewItemModal: FC<AddNewItemProperties> = (props: AddNewItemProperties) 
 			title: data.title,
 			startTime: new Date(startTime),
 			length: data.length,
-			programmer: undefined,
+			programmer: undefined
 		};
 		props.createNewItem(item);
 		handleClose();
@@ -64,34 +64,60 @@ const AddNewItemModal: FC<AddNewItemProperties> = (props: AddNewItemProperties) 
 					<div className="container d-flex">
 						<div className="row">
 							<form className="col-12" id="addNewItem" onSubmit={handleSubmit(onSubmitAction)}>
-								<label className="form-label" htmlFor="group">Group</label>
-								<input id="group" {...register('group', {
-									required: {
-										value: true,
-										message: 'Group is required',
-									}
-								})} className="form-control" />
-								<label className="form-label" htmlFor="title">Item title</label>
-								<input id="title" {...register('title', {
-									required: {
-										value: true,
-										message: 'Title is required',
-									}
-								})} className="form-control" />
-								<label className="form-label" htmlFor="start_time">Start time</label>
-								<input type="datetime-local" id="start_time" {...register('start_time', {
-									required: {
-										value: true,
-										message: 'Start time is required',
-									}
-								})} className="form-control" />
-								<label className="form-label" htmlFor="end_time">Length</label>
-								<input type="number" id="end_time" {...register('length', {
-									required: {
-										value: true,
-										message: 'Length is required',
-									}
-								})} className="form-control date" />
+								<label className="form-label" htmlFor="group">
+									Group
+								</label>
+								<input
+									id="group"
+									{...register('group', {
+										required: {
+											value: true,
+											message: 'Group is required'
+										}
+									})}
+									className="form-control"
+								/>
+								<label className="form-label" htmlFor="title">
+									Item title
+								</label>
+								<input
+									id="title"
+									{...register('title', {
+										required: {
+											value: true,
+											message: 'Title is required'
+										}
+									})}
+									className="form-control"
+								/>
+								<label className="form-label" htmlFor="start_time">
+									Start time
+								</label>
+								<input
+									type="datetime-local"
+									id="start_time"
+									{...register('start_time', {
+										required: {
+											value: true,
+											message: 'Start time is required'
+										}
+									})}
+									className="form-control"
+								/>
+								<label className="form-label" htmlFor="end_time">
+									Length
+								</label>
+								<input
+									type="number"
+									id="end_time"
+									{...register('length', {
+										required: {
+											value: true,
+											message: 'Length is required'
+										}
+									})}
+									className="form-control date"
+								/>
 							</form>
 						</div>
 					</div>

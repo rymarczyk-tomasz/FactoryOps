@@ -14,7 +14,7 @@ export class ItemService {
 		console.log('createItem', createItem);
 		const url = 'https://localhost:5005/items/insertOrUpdate';
 		const result = await axios.post<ItemDto>(url, createItem).then((x) => x.data);
-		console.log('create',result);
+		console.log('create', result);
 		return result;
 	};
 }

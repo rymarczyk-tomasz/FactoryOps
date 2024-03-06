@@ -4,4 +4,4 @@ export type Group = {
 	rightTitle?: React.ReactNode | undefined;
 	height?: number | undefined;
 	stackItems?: boolean | undefined;
-}
+};

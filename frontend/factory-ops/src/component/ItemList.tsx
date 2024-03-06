@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { ProgrammerService } from '../services/ProgrammerService';
 import { mockedData } from '../data';
 import { ItemListModel } from '../models/ItemListModel';
 import { Programmer } from '../models/Programmer';
@@ -9,8 +8,7 @@ const ItemLists: React.FC = () => {
 	const [mockData, setMockData] = useState<ItemListModel[]>([]);
 
 	useEffect(() => {
-		async function fetchData(){
-			const programmers = await ProgrammerService.getAllProgrammers();
+		async function fetchData() {
 			setProgrammers(programmers);
 			setMockData(mockedData);
 		}
@@ -30,7 +28,7 @@ const ItemLists: React.FC = () => {
 					</tr>
 				</thead>
 				<tbody>
-					{ mockData.map((item) => (
+					{mockData.map((item) => (
 						<tr key={item.id}>
 							<td>{item.startDate}</td>
 							<td>{item.project}</td>
@@ -40,7 +38,9 @@ const ItemLists: React.FC = () => {
 								<select>
 									<option>Select Programmer</option>
 									{programmers.map((programmer, index) => (
-										<option key={index} >{programmer.name} {programmer.surname}</option>
+										<option key={index}>
+											{programmer.name} {programmer.surname}
+										</option>
 									))}
 								</select>
 							</td>

@@ -20,7 +20,7 @@ const FactoryOpsTimeline = () => {
 
 	useEffect(() => {
 		async function fetchData() {
-			const items = (await ItemService.getAll()).map((item) =>{
+			const items = (await ItemService.getAll()).map((item) => {
 				console.log('itemDto', item);
 				return mapItemDtoToItem(item);
 			});
@@ -75,7 +75,7 @@ const FactoryOpsTimeline = () => {
 			group: item.group,
 			title: item.title,
 			start_time: new Date(item.startTime).valueOf(),
-			end_time: new Date(item.startTime).valueOf() + (item.length * 60 * 60 * 1000),
+			end_time: new Date(item.startTime).valueOf() + item.length * 60 * 60 * 1000,
 			length: item.length,
 			canMove: true,
 			canResize: true,
@@ -104,7 +104,7 @@ const FactoryOpsTimeline = () => {
 					canMove={true}
 					canChangeGroup={true}
 					minZoom={1000 * 60 * 60 * 24}
-					dragSnap={1000 * 60 * 60  * 24}
+					dragSnap={1000 * 60 * 60 * 24}
 					itemHeightRatio={0.75}
 					lineHeight={50}
 					onItemMove={handleItemMove}>
