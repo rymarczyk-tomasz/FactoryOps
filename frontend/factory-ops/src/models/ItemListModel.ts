@@ -6,5 +6,6 @@ export interface ItemListModel {
 	project: string;
 	machine: string;
 	machine_group: string;
+	lengthOfHours: number;
 	programmer?: Programmer;
 }

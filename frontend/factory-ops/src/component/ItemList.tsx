@@ -24,6 +24,7 @@ const ItemLists: React.FC = () => {
 						<th>Project</th>
 						<th>Machine</th>
 						<th>Machine Group</th>
+						<th>Time</th>
 						<th>Programmer</th>
 					</tr>
 				</thead>
@@ -34,6 +35,7 @@ const ItemLists: React.FC = () => {
 							<td>{item.project}</td>
 							<td>{item.machine}</td>
 							<td>{item.machine_group}</td>
+							<td>{item.lengthOfHours} godzin</td>
 							<td>
 								<select>
 									<option>Select Programmer</option>

@@ -28,13 +28,17 @@ function formatDate(date: Date): string {
 	return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
+function generateRandomLength(): number {
+	return Math.floor(Math.random() * 120) + 1;
+}
 export const mockedData: ItemListModel[] = [
 	{
 		id: 1,
 		startDate: generateRandomDate(),
 		project: 'Manzanillo',
 		machine: 'HSTM 305',
-		machine_group: 'HSTM 300'
+		machine_group: 'HSTM 300',
+		lengthOfHours: generateRandomLength()
 	},
 	{
 		id: 2,
@@ -42,6 +46,7 @@ export const mockedData: ItemListModel[] = [
 		project: 'HPC',
 		machine: 'HSTM 502',
 		machine_group: 'HSTM 500',
+		lengthOfHours: generateRandomLength(),
 		programmer: { id: 2, name: 'John', surname: 'Doe' }
 	},
 	{
@@ -49,34 +54,39 @@ export const mockedData: ItemListModel[] = [
 		startDate: generateRandomDate(),
 		project: 'KOSOVO',
 		machine: 'HSTM 308',
-		machine_group: 'HSTM 300'
+		machine_group: 'HSTM 300',
+		lengthOfHours: generateRandomLength()
 	},
 	{
 		id: 4,
 		startDate: generateRandomDate(),
 		project: 'KOSOVO',
 		machine: 'HSTM 305',
-		machine_group: 'HSTM 300'
+		machine_group: 'HSTM 300',
+		lengthOfHours: generateRandomLength()
 	},
 	{
 		id: 5,
 		startDate: generateRandomDate(),
 		project: 'Manzanillo',
 		machine: 'HSTM 305',
-		machine_group: 'HSTM 300'
+		machine_group: 'HSTM 300',
+		lengthOfHours: generateRandomLength()
 	},
 	{
 		id: 6,
 		startDate: generateRandomDate(),
 		project: 'Manzanillo',
 		machine: 'HSTM 305',
-		machine_group: 'HSTM 300'
+		machine_group: 'HSTM 300',
+		lengthOfHours: generateRandomLength()
 	},
 	{
 		id: 7,
 		startDate: generateRandomDate(),
 		project: 'Manzanillo',
 		machine: 'HSTM 305',
-		machine_group: 'HSTM 300'
+		machine_group: 'HSTM 300',
+		lengthOfHours: generateRandomLength()
 	}
 ];
