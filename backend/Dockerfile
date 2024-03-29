@@ -13,8 +13,14 @@ RUN dotnet restore ./FactoryOps.Api/FactoryOps.Api.csproj
 COPY . .
 RUN dotnet publish -c Release -o out
 
+# dodać step/contener z migracjami
+FROM build-env AS migration
+RUN dotnet tool install --global dotnet-ef --version 8.0.0
+ENV PATH="${PATH}:/root/.dotnet/tools"
+ENTRYPOINT dotnet-ef database update --project FactoryOps.Api/FactoryOps.Api.csproj --startup-project FactoryOps.Api/FactoryOps.Api.csproj
+
 # Build runtime image.
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS run
 WORKDIR /app
 COPY --from=build-env /app/out .
 

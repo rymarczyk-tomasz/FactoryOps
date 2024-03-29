@@ -2,8 +2,10 @@ version: "3.9"
 
 services:
   factory-ops-api:
+    build:
+      context: ./backend
     container_name: factory-ops-api
-    image: factory-ops:0.3
+    image: factory-ops-api:0.3
     restart: always
     depends_on:
       - db
@@ -21,7 +23,7 @@ services:
     ports:
       - 5432:5432
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready",]
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}",]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -29,9 +31,20 @@ services:
     environment:
       POSTGRES_DB: "factoryopsdb"
       POSTGRES_USER: "factoryops"
-      POSTGRES_PASSWORD: "somerandompassword"
+      POSTGRES_PASSWORD: "passwordinfile"
     volumes:
       - factory-ops-data:/var/lib/postgresql/data/
+    networks:
+      - factoryOpsNetwork
+
+  factory-ops-frontend:
+    build: 
+      context: ./frontend/factory-ops
+    container_name: factory-ops-frontend
+    image: factory-ops-frontend:0.3
+    restart: always
+    ports:
+      - 3000:3000
     networks:
       - factoryOpsNetwork
 
@@ -41,3 +54,5 @@ networks:
 
 volumes:
   factory-ops-data:
+
+
