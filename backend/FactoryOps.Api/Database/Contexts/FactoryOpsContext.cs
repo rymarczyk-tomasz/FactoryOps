@@ -15,8 +15,19 @@ public class FactoryOpsContext(DbContextOptions<FactoryOpsContext> options) : Db
 	
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
-		modelBuilder.Entity<Item>().ToTable("WorkItems").Property(p => p.CreatedDate).HasDefaultValueSql("now()");
-		modelBuilder.Entity<Groups>().ToTable("WorkingUnits").Property(p => p.CreatedDate).HasDefaultValueSql("now()");
-		modelBuilder.Entity<Programmer>().ToTable("Programmers").Property(p => p.CreatedDate).HasDefaultValueSql("now()");
+		// Use a provider-specific SQL fragment for default timestamps.
+		// SQLite doesn't support now(); PostgreSQL uses now(); SQL Server uses GETUTCDATE()/SYSUTCDATETIME().
+		var provider = this.Database.ProviderName;
+		var nowSql = provider switch
+		{
+			"Microsoft.EntityFrameworkCore.Sqlite" => "CURRENT_TIMESTAMP",
+			"Npgsql.EntityFrameworkCore.PostgreSQL" => "now()",
+			"Microsoft.EntityFrameworkCore.SqlServer" => "GETUTCDATE()",
+			_ => "CURRENT_TIMESTAMP",
+		};
+
+		modelBuilder.Entity<Item>().ToTable("WorkItems").Property(p => p.CreatedDate).HasDefaultValueSql(nowSql);
+		modelBuilder.Entity<Groups>().ToTable("WorkingUnits").Property(p => p.CreatedDate).HasDefaultValueSql(nowSql);
+		modelBuilder.Entity<Programmer>().ToTable("Programmers").Property(p => p.CreatedDate).HasDefaultValueSql(nowSql);
 	}
 }
