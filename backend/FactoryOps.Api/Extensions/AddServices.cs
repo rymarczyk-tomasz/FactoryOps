@@ -21,8 +21,9 @@ public static partial class ServiceCollectionExtensions
 	}
 	public static IServiceCollection AddEntityModule(this IServiceCollection services, IConfiguration configuration)
 	{
-		var connectionString = configuration.GetConnectionString("FactoryOpsConnectionString");
-		services.AddPostgresDatabase(connectionString!);
+		// var connectionString = configuration.GetConnectionString("FactoryOpsConnectionString");
+		// services.AddPostgresDatabase(connectionString!);
+		services.AddSqlLiteDatabase(configuration.GetConnectionString("FactoryOpsSqlite") ?? "Data Source=FactoryOps.db");
 		services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 		return services;
 	}
@@ -33,9 +34,9 @@ public static partial class ServiceCollectionExtensions
 		return services;
 	}
 
-	private static IServiceCollection AddSqlLiteDatabase(this IServiceCollection services)
+	private static IServiceCollection AddSqlLiteDatabase(this IServiceCollection services, string sqliteConnection)
 	{	
-		services.AddDbContext<FactoryOpsContext>();
+		services.AddDbContext<FactoryOpsContext>(opt => opt.UseSqlite(sqliteConnection));
 		return services;
 	}
 
