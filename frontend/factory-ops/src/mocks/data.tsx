@@ -1,4 +1,4 @@
-import { ItemListModel } from './models/ItemListModel';
+import { ItemListModel } from '../models/ItemListModel';
 
 export const mockedData: ItemListModel[] = [
 	{

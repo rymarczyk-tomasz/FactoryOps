@@ -18,9 +18,11 @@ const DeleteItemModal: FC<DeleteItemProperties> = (props: DeleteItemProperties) 
 
 	return (
 		<>
-			<Button variant="danger" size={'sm'} onClick={() => setShowModal(true)}>
-				Delete
-			</Button>
+			<div className="me-2">
+				<Button variant="danger" size={'sm'} onClick={() => setShowModal(true)}>
+					Delete
+				</Button>
+			</div>
 			<Modal show={showModal} onHide={handleClose}>
 				<Modal.Header closeButton>
 					<Modal.Title>Confirm Deletion</Modal.Title>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ProgrammerService } from '../services/ProgrammerService';
-import { mockedData } from '../data';
+import { mockedData } from '../mocks/data';
 import { ItemListModel } from '../models/ItemListModel';
 import { Programmer } from '../models/Programmer';
 

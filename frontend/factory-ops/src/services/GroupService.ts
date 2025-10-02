@@ -1,9 +1,9 @@
 import axios from 'axios';
 import { Group } from '../models/Group';
 
-
 export class GroupService {
 	public static getAllGroups = async (): Promise<Group[]> => {
-		return await axios.get<Group[]>('https://localhost:5005/groups').then((x) => x.data);
+		const url = 'https://localhost:5005/groups/';
+		return await axios.get<Group[]>(url).then((x) => x.data);
 	};
 }

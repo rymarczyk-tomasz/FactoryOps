@@ -2,7 +2,7 @@ import React, { FC, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Modal from 'react-bootstrap/Modal';
 import { Button, ModalHeader } from 'react-bootstrap';
-import { CreateItem } from '../models/CreateItemModel';
+import { CreateItem } from '../../models/CreateItemModel';
 
 interface AddNewItemProperties {
 	createNewItem: (item: CreateItem) => void;
@@ -53,9 +53,11 @@ const AddNewItemModal: FC<AddNewItemProperties> = (props: AddNewItemProperties) 
 
 	return (
 		<>
-			<Button variant="primary" size={'sm'} onClick={() => setShowModal(true)}>
-				Add
-			</Button>
+			<div className="me-2">
+				<Button variant="primary" size={'sm'} onClick={() => setShowModal(true)}>
+					Add
+				</Button>
+			</div>
 			<Modal show={showModal} onHide={handleClose}>
 				<ModalHeader>
 					<div>Add new Item</div>
