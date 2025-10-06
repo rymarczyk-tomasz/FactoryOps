@@ -3,14 +3,15 @@ import Timeline, { TimelineMarkers, TimelineHeaders, SidebarHeader, DateHeader, 
 import 'react-calendar-timeline/style.css';
 // import moment from 'moment';
 import { Item } from '../models/Item';
-import { Group } from '../models/Group';
+import { CreateGroup, Group } from '../models/Group';
 import { ItemService } from '../services/ItemService';
 import { GroupService } from '../services/GroupService';
-import AddNewItemModal from './Items/AddNewModal';
+import AddNewItemModal from './Items/AddNewItemModal';
 import EditItemModal from './Items/EditItemModal';
 import DeleteItemModal from './Items/DeleteItemModal';
 import { CreateItem } from '../models/CreateItemModel';
 import { ItemDto } from '../models/ItemDto';
+import AddNewGroupModal from './Groups/AddNewGroupModal';
 
 const FactoryOpsTimeline = () => {
 	const [groups, setGroups] = useState<Group[]>([]);
@@ -83,8 +84,16 @@ const FactoryOpsTimeline = () => {
 		return newItem;
 	}
 
+	const handleCreateNewGroup = async (group: CreateGroup) => {
+		const newGroup = await GroupService.create(group);
+		setGroups([...groups, newGroup]);
+	};
+
 	return (
 		<>
+			<div>
+				<a href="/list">go to list</a>
+			</div>
 			<div>
 				<div className="d-flex flex-row justify-content-between align-items-center mb-3">
 					<div>
@@ -98,7 +107,7 @@ const FactoryOpsTimeline = () => {
 					<div>
 						<label>Group Actions</label>
 						<div className="d-flex flex-row mb-3">
-							<button>asdasd</button>
+							<AddNewGroupModal createNewGroup={handleCreateNewGroup} />
 							<button>asdasd</button>
 							<button>asdasd</button>
 						</div>

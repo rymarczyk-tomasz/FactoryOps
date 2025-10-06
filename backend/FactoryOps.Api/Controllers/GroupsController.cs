@@ -19,8 +19,8 @@ public class WorkingUnitsController(IRepository<Groups> workingUnitsRepository) 
 	[Route("insertOrUpdate")]
 	public async Task<IActionResult> InsertOrUpdate([FromBody] Groups workItem)
 	{
-		await workingUnitsRepository.InsertOrUpdate(workItem);
-		return Ok();
+		var result = await workingUnitsRepository.InsertOrUpdate(workItem);
+		return Ok(result);
 	}
 
 	[HttpDelete]
