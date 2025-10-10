@@ -12,11 +12,13 @@ import DeleteItemModal from './Items/DeleteItemModal';
 import { CreateItem } from '../models/CreateItemModel';
 import { ItemDto } from '../models/ItemDto';
 import AddNewGroupModal from './Groups/AddNewGroupModal';
+import DeleteGroupModal from './Groups/DeleteGroupModal';
 
 const FactoryOpsTimeline = () => {
 	const [groups, setGroups] = useState<Group[]>([]);
 	const [items, setItems] = useState<Item[]>([]);
 	const [selectedItem, setSelectedItem] = useState<Item | undefined>();
+	const [selectedGroupId, setSelectedGroupId] = useState<number | undefined>();
 
 	useEffect(() => {
 		async function fetchData() {
@@ -26,6 +28,7 @@ const FactoryOpsTimeline = () => {
 			console.log('items', items);
 			setItems(items);
 			const groups = await GroupService.getAllGroups();
+			console.log(groups);
 			setGroups(groups);
 		}
 
@@ -62,6 +65,13 @@ const FactoryOpsTimeline = () => {
 
 	const handleDeleteItem = (item: Item) => {
 		setItems(items.filter((i) => i.id !== item.id));
+	};
+
+	const handleDeleteGroup = (group: Group) => {
+		setGroups(groups.filter((g) => g.id !== group.id));
+		if (selectedGroupId === group.id) {
+			setSelectedGroupId(undefined);
+		}
 	};
 
 	const getItemById = (itemId: number | undefined): Item | undefined => {
@@ -106,10 +116,33 @@ const FactoryOpsTimeline = () => {
 					</div>
 					<div>
 						<label>Group Actions</label>
-						<div className="d-flex flex-row mb-3">
+						<div className="d-flex flex-row mb-3 align-items-center">
 							<AddNewGroupModal createNewGroup={handleCreateNewGroup} />
-							<button>asdasd</button>
-							<button>asdasd</button>
+							<button className="ms-2">edit</button>
+							<select
+								className="form-select ms-2"
+								style={{ width: '200px' }}
+								value={selectedGroupId ?? ''}
+								onChange={(e) => setSelectedGroupId(e.target.value ? Number(e.target.value) : undefined)}>
+								<option value="">Select group...</option>
+								{groups.map((g) => (
+									<option key={g.id} value={g.id}>
+										{String(g.title)}
+									</option>
+								))}
+							</select>
+							{selectedGroupId ? (
+								<DeleteGroupModal
+									onDelete={() => handleDeleteGroup(groups.find((g) => g.id === selectedGroupId) as Group)}
+									groupName={String(groups.find((g) => g.id === selectedGroupId)?.title || '')}
+								/>
+							) : (
+								<div className="ms-2">
+									<button className="btn btn-danger btn-sm" disabled>
+										Delete
+									</button>
+								</div>
+							)}
 						</div>
 					</div>
 				</div>
