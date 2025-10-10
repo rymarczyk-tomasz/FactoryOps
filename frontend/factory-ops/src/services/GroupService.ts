@@ -11,4 +11,9 @@ export class GroupService {
 		const url = 'https://localhost:5005/groups/insertOrUpdate';
 		return await axios.post<Group>(url, group).then((x) => x.data);
 	};
+
+	public static update = async (group: Group): Promise<Group> => {
+		const url = 'https://localhost:5005/groups/insertOrUpdate';
+		return await axios.post<Group>(url, group).then((x) => x.data);
+	};
 }

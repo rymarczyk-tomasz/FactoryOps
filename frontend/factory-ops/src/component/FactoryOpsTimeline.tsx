@@ -12,6 +12,7 @@ import DeleteItemModal from './Items/DeleteItemModal';
 import { CreateItem } from '../models/CreateItemModel';
 import { ItemDto } from '../models/ItemDto';
 import AddNewGroupModal from './Groups/AddNewGroupModal';
+import EditGroupModal from './Groups/EditGroupModal';
 import DeleteGroupModal from './Groups/DeleteGroupModal';
 
 const FactoryOpsTimeline = () => {
@@ -99,6 +100,15 @@ const FactoryOpsTimeline = () => {
 		setGroups([...groups, newGroup]);
 	};
 
+	const handleUpdateGroup = async (group: Group) => {
+		try {
+			const updated = await GroupService.update(group);
+			setGroups(groups.map((g) => (g.id === updated.id ? updated : g)));
+		} catch (err) {
+			console.error('Failed to update group', err);
+		}
+	};
+
 	return (
 		<>
 			<div>
@@ -118,7 +128,10 @@ const FactoryOpsTimeline = () => {
 						<label>Group Actions</label>
 						<div className="d-flex flex-row mb-3 align-items-center">
 							<AddNewGroupModal createNewGroup={handleCreateNewGroup} />
-							<button className="ms-2">edit</button>
+							<EditGroupModal
+								group={groups.find((g) => g.id === selectedGroupId)}
+								UpdateGroup={(g: Group) => handleUpdateGroup(g)}
+							/>
 							<select
 								className="form-select ms-2"
 								style={{ width: '200px' }}
