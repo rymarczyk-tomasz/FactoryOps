@@ -4,6 +4,8 @@
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
 # Custom user things to ignore
+.github/instructions/
+.github/copilot-instructions.md
 
 # User-specific files
 *.rsuser
