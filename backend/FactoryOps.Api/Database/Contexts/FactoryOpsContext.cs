@@ -1,9 +1,10 @@
 ﻿using FactoryOps.Api.Database.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace FactoryOps.Api.Database.Contexts;
 
-public class FactoryOpsContext(DbContextOptions<FactoryOpsContext> options) : DbContext(options)
+public class FactoryOpsContext(DbContextOptions<FactoryOpsContext> options) : IdentityDbContext<ApplicationUser>(options)
 {
 	public DbSet<Item> WorkItems { get; set; }
 	public DbSet<Groups> WorkingUnits { get; set; }
@@ -15,6 +16,8 @@ public class FactoryOpsContext(DbContextOptions<FactoryOpsContext> options) : Db
 
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
+		base.OnModelCreating(modelBuilder);
+
 		// Use a provider-specific SQL fragment for default timestamps.
 		// SQLite doesn't support now(); PostgreSQL uses now(); SQL Server uses GETUTCDATE()/SYSUTCDATETIME().
 		var provider = this.Database.ProviderName;
