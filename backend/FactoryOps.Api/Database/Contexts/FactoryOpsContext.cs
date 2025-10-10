@@ -12,7 +12,7 @@ public class FactoryOpsContext(DbContextOptions<FactoryOpsContext> options) : Db
 	protected override void OnConfiguring(DbContextOptionsBuilder options)
 	{
 	}
-	
+
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
 		// Use a provider-specific SQL fragment for default timestamps.

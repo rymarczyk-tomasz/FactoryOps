@@ -35,7 +35,7 @@ public static partial class ServiceCollectionExtensions
 	}
 
 	private static IServiceCollection AddSqlLiteDatabase(this IServiceCollection services, string sqliteConnection)
-	{	
+	{
 		services.AddDbContext<FactoryOpsContext>(opt => opt.UseSqlite(sqliteConnection));
 		return services;
 	}
