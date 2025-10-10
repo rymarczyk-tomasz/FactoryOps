@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using FactoryOps.Api.Database.Models;
+﻿using FactoryOps.Api.Database.Models;
 using FactoryOps.Api.Database.Repositories;
+using Microsoft.AspNetCore.Mvc;
 
 namespace FactoryOps.Api.Controllers;
 
@@ -19,8 +19,8 @@ public class WorkingUnitsController(IRepository<Groups> workingUnitsRepository) 
 	[Route("insertOrUpdate")]
 	public async Task<IActionResult> InsertOrUpdate([FromBody] Groups workItem)
 	{
-		await workingUnitsRepository.InsertOrUpdate(workItem);
-		return Ok();
+		var result = await workingUnitsRepository.InsertOrUpdate(workItem);
+		return Ok(result);
 	}
 
 	[HttpDelete]

@@ -2,11 +2,12 @@ import React, { FC, useState } from 'react';
 import Modal from 'react-bootstrap/Modal';
 import { Button } from 'react-bootstrap';
 
-interface DeleteItemProperties {
+interface DeleteGroupProperties {
 	onDelete: () => void;
-	itemName: string;
+	groupName: string;
 }
-const DeleteItemModal: FC<DeleteItemProperties> = (props: DeleteItemProperties) => {
+
+const DeleteGroupModal: FC<DeleteGroupProperties> = (props: DeleteGroupProperties) => {
 	const [showModal, setShowModal] = useState<boolean>(false);
 
 	const handleClose = () => setShowModal(false);
@@ -18,14 +19,16 @@ const DeleteItemModal: FC<DeleteItemProperties> = (props: DeleteItemProperties) 
 
 	return (
 		<>
-			<Button variant="danger" size={'sm'} onClick={() => setShowModal(true)}>
-				Delete
-			</Button>
+			<div className="me-2">
+				<Button variant="danger" size={'sm'} onClick={() => setShowModal(true)}>
+					Delete
+				</Button>
+			</div>
 			<Modal show={showModal} onHide={handleClose}>
 				<Modal.Header closeButton>
 					<Modal.Title>Confirm Deletion</Modal.Title>
 				</Modal.Header>
-				<Modal.Body>Are you sure you want to delete {props.itemName} item?</Modal.Body>
+				<Modal.Body>Are you sure you want to delete {props.groupName} group?</Modal.Body>
 				<Modal.Footer>
 					<Button variant="secondary" onClick={handleClose}>
 						Cancel
@@ -39,4 +42,4 @@ const DeleteItemModal: FC<DeleteItemProperties> = (props: DeleteItemProperties) 
 	);
 };
 
-export default DeleteItemModal;
+export default DeleteGroupModal;

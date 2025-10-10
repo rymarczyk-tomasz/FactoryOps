@@ -5,3 +5,7 @@ export type Group = {
 	height?: number | undefined;
 	stackItems?: boolean | undefined;
 }
+
+export type CreateGroup = {
+	title: string;
+}

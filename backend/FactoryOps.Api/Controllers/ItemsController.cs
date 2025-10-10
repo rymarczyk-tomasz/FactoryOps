@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using FactoryOps.Api.Database.Models;
+﻿using FactoryOps.Api.Database.Models;
 using FactoryOps.Api.Database.Models.Frontend;
 using FactoryOps.Api.Database.Repositories;
+using Microsoft.AspNetCore.Mvc;
 
 namespace FactoryOps.Api.Controllers;
 

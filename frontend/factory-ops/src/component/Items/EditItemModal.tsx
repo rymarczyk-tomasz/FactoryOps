@@ -1,7 +1,7 @@
 import React, { FC, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Modal from 'react-bootstrap/Modal';
-import { Item } from '../models/Item';
+import { Item } from '../../models/Item';
 import { Button, ModalHeader, } from 'react-bootstrap';
 
 
@@ -55,14 +55,17 @@ const EditItemModal: FC<EditItemProperties> = (props: EditItemProperties) => {
 		return date.toISOString().substring(0, 16);
 	}
 
+	const show = () => {
+		setShowModal(true);
+	};
+
 	return (
 		<>
-			<Button variant="primary" size={'sm'} onClick={() =>
-			{
-				setShowModal(true);
-			}}>
-				Edit
-			</Button>
+			<div className="me-2">
+				<Button variant="primary" size={'sm'} onClick={show}>
+					Edit
+				</Button>
+			</div>
 			<Modal show={showModal} onHide={handleClose}>
 				<ModalHeader>
 					<div>Edit Item</div>
