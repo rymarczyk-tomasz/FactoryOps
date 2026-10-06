@@ -1,6 +1,7 @@
+import { calendarLookup } from '../domain/calendar';
 import { addBlock } from '../domain/schedule';
 import { firstWorkingShiftFrom, nextShiftStart } from '../domain/shifts';
-import { Block, Machine, PlanState, Programmer } from '../domain/types';
+import { Block, Machine, PlanState, Programmer, WorkMode } from '../domain/types';
 
 const MACHINE_NAMES = [
 	'HSTM 305',
@@ -14,6 +15,9 @@ const MACHINE_NAMES = [
 	'Okuma MU-8000V',
 	'Haas VF-4'
 ];
+
+/** Te maszyny chodzą w systemie 4-brygadowym (24/7), reszta pon-pt. */
+const CONTINUOUS_MACHINES = ['HSTM 305', 'HSTM 308'];
 
 const PROGRAMMERS: Omit<Programmer, 'id'>[] = [
 	{ name: 'Jan', surname: 'Kowalski' },
@@ -42,15 +46,18 @@ export function createSeedState(now: number): PlanState {
 	const pick = <T>(list: T[]) => list[Math.floor(rnd() * list.length)];
 	const calendar = { overrides: {} };
 
-	const machines: Machine[] = MACHINE_NAMES.map((name, i) => ({ id: `m${i + 1}`, name }));
+	const machines: Machine[] = MACHINE_NAMES.map((name, i) => {
+		const workMode: WorkMode = CONTINUOUS_MACHINES.includes(name) ? 'continuous' : 'weekdays';
+		return { id: `m${i + 1}`, name, workMode };
+	});
 	const programmers: Programmer[] = PROGRAMMERS.map((p, i) => ({ ...p, id: `p${i + 1}` }));
 
 	let blocks: Block[] = [];
 	let orderCounter = 412;
-	const planStart = firstWorkingShiftFrom(now - 4 * 24 * 3600_000, calendar);
+	const calendars = calendarLookup({ calendar, machines });
 
 	for (const machine of machines) {
-		let cursor = planStart;
+		let cursor = firstWorkingShiftFrom(now - 4 * 24 * 3600_000, calendars(machine.id));
 		for (let i = 0, count = 6 + Math.floor(rnd() * 6); i < count; i++) {
 			// czasem przerwa między zleceniami
 			if (rnd() < 0.25) cursor = nextShiftStart(nextShiftStart(cursor));
@@ -67,7 +74,7 @@ export function createSeedState(now: number): PlanState {
 					start: cursor
 				},
 				id,
-				calendar,
+				calendars,
 				now
 			);
 			cursor = blocks.find((b) => b.id === id)!.end;

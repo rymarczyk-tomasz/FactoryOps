@@ -1,23 +1,30 @@
 import React, { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { calendarLookup } from '../domain/calendar';
 import * as schedule from '../domain/schedule';
 import { newId } from '../domain/ids';
-import { Block, BlockDraft, Id, PlanState } from '../domain/types';
+import { Block, BlockDraft, Id, PlanState, WorkMode } from '../domain/types';
 import { LocalStoragePlanRepository, PlanRepository } from './PlanRepository';
 
 const HISTORY_LIMIT = 50;
+
+/** Po zmianie kalendarza bloczki trzeba ułożyć od nowa. */
+const withReflow = (s: PlanState): PlanState => ({ ...s, blocks: schedule.reflow(s.blocks, calendarLookup(s)) });
 
 interface PlanActions {
 	addBlock(draft: BlockDraft): Id;
 	updateBlock(id: Id, patch: Partial<Omit<Block, 'id' | 'end'>>): void;
 	moveBlock(id: Id, start: number, machineId: Id): void;
-	resizeBlock(id: Id, end: number): void;
 	deleteBlock(id: Id): void;
 	compactMachine(machineId: Id): void;
 	addMachine(name: string): Id;
 	renameMachine(id: Id, name: string): void;
 	deleteMachine(id: Id): void;
-	/** `undefined` przywraca domyślne ustawienie dnia (pon-pt pracujące). */
-	setDayWorking(dayKey: string, working: boolean | undefined): void;
+	setMachineWorkMode(id: Id, mode: WorkMode): void;
+	/**
+	 * Wyjątek w kalendarzu maszyny (`machineId`) albo całego zakładu (bez `machineId`).
+	 * `undefined` usuwa wyjątek - dzień wraca do ustawienia domyślnego.
+	 */
+	setDayWorking(dayKey: string, working: boolean | undefined, machineId?: Id): void;
 	undo(): void;
 	resetDemo(): Promise<void>;
 }
@@ -72,14 +79,13 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 		() => ({
 			addBlock(draft) {
 				const id = newId();
-				withBlocks((s) => schedule.addBlock(s.blocks, draft, id, s.calendar, Date.now()));
+				withBlocks((s) => schedule.addBlock(s.blocks, draft, id, calendarLookup(s), Date.now()));
 				return id;
 			},
-			updateBlock: (id, patch) => withBlocks((s) => schedule.updateBlock(s.blocks, id, patch, s.calendar)),
-			moveBlock: (id, start, machineId) => withBlocks((s) => schedule.moveBlock(s.blocks, id, start, machineId, s.calendar)),
-			resizeBlock: (id, end) => withBlocks((s) => schedule.resizeBlock(s.blocks, id, end, s.calendar)),
+			updateBlock: (id, patch) => withBlocks((s) => schedule.updateBlock(s.blocks, id, patch, calendarLookup(s))),
+			moveBlock: (id, start, machineId) => withBlocks((s) => schedule.moveBlock(s.blocks, id, start, machineId, calendarLookup(s))),
 			deleteBlock: (id) => withBlocks((s) => schedule.removeBlock(s.blocks, id)),
-			compactMachine: (machineId) => withBlocks((s) => schedule.compactMachine(s.blocks, machineId, s.calendar)),
+			compactMachine: (machineId) => withBlocks((s) => schedule.compactMachine(s.blocks, machineId, calendarLookup(s))),
 			addMachine(name) {
 				const id = newId();
 				apply((s) => ({ ...s, machines: [...s.machines, { id, name }] }));
@@ -92,14 +98,21 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 					machines: s.machines.filter((m) => m.id !== id),
 					blocks: s.blocks.filter((b) => b.machineId !== id)
 				})),
-			setDayWorking(dayKey, working) {
-				apply((s) => {
-					const overrides = { ...s.calendar.overrides };
-					if (working === undefined) delete overrides[dayKey];
-					else overrides[dayKey] = working;
-					const calendar = { overrides };
-					return { ...s, calendar, blocks: schedule.reflow(s.blocks, calendar) };
-				});
+			setMachineWorkMode: (id, mode) => apply((s) => withReflow({ ...s, machines: s.machines.map((m) => (m.id === id ? { ...m, workMode: mode } : m)) })),
+			setDayWorking(dayKey, working, machineId) {
+				const withOverride = (overrides: Record<string, boolean> = {}) => {
+					const next = { ...overrides };
+					if (working === undefined) delete next[dayKey];
+					else next[dayKey] = working;
+					return next;
+				};
+				apply((s) =>
+					withReflow(
+						machineId === undefined
+							? { ...s, calendar: { overrides: withOverride(s.calendar.overrides) } }
+							: { ...s, machines: s.machines.map((m) => (m.id === machineId ? { ...m, overrides: withOverride(m.overrides) } : m)) }
+					)
+				);
 			},
 			async resetDemo() {
 				const fresh = await repo.reset();

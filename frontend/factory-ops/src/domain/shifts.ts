@@ -1,5 +1,3 @@
-import { WorkCalendar } from './types';
-
 export const SHIFT_HOURS = 8;
 /** Zmiany: 6-14, 14-22, 22-6. Zmiana nocna należy do dnia, w którym się zaczyna. */
 export const SHIFT_START_HOURS = [6, 14, 22] as const;
@@ -22,9 +20,8 @@ export function isWeekend(date: Date): boolean {
 	return day === 0 || day === 6;
 }
 
-export function isWorkingDay(date: Date, calendar: WorkCalendar): boolean {
-	return calendar.overrides[dayKey(date)] ?? !isWeekend(date);
-}
+/** Czy dany dzień (licząc od zmiany 6:00) jest pracujący - kalendarz konkretnej maszyny. */
+export type IsWorkingDay = (date: Date) => boolean;
 
 export function shiftsForHours(hours: number): number {
 	return Math.max(1, Math.ceil(hours / SHIFT_HOURS));
@@ -53,39 +50,36 @@ export function nextShiftStart(shiftStart: number): number {
 	return addWallHours(shiftStart, SHIFT_HOURS);
 }
 
-export function isWorkingShift(shiftStart: number, calendar: WorkCalendar): boolean {
-	return isWorkingDay(new Date(shiftStart), calendar);
+export function isWorkingShift(shiftStart: number, isWorkingDay: IsWorkingDay): boolean {
+	return isWorkingDay(new Date(shiftStart));
 }
 
 /** Pierwsza pracująca zmiana zaczynająca się nie wcześniej niż `ms` (od granicy zmiany w górę). */
-export function firstWorkingShiftFrom(ms: number, calendar: WorkCalendar): number {
+export function firstWorkingShiftFrom(ms: number, isWorkingDay: IsWorkingDay): number {
 	let s = shiftStartAtOrBefore(ms);
 	if (s < ms) s = nextShiftStart(s);
 	// zabezpieczenie przed nieskończoną pętlą przy kalendarzu bez dni pracujących
 	for (let i = 0; i < 3 * 366; i++) {
-		if (isWorkingShift(s, calendar)) return s;
+		if (isWorkingShift(s, isWorkingDay)) return s;
 		s = nextShiftStart(s);
 	}
 	return s;
 }
 
 /** Koniec bloku zajmującego `shifts` pracujących zmian, licząc od pracującej zmiany `start`. */
-export function endAfterShifts(start: number, shifts: number, calendar: WorkCalendar): number {
+export function endAfterShifts(start: number, shifts: number, isWorkingDay: IsWorkingDay): number {
 	let s = start;
 	let counted = 0;
 	for (let i = 0; i < 3 * 366 * 5; i++) {
-		if (isWorkingShift(s, calendar)) counted++;
+		if (isWorkingShift(s, isWorkingDay)) counted++;
 		if (counted >= shifts) break;
 		s = nextShiftStart(s);
 	}
 	return nextShiftStart(s);
 }
 
-/** Liczba pracujących zmian w przedziale [start, end). */
-export function workingShiftsBetween(start: number, end: number, calendar: WorkCalendar): number {
-	let count = 0;
-	for (let s = shiftStartAtOrBefore(start); s < end; s = nextShiftStart(s)) {
-		if (s >= start && isWorkingShift(s, calendar)) count++;
-	}
-	return count;
+/** Początek doby zmianowej (6:00), do której należy podany moment - np. 3:00 w nocy to jeszcze poprzednia doba. */
+export function shiftDayStart(ms: number): number {
+	const shift = new Date(shiftStartAtOrBefore(ms));
+	return new Date(shift.getFullYear(), shift.getMonth(), shift.getDate(), SHIFT_START_HOURS[0]).getTime();
 }

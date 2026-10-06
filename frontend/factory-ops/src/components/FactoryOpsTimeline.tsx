@@ -1,17 +1,21 @@
-import React, { useMemo, useState } from 'react';
-import { Button, ButtonToolbar } from 'react-bootstrap';
+import React, { useCallback, useMemo, useState } from 'react';
+import { Badge, Button, ButtonToolbar } from 'react-bootstrap';
 import Timeline, { DateHeader, SidebarHeader, TimelineHeaders, TimelineItemBase, TimelineMarkers, TodayMarker } from 'react-calendar-timeline';
 import 'react-calendar-timeline/style.css';
 import { usePlan } from '../data/PlanContext';
+import { calendarLookup, nonWorkingPeriods, workMode } from '../domain/calendar';
 import { formatDateTime, formatHours, programmerName, timelineLabel } from '../domain/format';
 import { blockStatus } from '../domain/schedule';
-import { isWorkingDay, nearestShiftStart } from '../domain/shifts';
-import { Block, Id } from '../domain/types';
+import { nearestShiftStart, shiftDayStart } from '../domain/shifts';
+import { Block, Id, Machine } from '../domain/types';
 import BlockFormModal, { BlockFormDefaults } from './BlockFormModal';
 import ConfirmModal from './ConfirmModal';
+import DayContextMenu, { DayMenuTarget } from './DayContextMenu';
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
+/** Prefiks id tła z dniami wolnymi - takich elementów nie da się zaznaczyć ani przesunąć. */
+const OFF_PREFIX = 'off:';
 
 const PROJECT_COLORS = ['#2563eb', '#0d9488', '#d97706', '#7c3aed', '#db2777', '#059669', '#dc2626', '#4f46e5'];
 
@@ -21,20 +25,53 @@ function projectColor(project: string): string {
 	return PROJECT_COLORS[Math.abs(hash) % PROJECT_COLORS.length];
 }
 
+type MachineGroup = { id: Id; title: string; machine: Machine; stackItems: boolean };
+
 // treść zostaje po zamknięciu, żeby modal nie zmieniał się w trakcie animacji zamykania
 type FormState = { show: boolean; block?: Block; defaults?: BlockFormDefaults };
 
 const FactoryOpsTimeline = () => {
-	const { state, moveBlock, resizeBlock, deleteBlock, undo, canUndo } = usePlan();
+	const { state, moveBlock, deleteBlock, undo, canUndo } = usePlan();
 	const [selectedId, setSelectedId] = useState<Id>();
 	const [form, setForm] = useState<FormState>({ show: false });
 	const [confirmDelete, setConfirmDelete] = useState(false);
+	const [dayMenu, setDayMenu] = useState<DayMenuTarget>();
+	const closeDayMenu = useCallback(() => setDayMenu(undefined), []);
 
 	const selected = state.blocks.find((b) => b.id === selectedId);
+	const select = (id: Id) => !String(id).startsWith(OFF_PREFIX) && setSelectedId(String(id));
 
-	const groups = useMemo(() => state.machines.map((m) => ({ id: m.id, title: m.name })), [state.machines]);
+	const openDayMenu = (machineId: Id, time: number, e: React.SyntheticEvent) => {
+		e.preventDefault();
+		const { clientX, clientY } = e as React.MouseEvent;
+		setDayMenu({ x: clientX, y: clientY, machineId, day: shiftDayStart(time) });
+	};
 
-	const items = useMemo<TimelineItemBase<number>[]>(() => {
+	// bloczki na maszynie nigdy na siebie nie nachodzą (pilnuje tego harmonogram), więc bez układania w stos -
+	// dzięki temu tło z dniami wolnymi leży pod zleceniami
+	const groups = useMemo<MachineGroup[]>(() => state.machines.map((m) => ({ id: m.id, title: m.name, machine: m, stackItems: false })), [state.machines]);
+
+	const offItems = useMemo<TimelineItemBase<number>[]>(() => {
+		const calendars = calendarLookup(state);
+		const now = Date.now();
+		const from = Math.min(now, ...state.blocks.map((b) => b.start)) - 30 * DAY;
+		const to = Math.max(now, ...state.blocks.map((b) => b.end)) + 120 * DAY;
+		return state.machines.flatMap((machine) =>
+			nonWorkingPeriods(calendars(machine.id), from, to).map(([start, end]) => ({
+				id: `${OFF_PREFIX}${machine.id}:${start}`,
+				group: machine.id,
+				title: '',
+				start_time: start,
+				end_time: end,
+				canMove: false,
+				canResize: false,
+				canChangeGroup: false,
+				className: 'non-working-item'
+			}))
+		);
+	}, [state]);
+
+	const blockItems = useMemo<TimelineItemBase<number>[]>(() => {
 		const now = Date.now();
 		return state.blocks.map((block) => {
 			const color = projectColor(block.project);
@@ -55,7 +92,8 @@ const FactoryOpsTimeline = () => {
 				start_time: block.start,
 				end_time: block.end,
 				canMove: true,
-				canResize: 'right',
+				// długość wynika z godzin w zamówieniu - zmienia się ją w formularzu, nie myszką
+				canResize: false,
 				canChangeGroup: true,
 				itemProps: {
 					title: tooltip,
@@ -70,24 +108,31 @@ const FactoryOpsTimeline = () => {
 		});
 	}, [state.blocks, state.programmers]);
 
+	const items = useMemo(() => [...offItems, ...blockItems], [offItems, blockItems]);
+
 	return (
 		<>
-			<ButtonToolbar className="gap-2 mb-3">
-				<Button size="sm" onClick={() => setForm({ show: true })}>
-					Dodaj zlecenie
-				</Button>
-				<Button size="sm" variant="outline-secondary" disabled={!selected} onClick={() => setForm({ show: true, block: selected })}>
-					Edytuj
-				</Button>
-				<Button size="sm" variant="outline-danger" disabled={!selected} onClick={() => setConfirmDelete(true)}>
-					Usuń
-				</Button>
-				<Button size="sm" variant="outline-secondary" disabled={!canUndo} onClick={undo}>
-					Cofnij
-				</Button>
-			</ButtonToolbar>
+			<div className="d-flex flex-wrap align-items-center gap-3 mb-3">
+				<ButtonToolbar className="gap-2">
+					<Button size="sm" onClick={() => setForm({ show: true })}>
+						Dodaj zlecenie
+					</Button>
+					<Button size="sm" variant="outline-secondary" disabled={!selected} onClick={() => setForm({ show: true, block: selected })}>
+						Edytuj
+					</Button>
+					<Button size="sm" variant="outline-danger" disabled={!selected} onClick={() => setConfirmDelete(true)}>
+						Usuń
+					</Button>
+					<Button size="sm" variant="outline-secondary" disabled={!canUndo} onClick={undo}>
+						Cofnij
+					</Button>
+				</ButtonToolbar>
+				<small className="text-secondary">
+					<span className="legend-swatch non-working-item" /> dzień wolny maszyny · prawy klik na planie: dni pracujące/wolne
+				</small>
+			</div>
 
-			<Timeline
+			<Timeline<TimelineItemBase<number>, MachineGroup>
 				groups={groups}
 				items={items}
 				defaultTimeStart={Date.now() - 2 * DAY}
@@ -97,18 +142,33 @@ const FactoryOpsTimeline = () => {
 				dragSnap={HOUR}
 				lineHeight={44}
 				itemHeightRatio={0.8}
-				stackItems
 				canMove
 				canChangeGroup
+				canResize={false}
 				selected={selectedId ? [selectedId] : []}
-				onItemSelect={(id) => setSelectedId(String(id))}
-				onItemClick={(id) => setSelectedId(String(id))}
+				onItemSelect={select}
+				onItemClick={select}
 				onItemDeselect={() => setSelectedId(undefined)}
 				onCanvasDoubleClick={(groupId, time) => setForm({ show: true, defaults: { machineId: String(groupId), start: nearestShiftStart(time) } })}
+				onCanvasContextMenu={(groupId, time, e) => openDayMenu(String(groupId), time, e)}
+				onItemContextMenu={(itemId, e, time) => {
+					const block = state.blocks.find((b) => b.id === itemId);
+					if (block) openDayMenu(block.machineId, time, e);
+				}}
 				moveResizeValidator={(_action, _item, time) => nearestShiftStart(time)}
 				onItemMove={(id, time, groupOrder) => moveBlock(String(id), time, state.machines[groupOrder].id)}
-				onItemResize={(id, time, edge) => edge === 'right' && resizeBlock(String(id), time)}
-				verticalLineClassNamesForTime={(start) => (isWorkingDay(new Date(start), state.calendar) ? [] : ['non-working'])}>
+				groupRenderer={({ group }) => (
+					<div className="d-flex align-items-center justify-content-between gap-1">
+						<span className="text-truncate" title={group.title}>
+							{group.title}
+						</span>
+						{workMode(group.machine) === 'continuous' && (
+							<Badge bg="success" pill title="System 4-brygadowy">
+								24/7
+							</Badge>
+						)}
+					</div>
+				)}>
 				<TimelineHeaders className="sticky">
 					<SidebarHeader>{({ getRootProps }) => <div {...getRootProps()} className="timeline-sidebar-header">Maszyna</div>}</SidebarHeader>
 					<DateHeader unit="primaryHeader" labelFormat={timelineLabel} />
@@ -119,12 +179,14 @@ const FactoryOpsTimeline = () => {
 				</TimelineMarkers>
 			</Timeline>
 
-			<BlockFormModal
-				show={form.show}
-				block={form.block}
-				defaults={form.defaults}
-				onHide={() => setForm((f) => ({ ...f, show: false }))}
-			/>
+			{dayMenu && (
+				<DayContextMenu
+					target={dayMenu}
+					onAddBlock={() => setForm({ show: true, defaults: { machineId: dayMenu.machineId, start: dayMenu.day } })}
+					onClose={closeDayMenu}
+				/>
+			)}
+			<BlockFormModal show={form.show} block={form.block} defaults={form.defaults} onHide={() => setForm((f) => ({ ...f, show: false }))} />
 			<ConfirmModal
 				show={confirmDelete}
 				title="Usunąć zlecenie?"

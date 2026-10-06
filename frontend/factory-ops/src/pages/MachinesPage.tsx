@@ -2,10 +2,11 @@ import React, { FormEvent, useState } from 'react';
 import { Button, Form, InputGroup, Table } from 'react-bootstrap';
 import ConfirmModal from '../components/ConfirmModal';
 import { usePlan } from '../data/PlanContext';
-import { Machine } from '../domain/types';
+import { workMode, WORK_MODE_LABELS } from '../domain/calendar';
+import { Machine, WorkMode } from '../domain/types';
 
 const MachinesPage = () => {
-	const { state, addMachine, renameMachine, deleteMachine, compactMachine } = usePlan();
+	const { state, addMachine, renameMachine, deleteMachine, compactMachine, setMachineWorkMode } = usePlan();
 	const [newName, setNewName] = useState('');
 	const [toDelete, setToDelete] = useState<Machine>();
 
@@ -32,6 +33,7 @@ const MachinesPage = () => {
 				<thead>
 					<tr>
 						<th>Nazwa</th>
+						<th>System pracy</th>
 						<th>Zlecenia</th>
 						<th />
 					</tr>
@@ -46,6 +48,19 @@ const MachinesPage = () => {
 									aria-label="Nazwa maszyny"
 									onBlur={(e) => e.target.value.trim() && e.target.value !== machine.name && renameMachine(machine.id, e.target.value.trim())}
 								/>
+							</td>
+							<td>
+								<Form.Select
+									size="sm"
+									aria-label="System pracy"
+									value={workMode(machine)}
+									onChange={(e) => setMachineWorkMode(machine.id, e.target.value as WorkMode)}>
+									{Object.entries(WORK_MODE_LABELS).map(([mode, label]) => (
+										<option key={mode} value={mode}>
+											{label}
+										</option>
+									))}
+								</Form.Select>
 							</td>
 							<td>{blockCount(machine.id)}</td>
 							<td className="text-end text-nowrap">

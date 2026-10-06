@@ -6,8 +6,37 @@ body {
 }
 
 /* Timeline */
-.react-calendar-timeline .rct-vertical-lines .rct-vl.non-working {
-	background: repeating-linear-gradient(-45deg, #f3f4f6, #f3f4f6 6px, #e5e7eb 6px, #e5e7eb 12px);
+
+/* weekendy biblioteki są wspólne dla wszystkich maszyn - dni wolne rysujemy osobno dla każdej maszyny */
+.react-calendar-timeline .rct-vertical-lines .rct-vl.rct-day-6,
+.react-calendar-timeline .rct-vertical-lines .rct-vl.rct-day-0 {
+	/* !important, bo CSS biblioteki ładuje się po naszym */
+	background: transparent !important;
+}
+
+.non-working-item,
+.react-calendar-timeline .rct-item.non-working-item {
+	background: repeating-linear-gradient(-45deg, #eceef1, #eceef1 6px, #d9dde3 6px, #d9dde3 12px) !important;
+	border: none !important;
+	pointer-events: none;
+	z-index: 1 !important;
+}
+
+.react-calendar-timeline .rct-item.non-working-item {
+	/* tło na całą wysokość wiersza: element ma 0.8 wysokości linii (itemHeightRatio) i jest wyśrodkowany */
+	transform: scaleY(1.25);
+}
+
+.legend-swatch {
+	display: inline-block;
+	width: 14px;
+	height: 14px;
+	vertical-align: -2px;
+	border-radius: 2px;
+}
+
+.day-menu {
+	z-index: 1080;
 }
 
 .react-calendar-timeline .rct-item {

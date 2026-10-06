@@ -1,8 +1,18 @@
 export type Id = string;
 
+/**
+ * weekdays - pon-pt, 3 zmiany, weekend wolny (chyba że ktoś przyjdzie - wyjątek w kalendarzu maszyny)
+ * continuous - system 4-brygadowy, praca 24/7
+ */
+export type WorkMode = 'weekdays' | 'continuous';
+
 export interface Machine {
 	id: Id;
 	name: string;
+	/** Brak = 'weekdays' (dane zapisane przed dodaniem systemów pracy). */
+	workMode?: WorkMode;
+	/** Wyjątki tylko dla tej maszyny, mają pierwszeństwo przed kalendarzem zakładu. Klucz: 'YYYY-MM-DD'. */
+	overrides?: Record<string, boolean>;
 }
 
 export interface Programmer {
@@ -35,8 +45,9 @@ export type BlockDraft = Omit<Block, 'id' | 'start' | 'end'> & {
 
 export type BlockStatus = 'done' | 'in_progress' | 'planned';
 
+/** Kalendarz zakładu - wyjątki dla wszystkich maszyn (np. święto, pracująca sobota). */
 export interface WorkCalendar {
-	/** Wyjątki od domyślnego kalendarza (pon-pt pracujące), klucz: 'YYYY-MM-DD'. */
+	/** Klucz: 'YYYY-MM-DD'. */
 	overrides: Record<string, boolean>;
 }
 
