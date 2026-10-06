@@ -11,7 +11,7 @@ export interface PlanRepository {
 	reset(): Promise<PlanState>;
 }
 
-const STORAGE_KEY = 'factoryops.plan.v4';
+const STORAGE_KEY = 'factoryops.plan.v5';
 
 export class LocalStoragePlanRepository implements PlanRepository {
 	async load(): Promise<PlanState> {

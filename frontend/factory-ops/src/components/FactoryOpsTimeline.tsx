@@ -174,7 +174,7 @@ const FactoryOpsTimeline = () => {
 		return state.breakdowns.map((breakdown) => {
 			const machine = machines.get(breakdown.machineId);
 			const units = unitCount(machine);
-			const machinesDown = breakdown.units.map(unitLabel).join(', ');
+			const machinesDown = breakdown.units.map((unit) => unitLabel(machine, unit)).join(', ');
 			// od najdłuższego - renderer wybierze ten, który się zmieści
 			const labels = isLine(machine) ? [`Awaria ${machinesDown}`, machinesDown, '!'] : ['Awaria', '!'];
 			return {

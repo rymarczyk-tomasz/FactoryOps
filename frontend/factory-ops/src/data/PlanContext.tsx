@@ -2,7 +2,8 @@ import React, { createContext, ReactNode, useCallback, useContext, useEffect, us
 import { capacityLookup } from '../domain/calendar';
 import * as schedule from '../domain/schedule';
 import { newId } from '../domain/ids';
-import { Block, BlockDraft, Breakdown, DayOverride, Id, PlanState, WorkMode } from '../domain/types';
+import { applyMachineDraft } from '../domain/machines';
+import { Block, BlockDraft, Breakdown, DayOverride, Id, MachineDraft, PlanState } from '../domain/types';
 import { LocalStoragePlanRepository, PlanRepository } from './PlanRepository';
 
 const HISTORY_LIMIT = 50;
@@ -16,12 +17,9 @@ interface PlanActions {
 	moveBlock(id: Id, start: number, machineId: Id): void;
 	deleteBlock(id: Id): void;
 	compactMachine(machineId: Id): void;
-	/** `units` > 1 to linia produkcyjna z tyloma jednakowymi maszynami. */
-	addMachine(name: string, units?: number): Id;
-	renameMachine(id: Id, name: string): void;
+	/** Dodaje (bez `id`) albo zapisuje istniejącą maszynę lub linię. */
+	saveMachine(draft: MachineDraft, id?: Id): Id;
 	deleteMachine(id: Id): void;
-	setMachineWorkMode(id: Id, mode: WorkMode): void;
-	setMachineUnits(id: Id, units: number): void;
 	addBreakdown(breakdown: Omit<Breakdown, 'id'>): Id;
 	removeBreakdown(id: Id): void;
 	/**
@@ -90,12 +88,12 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 			moveBlock: (id, start, machineId) => withBlocks((s) => schedule.moveBlock(s.blocks, id, start, machineId, capacityLookup(s), Date.now())),
 			deleteBlock: (id) => withBlocks((s) => schedule.removeBlock(s.blocks, id, capacityLookup(s), Date.now())),
 			compactMachine: (machineId) => withBlocks((s) => schedule.compactMachine(s.blocks, machineId, capacityLookup(s), Date.now())),
-			addMachine(name, units = 1) {
-				const id = newId();
-				apply((s) => ({ ...s, machines: [...s.machines, units > 1 ? { id, name, units, workMode: 'continuous' } : { id, name }] }));
+			saveMachine(draft, existingId) {
+				const id = existingId ?? newId();
+				// system pracy i liczba maszyn w linii zmieniają czas zleceń
+				apply((s) => withReflow({ ...s, ...applyMachineDraft(s.machines, s.breakdowns, draft, id) }));
 				return id;
 			},
-			renameMachine: (id, name) => apply((s) => ({ ...s, machines: s.machines.map((m) => (m.id === id ? { ...m, name } : m)) })),
 			deleteMachine: (id) =>
 				apply((s) => ({
 					...s,
@@ -103,19 +101,6 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 					blocks: s.blocks.filter((b) => b.machineId !== id),
 					breakdowns: s.breakdowns.filter((b) => b.machineId !== id)
 				})),
-			setMachineWorkMode: (id, mode) => apply((s) => withReflow({ ...s, machines: s.machines.map((m) => (m.id === id ? { ...m, workMode: mode } : m)) })),
-			setMachineUnits(id, units) {
-				apply((s) =>
-					withReflow({
-						...s,
-						machines: s.machines.map((m) => (m.id === id ? { ...m, units } : m)),
-						// awarie maszyn, których już nie ma w linii, tracą sens
-						breakdowns: s.breakdowns
-							.map((b) => (b.machineId === id ? { ...b, units: b.units.filter((u) => u < units) } : b))
-							.filter((b) => b.units.length > 0)
-					})
-				);
-			},
 			addBreakdown(breakdown) {
 				const id = newId();
 				apply((s) => withReflow({ ...s, breakdowns: [...s.breakdowns, { ...breakdown, id }] }));

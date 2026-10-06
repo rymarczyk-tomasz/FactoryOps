@@ -87,7 +87,7 @@ describe('kalendarz maszyny', () => {
 });
 
 describe('linie i awarie', () => {
-	const line: Machine = { id: 'l1', name: 'Linia 1', workMode: 'continuous', units: 3 };
+	const line: Machine = { id: 'l1', name: 'Linia 1', workMode: 'continuous', lineMachines: ['M1', 'M2', 'M3'] };
 	const lineCapacity = (breakdowns: Breakdown[] = []) => capacityLookup({ calendar: plant, machines: [line], breakdowns })('l1');
 	const breakdown = (units: number[], start: number, end: number, machineId = 'l1'): Breakdown => ({ id: 'a', machineId, units, start, end });
 

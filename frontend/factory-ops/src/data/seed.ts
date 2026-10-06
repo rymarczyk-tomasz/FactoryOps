@@ -72,7 +72,15 @@ export function createSeedState(now: number): PlanState {
 	const calendar = { overrides: {} };
 
 	const machines: Machine[] = [
-		...Array.from({ length: LINE_COUNT }, (_, i): Machine => ({ id: `l${i + 1}`, name: `Linia ${i + 1}`, workMode: 'continuous', units: LINE_UNITS })),
+		...Array.from(
+			{ length: LINE_COUNT },
+			(_, i): Machine => ({
+				id: `l${i + 1}`,
+				name: `Linia ${i + 1}`,
+				workMode: 'continuous',
+				lineMachines: Array.from({ length: LINE_UNITS }, (_, unit) => `L${i + 1}-M${unit + 1}`)
+			})
+		),
 		...MACHINE_NAMES.map((name, i): Machine => ({ id: `m${i + 1}`, name, workMode: 'weekdays' }))
 	];
 	const programmers: Programmer[] = PROGRAMMERS.map((p, i) => ({ ...p, id: `p${i + 1}` }));
@@ -90,14 +98,14 @@ export function createSeedState(now: number): PlanState {
 	let orderCounter = 412;
 	const blocks: Block[] = [];
 	for (const machine of machines) {
-		const hours = machine.units ? LINE_HOURS : MACHINE_HOURS;
+		const hours = machine.lineMachines ? LINE_HOURS : MACHINE_HOURS;
 		// każda maszyna liczona osobno - kolejki maszyn są od siebie niezależne
 		let queue: Block[] = [];
 		// dane tworzą też historię, więc liczymy je od początku planu, nie od „teraz”
 		const planStart = now - 4 * 24 * 3600_000;
 		let start: number | undefined = planStart;
 		// linie przerabiają zlecenia 3 razy szybciej, więc mają ich więcej, żeby plan sięgał podobnie daleko
-		const minCount = machine.units ? 16 : 6;
+		const minCount = machine.lineMachines ? 16 : 6;
 		for (let i = 0, count = minCount + Math.floor(rnd() * 6); i < count; i++) {
 			// czasem zlecenie czeka z przerwą (np. na materiał) - dostaje własny termin
 			const lastEnd = queue.length ? queue[queue.length - 1].end : undefined;

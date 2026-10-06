@@ -3,7 +3,7 @@ import { usePlan } from '../data/PlanContext';
 import { effectiveDay, formatWorkingHours, isLine, isValidWorkingHours, unitCount, unitLabel, workMode, WORK_MODE_LABELS } from '../domain/calendar';
 import { formatDateTime, fromLocalInputValue, toLocalInputValue } from '../domain/format';
 import { addHours, dayKey, nearestHourStart, SHIFT_START_HOURS } from '../domain/shifts';
-import { Breakdown, DayOverride, Id, WorkingHours } from '../domain/types';
+import { Breakdown, DayOverride, Id, Machine, WorkingHours } from '../domain/types';
 
 export interface DayMenuTarget {
 	x: number;
@@ -39,11 +39,11 @@ interface BreakdownForm {
 
 const DEFAULT_BREAKDOWN_HOURS = 4;
 
-function describeBreakdown(breakdown: Breakdown, line: boolean): string {
+function describeBreakdown(breakdown: Breakdown, machine: Machine): string {
 	const end = new Date(breakdown.end);
 	const sameDay = new Date(breakdown.start).toDateString() === end.toDateString();
 	const range = `${formatDateTime(breakdown.start)} → ${sameDay ? hourFormat.format(end) : formatDateTime(breakdown.end)}`;
-	return line ? `${breakdown.units.map(unitLabel).join(', ')} · ${range}` : range;
+	return isLine(machine) ? `${breakdown.units.map((unit) => unitLabel(machine, unit)).join(', ')} · ${range}` : range;
 }
 
 function describeDay(day: DayOverride): string {
@@ -190,7 +190,7 @@ const DayContextMenu = ({ target, onAddBlock, onClose }: DayContextMenuProps) =>
 			<div className="dropdown-divider" />
 			{dayBreakdowns.map((breakdown) => (
 				<div key={breakdown.id} className="d-flex align-items-center justify-content-between gap-2 px-3 py-1 small">
-					<span className="text-danger">Awaria {describeBreakdown(breakdown, line)}</span>
+					<span className="text-danger">Awaria {describeBreakdown(breakdown, machine)}</span>
 					<button type="button" className="btn btn-link btn-sm p-0 text-danger" onClick={run(() => removeBreakdown(breakdown.id))}>
 						Usuń
 					</button>
@@ -209,7 +209,7 @@ const DayContextMenu = ({ target, onAddBlock, onClose }: DayContextMenuProps) =>
 					}}>
 					<div className="small text-secondary mb-1">Awaria na {machine.name}</div>
 					{line && (
-						<div className="d-flex gap-3 mb-2">
+						<div className="d-flex flex-wrap column-gap-3 mb-2">
 							{Array.from({ length: unitCount(machine) }, (_, unit) => (
 								<div key={unit} className="form-check">
 									<input
@@ -220,7 +220,7 @@ const DayContextMenu = ({ target, onAddBlock, onClose }: DayContextMenuProps) =>
 										onChange={() => toggleUnit(unit)}
 									/>
 									<label className="form-check-label small" htmlFor={`breakdownUnit${unit}`}>
-										{unitLabel(unit)}
+										{unitLabel(machine, unit)}
 									</label>
 								</div>
 							))}

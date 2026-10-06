@@ -54,16 +54,16 @@ export function machineCalendar(plant: WorkCalendar, machine: Machine | undefine
 }
 
 export function unitCount(machine: Machine | undefined): number {
-	return machine?.units ?? 1;
+	return machine?.lineMachines?.length || 1;
 }
 
 export function isLine(machine: Machine | undefined): boolean {
 	return unitCount(machine) > 1;
 }
 
-/** Nazwy maszyn w linii do wyboru przy awarii: M1, M2, M3. */
-export function unitLabel(unit: number): string {
-	return `M${unit + 1}`;
+/** Nazwa maszyny linii (np. przy awarii); bez nazwy - M1, M2, M3. */
+export function unitLabel(machine: Machine | undefined, unit: number): string {
+	return machine?.lineMachines?.[unit] || `M${unit + 1}`;
 }
 
 /** Awarie maszyny trwające w danej godzinie. */

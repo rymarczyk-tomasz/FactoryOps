@@ -26,10 +26,17 @@ export interface Machine {
 	/** Wyjątki tylko dla tej maszyny, mają pierwszeństwo przed kalendarzem zakładu. Klucz: 'YYYY-MM-DD'. */
 	overrides?: Record<string, DayOverride>;
 	/**
-	 * Ile jednakowych maszyn pracuje równolegle - linia produkcyjna to 3, zwykła maszyna 1 (brak = 1).
+	 * Nazwy jednakowych maszyn pracujących równolegle w linii produkcyjnej (brak = pojedyncza maszyna).
 	 * Zlecenie na linii dzieli się między pracujące maszyny, więc trwa krócej.
 	 */
-	units?: number;
+	lineMachines?: string[];
+}
+
+/** Dane z formularza maszyny/linii. `previousIndex` łączy maszynę linii z jej dotychczasowym numerem (dla awarii). */
+export interface MachineDraft {
+	name: string;
+	workMode: WorkMode;
+	lineMachines?: { name: string; previousIndex?: number }[];
 }
 
 /** Awaria: wybrane maszyny (numery w linii, od 0) stoją w przedziale [start, end). */
