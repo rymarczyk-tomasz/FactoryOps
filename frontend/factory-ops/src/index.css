@@ -42,6 +42,14 @@ body {
 .react-calendar-timeline .rct-item {
 	border-radius: 4px;
 	font-size: 0.8rem;
+	/* napis nie może wystawać na sąsiednie zlecenie - przechwytywałby jego kliknięcia */
+	overflow: hidden;
+}
+
+.react-calendar-timeline .rct-item .rct-item-content {
+	max-width: 100%;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 /* czytelny napis także na zakreskowanym (wolnym) fragmencie zlecenia */
@@ -49,7 +57,7 @@ body {
 	text-shadow: 0 0 3px rgba(0, 0, 0, 0.55);
 }
 
-.react-calendar-timeline .rct-item.selected {
+.react-calendar-timeline .rct-item.is-selected {
 	box-shadow: 0 0 0 2px #111827;
 }
 

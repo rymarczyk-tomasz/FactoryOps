@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, Button, ButtonToolbar } from 'react-bootstrap';
 import Timeline, { DateHeader, SidebarHeader, TimelineHeaders, TimelineItemBase, TimelineMarkers, TodayMarker } from 'react-calendar-timeline';
+import type { ItemRendererProps } from 'react-calendar-timeline/dist/lib/items/Item';
 import 'react-calendar-timeline/style.css';
 import { usePlan } from '../data/PlanContext';
 import { calendarLookup, nonWorkingPeriods, nonWorkingSegments, workMode } from '../domain/calendar';
@@ -38,6 +39,39 @@ function blockBackground(color: string, start: number, end: number, offSegments:
 	const solid = `linear-gradient(to right, ${color} 0%, ${stops.join(', ')}, ${color} 100%)`;
 	const stripes = `repeating-linear-gradient(-45deg, ${color}59 0 6px, ${color}a6 6px 12px)`;
 	return `${solid}, ${stripes}`;
+}
+
+/** Element timeline z wariantami opisu - renderer wybiera najdłuższy, który mieści się w kafelku. */
+type PlanItem = TimelineItemBase<number> & { labels?: string[] };
+
+/** Przybliżona szerokość znaku przy czcionce 0.8rem + odstępy wewnątrz kafelka. */
+const CHAR_WIDTH = 7;
+const LABEL_PADDING = 14;
+
+function blockLabels(block: Block): string[] {
+	const shortNo = block.orderNo.split('/').pop() ?? block.orderNo;
+	return [`${block.orderNo} · ${block.operation}`, `${shortNo} · ${block.operation}`, shortNo];
+}
+
+/**
+ * Opis nigdy nie wychodzi poza kafelek - inaczej przy krótkich zleceniach obok siebie napis
+ * zasłaniał sąsiada i kliknięcie trafiało w złe zlecenie. Za wąski kafelek zostaje bez napisu (dane w podpowiedzi).
+ */
+function renderItem({ item, itemContext, getItemProps }: ItemRendererProps<PlanItem>) {
+	const { key, ref, ...props } = getItemProps(item.itemProps ?? {});
+	const width = itemContext.dimensions.width;
+	const label = item.labels ? (item.labels.find((l) => l.length * CHAR_WIDTH + LABEL_PADDING <= width) ?? '') : itemContext.title;
+	return (
+		<div
+			{...props}
+			ref={ref}
+			key={key}
+			// biblioteka nie oznacza zaznaczenia klasą, a jej podpowiedź to sam tytuł - ustawiamy oba sami
+			className={itemContext.selected ? `${props.className} is-selected` : props.className}
+			title={item.itemProps?.title ?? props.title}>
+			{label && <div className="rct-item-content">{label}</div>}
+		</div>
+	);
 }
 
 type MachineGroup = { id: Id; title: string; machine: Machine; stackItems: boolean };
@@ -88,7 +122,7 @@ const FactoryOpsTimeline = () => {
 	// dzięki temu tło z dniami wolnymi leży pod zleceniami
 	const groups = useMemo<MachineGroup[]>(() => state.machines.map((m) => ({ id: m.id, title: m.name, machine: m, stackItems: false })), [state.machines]);
 
-	const offItems = useMemo<TimelineItemBase<number>[]>(() => {
+	const offItems = useMemo<PlanItem[]>(() => {
 		const calendars = calendarLookup(state);
 		const now = Date.now();
 		const from = Math.min(now, ...state.blocks.map((b) => b.start)) - 30 * DAY;
@@ -109,7 +143,7 @@ const FactoryOpsTimeline = () => {
 	}, [state]);
 
 	const draggedId = drag?.id;
-	const blockItems = useMemo<TimelineItemBase<number>[]>(() => {
+	const blockItems = useMemo<PlanItem[]>(() => {
 		const now = Date.now();
 		const calendars = calendarLookup({ calendar: state.calendar, machines: state.machines });
 		return state.blocks.map((block) => {
@@ -128,6 +162,7 @@ const FactoryOpsTimeline = () => {
 				id: block.id,
 				group: block.machineId,
 				title: `${block.orderNo} · ${block.operation}`,
+				labels: blockLabels(block),
 				start_time: block.start,
 				end_time: block.end,
 				canMove: true,
@@ -149,7 +184,7 @@ const FactoryOpsTimeline = () => {
 	}, [state.blocks, state.programmers, state.calendar, state.machines, draggedId]);
 
 	// kreska w miejscu, gdzie faktycznie wyląduje przenoszony bloczek (po zepchnięciu kolejki)
-	const indicatorItems = useMemo<TimelineItemBase<number>[]>(() => {
+	const indicatorItems = useMemo<PlanItem[]>(() => {
 		if (!drag || !preview) return [];
 		const neighbours = [preview.after && `po ${preview.after.orderNo}`, preview.before && `przed ${preview.before.orderNo}`].filter(Boolean);
 		return [
@@ -192,7 +227,7 @@ const FactoryOpsTimeline = () => {
 				</small>
 			</div>
 
-			<Timeline<TimelineItemBase<number>, MachineGroup>
+			<Timeline<PlanItem, MachineGroup>
 				groups={groups}
 				items={items}
 				defaultTimeStart={Date.now() - 2 * DAY}
@@ -232,6 +267,7 @@ const FactoryOpsTimeline = () => {
 					if (last && last.id === id) moveBlock(last.id, last.start, last.machineId);
 					else moveBlock(String(id), time, state.machines[groupOrder].id);
 				}}
+				itemRenderer={renderItem}
 				groupRenderer={({ group }) => (
 					<div className="d-flex align-items-center justify-content-between gap-1">
 						<span className="text-truncate" title={group.title}>
