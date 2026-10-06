@@ -71,7 +71,7 @@ body {
 	align-items: center;
 	padding: 0 12px;
 	font-weight: 600;
-	color: #fff;
+	color: #e2e8f0;
 }
 
 /* przeciąganie: przenoszony bloczek prześwituje, kreska pokazuje miejsce wstawienia */
@@ -149,4 +149,161 @@ body {
 
 .day-hours-form .breakdown-hours {
 	width: 4.5rem;
+}
+
+/* ---- motyw planu (zamiast domyślnego czerwonego nagłówka biblioteki) ---- */
+.app-card {
+	border: none;
+	box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+/* !important: CSS biblioteki ładuje się po naszym */
+.react-calendar-timeline .rct-header-root {
+	background: #1e293b !important;
+	border-bottom: 1px solid #0f172a !important;
+}
+
+.react-calendar-timeline .rct-dateHeader {
+	background: #f1f5f9 !important;
+	color: #334155;
+	border-left: 1px solid #e2e8f0 !important;
+	border-bottom: 1px solid #cbd5e1 !important;
+	font-size: 0.8rem;
+}
+
+.react-calendar-timeline .rct-dateHeader.rct-dateHeader-primary {
+	background: transparent !important;
+	color: #e2e8f0;
+	border-left: 1px solid #334155 !important;
+	border-right: none;
+	font-weight: 600;
+}
+
+.react-calendar-timeline .rct-sidebar,
+.react-calendar-timeline .rct-sidebar .rct-sidebar-row,
+.react-calendar-timeline .rct-horizontal-lines .rct-hl-even,
+.react-calendar-timeline .rct-horizontal-lines .rct-hl-odd {
+	border-color: #e2e8f0;
+}
+
+.react-calendar-timeline .rct-vertical-lines .rct-vl {
+	border-left-color: #e2e8f0;
+}
+
+/* nagłówki zwijanych grup (Linie produkcyjne / Maszyny) */
+.react-calendar-timeline .rct-horizontal-lines .group-header-row {
+	background: #e2e8f0;
+}
+
+.group-header {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	width: 100%;
+	padding: 0;
+	border: none;
+	background: transparent;
+	font-weight: 600;
+	font-size: 0.85rem;
+	color: #1e293b;
+	text-align: left;
+}
+
+.group-chevron {
+	width: 1rem;
+	color: #64748b;
+}
+
+/* wyszukiwanie: pasujące zlecenia wyróżnione, reszta przygaszona */
+.react-calendar-timeline .rct-item.dimmed {
+	opacity: 0.15 !important;
+}
+
+.react-calendar-timeline .rct-item.search-match {
+	box-shadow: 0 0 0 2px #f59e0b;
+}
+
+.react-calendar-timeline .rct-item.search-match.is-selected {
+	box-shadow: 0 0 0 3px #111827;
+}
+
+.plan-search {
+	width: 340px;
+}
+
+/* panel boczny zlecenia */
+.details-panel {
+	--bs-offcanvas-width: 360px;
+	box-shadow: -8px 0 24px rgba(15, 23, 42, 0.12);
+}
+
+.details-list {
+	display: grid;
+	grid-template-columns: max-content 1fr;
+	gap: 6px 16px;
+}
+
+.details-list dt {
+	font-weight: 500;
+	color: #64748b;
+}
+
+.details-list dd {
+	margin: 0;
+}
+
+.text-pre-wrap {
+	white-space: pre-wrap;
+}
+
+/* komunikaty po zmianach planu */
+.notice-container {
+	z-index: 1090;
+}
+
+/* obciążenie */
+.stat-tile {
+	min-width: 200px;
+	padding: 12px 16px;
+	border-radius: 8px;
+	background: #f8fafc;
+	border: 1px solid #e2e8f0;
+}
+
+.stat-label {
+	font-size: 0.8rem;
+	color: #64748b;
+}
+
+.stat-value {
+	font-size: 1.75rem;
+	font-weight: 600;
+	line-height: 1.2;
+}
+
+.load-table .load-cell {
+	min-width: 72px;
+	font-variant-numeric: tabular-nums;
+}
+
+.table-group-row th {
+	background: #f1f5f9 !important;
+}
+
+/* lista zleceń: sortowanie po kliknięciu w nagłówek */
+.list-table th.sortable button {
+	padding: 0;
+	border: none;
+	background: none;
+	font-weight: inherit;
+	color: inherit;
+	white-space: nowrap;
+}
+
+.sort-arrow {
+	display: inline-block;
+	width: 1em;
+	margin-left: 2px;
+	font-size: 0.7em;
+	color: #64748b;
 }

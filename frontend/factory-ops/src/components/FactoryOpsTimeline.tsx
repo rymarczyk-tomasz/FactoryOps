@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Badge, Button, ButtonToolbar } from 'react-bootstrap';
+import { Badge, Button, ButtonGroup, Form, InputGroup } from 'react-bootstrap';
 import Timeline, { DateHeader, SidebarHeader, TimelineHeaders, TimelineItemBase, TimelineMarkers, TodayMarker } from 'react-calendar-timeline';
 import type { ItemRendererProps } from 'react-calendar-timeline/dist/lib/items/Item';
 import 'react-calendar-timeline/style.css';
@@ -9,6 +9,7 @@ import { formatDateTime, formatHours, programmerName, timelineLabel } from '../d
 import { blockStatus, previewMove } from '../domain/schedule';
 import { nearestHourStart, shiftDayStart } from '../domain/shifts';
 import { Block, Id, Machine } from '../domain/types';
+import BlockDetailsPanel from './BlockDetailsPanel';
 import BlockFormModal, { BlockFormDefaults } from './BlockFormModal';
 import ConfirmModal from './ConfirmModal';
 import DayContextMenu, { DayMenuTarget } from './DayContextMenu';
@@ -99,7 +100,13 @@ function renderItem({ item, itemContext, getItemProps }: ItemRendererProps<PlanI
 	);
 }
 
-type MachineGroup = { id: Id; title: string; machine: Machine; stackItems: boolean };
+type GroupKind = 'lines' | 'machines';
+
+/** Wiersz planu: maszyna/linia albo nagłówek zwijanej grupy („Linie produkcyjne”, „Maszyny”). */
+type PlanGroup = { id: Id; title: string; stackItems: boolean; height?: number; machine?: Machine; header?: { kind: GroupKind; count: number; collapsed: boolean } };
+
+const GROUP_TITLES: Record<GroupKind, string> = { lines: 'Linie produkcyjne', machines: 'Maszyny' };
+const HEADER_HEIGHT = 30;
 
 // treść zostaje po zamknięciu, żeby modal nie zmieniał się w trakcie animacji zamykania
 type FormState = { show: boolean; block?: Block; defaults?: BlockFormDefaults };
@@ -107,16 +114,34 @@ type FormState = { show: boolean; block?: Block; defaults?: BlockFormDefaults };
 /** Bloczek w trakcie przeciągania: docelowa maszyna i początek przyciągnięty do pełnej godziny. */
 type DragState = { id: Id; machineId: Id; start: number };
 
+/** Widoczny zakres planu. Ułamek `lead` to część zakresu przed „teraz”. */
+const ZOOMS = [
+	{ label: 'Dzień', span: DAY, lead: 0.2 },
+	{ label: 'Tydzień', span: 7 * DAY, lead: 1 / 7 },
+	{ label: 'Miesiąc', span: 30 * DAY, lead: 0.1 }
+];
+type Range = { start: number; end: number };
+const rangeAround = (time: number, span: number, lead: number): Range => ({ start: time - span * lead, end: time + span * (1 - lead) });
+
+function matchesQuery(block: Block, query: string): boolean {
+	const q = query.trim().toLowerCase();
+	return [block.orderNo, block.project, block.operation].some((field) => field.toLowerCase().includes(q));
+}
+
 const FactoryOpsTimeline = () => {
 	const { state, moveBlock, deleteBlock, undo, canUndo } = usePlan();
 	const [selectedId, setSelectedId] = useState<Id>();
 	const [form, setForm] = useState<FormState>({ show: false });
-	const [confirmDelete, setConfirmDelete] = useState(false);
+	const [toDelete, setToDelete] = useState<Block>();
 	const [dayMenu, setDayMenu] = useState<DayMenuTarget>();
 	const closeDayMenu = useCallback(() => setDayMenu(undefined), []);
 	const [drag, setDrag] = useState<DragState>();
 	// ostatnia pozycja podglądu bez czekania na render - przy upuszczeniu bloczek ląduje dokładnie tam, gdzie kreska
 	const dragRef = useRef<DragState>();
+	const [range, setRange] = useState<Range>(() => rangeAround(Date.now(), ZOOMS[1].span, ZOOMS[1].lead));
+	const [collapsed, setCollapsed] = useState<Record<GroupKind, boolean>>({ lines: false, machines: false });
+	const [query, setQuery] = useState('');
+	const [matchIndex, setMatchIndex] = useState(0);
 
 	// upuszczenie bez zmiany miejsca nie wywołuje onItemMove - podgląd chowamy po puszczeniu przycisku
 	const dragging = drag !== undefined;
@@ -143,9 +168,46 @@ const FactoryOpsTimeline = () => {
 		setDayMenu({ x: clientX, y: clientY, machineId, day: shiftDayStart(time), hour: nearestHourStart(time) });
 	};
 
+	// --- zoom i przewijanie ---
+	const span = range.end - range.start;
+	const activeZoom = ZOOMS.find((z) => Math.abs(z.span - span) < HOUR);
+	const zoomTo = (zoom: (typeof ZOOMS)[number]) => setRange(rangeAround(Date.now(), zoom.span, zoom.lead));
+	const goToday = () => setRange(rangeAround(Date.now(), span, activeZoom?.lead ?? 0.15));
+	const showBlock = (block: Block) => setRange(rangeAround(block.start, Math.max(span, (block.end - block.start) * 1.5), 0.15));
+
+	// --- wyszukiwanie ---
+	const matches = useMemo(() => (query.trim() ? [...state.blocks].filter((b) => matchesQuery(b, query)).sort((a, b) => a.start - b.start) : []), [state.blocks, query]);
+	const matchIds = useMemo(() => new Set(matches.map((b) => b.id)), [matches]);
+	const jumpToMatch = (index: number) => {
+		if (matches.length === 0) return;
+		const wrapped = (index + matches.length) % matches.length;
+		setMatchIndex(wrapped);
+		setSelectedId(matches[wrapped].id);
+		showBlock(matches[wrapped]);
+	};
+
+	// --- wiersze: linie i maszyny w zwijanych grupach ---
 	// bloczki na maszynie nigdy na siebie nie nachodzą (pilnuje tego harmonogram), więc bez układania w stos -
 	// dzięki temu tło z dniami wolnymi leży pod zleceniami
-	const groups = useMemo<MachineGroup[]>(() => state.machines.map((m) => ({ id: m.id, title: m.name, machine: m, stackItems: false })), [state.machines]);
+	const groups = useMemo<PlanGroup[]>(() => {
+		const row = (m: Machine): PlanGroup => ({ id: m.id, title: m.name, machine: m, stackItems: false });
+		const byKind: Record<GroupKind, Machine[]> = { lines: state.machines.filter(isLine), machines: state.machines.filter((m) => !isLine(m)) };
+		// nagłówki tylko wtedy, gdy są oba rodzaje - inaczej nie ma czego grupować
+		if (byKind.lines.length === 0 || byKind.machines.length === 0) return state.machines.map(row);
+		return (['lines', 'machines'] as GroupKind[]).flatMap((kind) => [
+			{
+				id: `hdr:${kind}`,
+				title: GROUP_TITLES[kind],
+				stackItems: false,
+				height: HEADER_HEIGHT,
+				header: { kind, count: byKind[kind].length, collapsed: collapsed[kind] }
+			},
+			...(collapsed[kind] ? [] : byKind[kind].map(row))
+		]);
+	}, [state.machines, collapsed]);
+	const visibleMachineIds = useMemo(() => new Set(groups.filter((g) => g.machine).map((g) => g.id)), [groups]);
+	/** Maszyna wiersza o danym numerze; na nagłówku grupy - `undefined`. */
+	const machineAtRow = (groupOrder: number) => groups[groupOrder]?.machine?.id;
 
 	// tło zależy tylko od kalendarzy - nie przeliczamy go przy każdym przesunięciu zlecenia
 	const offItems = useMemo<PlanItem[]>(() => {
@@ -193,6 +255,7 @@ const FactoryOpsTimeline = () => {
 	}, [state.breakdowns, state.machines]);
 
 	const draggedId = drag?.id;
+	const searching = query.trim() !== '';
 	const blockItems = useMemo<PlanItem[]>(() => {
 		const now = Date.now();
 		const calendars = calendarLookup({ calendar: state.calendar, machines: state.machines });
@@ -211,6 +274,7 @@ const FactoryOpsTimeline = () => {
 			]
 				.filter(Boolean)
 				.join('\n');
+			const classes = [block.id === draggedId && 'dragging-block', searching && (matchIds.has(block.id) ? 'search-match' : 'dimmed')].filter(Boolean);
 			return {
 				id: block.id,
 				group: block.machineId,
@@ -222,7 +286,7 @@ const FactoryOpsTimeline = () => {
 				// długość wynika z godzin w zamówieniu - zmienia się ją w formularzu, nie myszką
 				canResize: false,
 				canChangeGroup: true,
-				className: block.id === draggedId ? 'dragging-block' : undefined,
+				className: classes.join(' ') || undefined,
 				itemProps: {
 					title: tooltip,
 					onDoubleClick: () => setForm({ show: true, block }),
@@ -234,7 +298,7 @@ const FactoryOpsTimeline = () => {
 				}
 			};
 		});
-	}, [state.blocks, state.programmers, state.calendar, state.machines, draggedId]);
+	}, [state.blocks, state.programmers, state.calendar, state.machines, draggedId, searching, matchIds]);
 
 	// kreska w miejscu, gdzie faktycznie wyląduje przenoszony bloczek (po zepchnięciu kolejki)
 	const indicatorItems = useMemo<PlanItem[]>(() => {
@@ -259,39 +323,76 @@ const FactoryOpsTimeline = () => {
 		];
 	}, [drag, preview]);
 
-	const items = useMemo(() => [...offItems, ...blockItems, ...breakdownItems, ...indicatorItems], [offItems, blockItems, breakdownItems, indicatorItems]);
+	// elementy zwiniętych grup nie trafiają do biblioteki
+	const items = useMemo(
+		() => [...offItems, ...blockItems, ...breakdownItems, ...indicatorItems].filter((item) => visibleMachineIds.has(String(item.group))),
+		[offItems, blockItems, breakdownItems, indicatorItems, visibleMachineIds]
+	);
 
 	return (
 		<>
-			<div className="d-flex flex-wrap align-items-center gap-3 mb-3">
-				<ButtonToolbar className="gap-2">
-					<Button size="sm" onClick={() => setForm({ show: true })}>
-						Dodaj zlecenie
-					</Button>
-					<Button size="sm" variant="outline-secondary" disabled={!selected} onClick={() => setForm({ show: true, block: selected })}>
-						Edytuj
-					</Button>
-					<Button size="sm" variant="outline-danger" disabled={!selected} onClick={() => setConfirmDelete(true)}>
-						Usuń
-					</Button>
-					<Button size="sm" variant="outline-secondary" disabled={!canUndo} onClick={undo}>
-						Cofnij
-					</Button>
-				</ButtonToolbar>
-				<small className="text-secondary">
-					<span className="legend-swatch non-working-item" /> czas wolny <span className="legend-swatch breakdown-swatch ms-2" /> awaria · prawy klik na planie:
-					godziny pracy i awarie
+			<div className="d-flex flex-wrap align-items-center gap-2 mb-3 plan-toolbar">
+				<Button size="sm" onClick={() => setForm({ show: true })}>
+					+ Dodaj zlecenie
+				</Button>
+				<Button size="sm" variant="outline-secondary" disabled={!canUndo} onClick={undo}>
+					Cofnij
+				</Button>
+				<div className="vr mx-1" />
+				<ButtonGroup size="sm" aria-label="Zakres planu">
+					{ZOOMS.map((zoom) => (
+						<Button key={zoom.label} variant={activeZoom === zoom ? 'secondary' : 'outline-secondary'} onClick={() => zoomTo(zoom)}>
+							{zoom.label}
+						</Button>
+					))}
+				</ButtonGroup>
+				<Button size="sm" variant="outline-secondary" onClick={goToday}>
+					Dziś
+				</Button>
+				<div className="vr mx-1" />
+				<InputGroup size="sm" className="plan-search">
+					<Form.Control
+						type="search"
+						placeholder="Szukaj: nr zamówienia, projekt, operacja"
+						aria-label="Szukaj zleceń"
+						value={query}
+						onChange={(e) => {
+							setQuery(e.target.value);
+							setMatchIndex(0);
+						}}
+						onKeyDown={(e) => {
+							if (e.key === 'Enter') jumpToMatch(e.shiftKey ? matchIndex - 1 : searching && selectedId === matches[matchIndex]?.id ? matchIndex + 1 : matchIndex);
+							if (e.key === 'Escape') setQuery('');
+						}}
+					/>
+					{searching && (
+						<>
+							<InputGroup.Text className="text-nowrap">{matches.length ? `${matchIndex + 1} / ${matches.length}` : 'brak'}</InputGroup.Text>
+							<Button variant="outline-secondary" disabled={!matches.length} onClick={() => jumpToMatch(matchIndex - 1)} aria-label="Poprzednie">
+								‹
+							</Button>
+							<Button variant="outline-secondary" disabled={!matches.length} onClick={() => jumpToMatch(matchIndex + 1)} aria-label="Następne">
+								›
+							</Button>
+						</>
+					)}
+				</InputGroup>
+				<small className="text-secondary ms-auto">
+					<span className="legend-swatch non-working-item" /> czas wolny <span className="legend-swatch breakdown-swatch ms-2" /> awaria · prawy klik: godziny pracy
+					i awarie
 				</small>
 			</div>
 
-			<Timeline<PlanItem, MachineGroup>
+			<Timeline<PlanItem, PlanGroup>
 				groups={groups}
 				items={items}
-				defaultTimeStart={Date.now() - 2 * DAY}
-				defaultTimeEnd={Date.now() + 12 * DAY}
-				minZoom={DAY}
+				visibleTimeStart={range.start}
+				visibleTimeEnd={range.end}
+				onTimeChange={(start, end) => setRange({ start, end })}
+				minZoom={12 * HOUR}
 				maxZoom={90 * DAY}
 				dragSnap={HOUR}
+				sidebarWidth={200}
 				lineHeight={38}
 				itemHeightRatio={0.8}
 				canMove
@@ -301,8 +402,10 @@ const FactoryOpsTimeline = () => {
 				onItemSelect={select}
 				onItemClick={select}
 				onItemDeselect={() => setSelectedId(undefined)}
-				onCanvasDoubleClick={(groupId, time) => setForm({ show: true, defaults: { machineId: String(groupId), start: nearestHourStart(time) } })}
-				onCanvasContextMenu={(groupId, time, e) => openDayMenu(String(groupId), time, e)}
+				onCanvasDoubleClick={(groupId, time) =>
+					visibleMachineIds.has(String(groupId)) && setForm({ show: true, defaults: { machineId: String(groupId), start: nearestHourStart(time) } })
+				}
+				onCanvasContextMenu={(groupId, time, e) => (visibleMachineIds.has(String(groupId)) ? openDayMenu(String(groupId), time, e) : e.preventDefault())}
 				onItemContextMenu={(itemId, e, time) => {
 					const block = state.blocks.find((b) => b.id === itemId);
 					if (block) openDayMenu(block.machineId, time, e);
@@ -310,8 +413,12 @@ const FactoryOpsTimeline = () => {
 				moveResizeValidator={(_action, _item, time) => nearestHourStart(time)}
 				onItemDrag={(e) => {
 					if (e.eventType !== 'move') return;
-					const next = { id: String(e.itemId), machineId: state.machines[e.newGroupOrder].id, start: nearestHourStart(e.time) };
 					const last = dragRef.current;
+					const id = String(e.itemId);
+					// nad nagłówkiem grupy zostajemy na ostatniej maszynie
+					const machineId = machineAtRow(e.newGroupOrder) ?? last?.machineId ?? state.blocks.find((b) => b.id === id)?.machineId;
+					if (!machineId) return;
+					const next = { id, machineId, start: nearestHourStart(e.time) };
 					// zdarzenie przychodzi przy każdym ruchu myszy - przeliczamy tylko po zmianie godziny lub maszyny
 					if (last && last.id === next.id && last.machineId === next.machineId && last.start === next.start) return;
 					dragRef.current = next;
@@ -322,30 +429,46 @@ const FactoryOpsTimeline = () => {
 					dragRef.current = undefined;
 					setDrag(undefined);
 					if (last && last.id === id) moveBlock(last.id, last.start, last.machineId);
-					else moveBlock(String(id), time, state.machines[groupOrder].id);
+					else {
+						const machineId = machineAtRow(groupOrder) ?? state.blocks.find((b) => b.id === id)?.machineId;
+						if (machineId) moveBlock(String(id), time, machineId);
+					}
 				}}
 				itemRenderer={renderItem}
-				groupRenderer={({ group }) => (
-					<div className="d-flex align-items-center justify-content-between gap-1">
-						<span className="text-truncate" title={group.title}>
+				horizontalLineClassNamesForGroup={(group) => (group.header ? ['group-header-row'] : [])}
+				groupRenderer={({ group }) =>
+					group.header ? (
+						<button
+							type="button"
+							className="group-header"
+							aria-expanded={!group.header.collapsed}
+							onClick={() => setCollapsed((c) => ({ ...c, [group.header!.kind]: !c[group.header!.kind] }))}>
+							<span className="group-chevron">{group.header.collapsed ? '▸' : '▾'}</span>
 							{group.title}
-						</span>
-						<span className="d-flex gap-1">
-							{isLine(group.machine) && (
-								<Badge bg="primary" pill title={`Linia: ${unitCount(group.machine)} maszyny pracujące równolegle`}>
-									{unitCount(group.machine)}×
-								</Badge>
-							)}
-							{workMode(group.machine) === 'continuous' && (
-								<Badge bg="success" pill title="System 4-brygadowy">
-									24/7
-								</Badge>
-							)}
-						</span>
-					</div>
-				)}>
+							<span className="text-secondary fw-normal ms-1">({group.header.count})</span>
+						</button>
+					) : (
+						<div className="d-flex align-items-center justify-content-between gap-1">
+							<span className="text-truncate" title={group.title}>
+								{group.title}
+							</span>
+							<span className="d-flex gap-1">
+								{isLine(group.machine) && (
+									<Badge bg="primary" pill title={`Linia: ${unitCount(group.machine)} maszyny pracujące równolegle`}>
+										{unitCount(group.machine)}×
+									</Badge>
+								)}
+								{workMode(group.machine) === 'continuous' && (
+									<Badge bg="success" pill title="System 4-brygadowy">
+										24/7
+									</Badge>
+								)}
+							</span>
+						</div>
+					)
+				}>
 				<TimelineHeaders className="sticky">
-					<SidebarHeader>{({ getRootProps }) => <div {...getRootProps()} className="timeline-sidebar-header">Maszyna</div>}</SidebarHeader>
+					<SidebarHeader>{({ getRootProps }) => <div {...getRootProps()} className="timeline-sidebar-header">Maszyna / linia</div>}</SidebarHeader>
 					<DateHeader unit="primaryHeader" labelFormat={timelineLabel} />
 					<DateHeader labelFormat={timelineLabel} />
 				</TimelineHeaders>
@@ -354,6 +477,13 @@ const FactoryOpsTimeline = () => {
 				</TimelineMarkers>
 			</Timeline>
 
+			<BlockDetailsPanel
+				block={selected}
+				onEdit={(block) => setForm({ show: true, block })}
+				onDelete={setToDelete}
+				onShow={showBlock}
+				onClose={() => setSelectedId(undefined)}
+			/>
 			{dayMenu && (
 				<DayContextMenu
 					target={dayMenu}
@@ -363,16 +493,17 @@ const FactoryOpsTimeline = () => {
 			)}
 			<BlockFormModal show={form.show} block={form.block} defaults={form.defaults} onHide={() => setForm((f) => ({ ...f, show: false }))} />
 			<ConfirmModal
-				show={confirmDelete}
+				show={toDelete !== undefined}
 				title="Usunąć zlecenie?"
 				onConfirm={() => {
-					if (selected) deleteBlock(selected.id);
-					setSelectedId(undefined);
+					if (!toDelete) return;
+					deleteBlock(toDelete.id);
+					if (toDelete.id === selectedId) setSelectedId(undefined);
 				}}
-				onHide={() => setConfirmDelete(false)}>
-				{selected && (
+				onHide={() => setToDelete(undefined)}>
+				{toDelete && (
 					<>
-						Zlecenie <strong>{selected.orderNo}</strong> ({selected.operation}) zostanie usunięte z planu.
+						Zlecenie <strong>{toDelete.orderNo}</strong> ({toDelete.operation}) zostanie usunięte z planu. Następne zlecenia na maszynie cofną się na jego miejsce.
 					</>
 				)}
 			</ConfirmModal>

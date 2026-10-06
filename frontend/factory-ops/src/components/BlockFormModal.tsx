@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Col, Form, Modal, Row } from 'react-bootstrap';
 import { useForm } from 'react-hook-form';
 import { usePlan } from '../data/PlanContext';
@@ -24,43 +24,57 @@ interface BlockForm {
 	orderNo: string;
 	project: string;
 	operation: string;
-	hours: number;
+	/** Pusty string, dopóki użytkownik nic nie wpisze (pole liczbowe). */
+	hours: number | '';
 	programmerId: Id;
 	startMode: 'queue' | 'manual';
 	start: string;
 	note: string;
 }
 
+/** Maszyna z ostatnio dodanego zlecenia - Adam zwykle wpisuje kilka zleceń na tę samą maszynę. */
+let lastMachineId: Id | undefined;
+
+const uniqueSorted = (values: string[]) => [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pl'));
+
 const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) => {
 	const { state, addBlock, updateBlock } = usePlan();
 	const isEdit = block !== undefined;
+	const [addedCount, setAddedCount] = useState(0);
 	const {
 		register,
 		handleSubmit,
 		reset,
 		watch,
+		setFocus,
 		formState: { errors }
 	} = useForm<BlockForm>();
+
+	// podpowiedzi z dotychczasowych zleceń
+	const projects = useMemo(() => uniqueSorted(state.blocks.map((b) => b.project)), [state.blocks]);
+	const operations = useMemo(() => uniqueSorted(state.blocks.map((b) => b.operation)), [state.blocks]);
 
 	useEffect(() => {
 		if (!show) return;
 		const start = block?.start ?? defaults?.start;
+		const machineId = block?.machineId ?? defaults?.machineId ?? (state.machines.some((m) => m.id === lastMachineId) ? lastMachineId : state.machines[0]?.id);
 		reset({
-			machineId: block?.machineId ?? defaults?.machineId ?? state.machines[0]?.id ?? '',
+			machineId: machineId ?? '',
 			orderNo: block?.orderNo ?? '',
 			project: block?.project ?? '',
 			operation: block?.operation ?? '',
-			hours: block?.hours ?? 8,
+			hours: block?.hours ?? '',
 			programmerId: block?.programmerId ?? '',
 			startMode: start !== undefined ? 'manual' : 'queue',
 			start: start !== undefined ? toLocalInputValue(start) : '',
 			note: block?.note ?? ''
 		});
+		setAddedCount(0);
 		// formularz ustawiamy tylko przy otwarciu, nie przy każdej zmianie planu
 	}, [show]);
 
 	const startMode = watch('startMode');
-	const hours = watch('hours');
+	const hours = Number(watch('hours'));
 	const machine = state.machines.find((m) => m.id === watch('machineId'));
 
 	/** Podpowiedź pod polem godzin: na linii czas dzieli się między maszyny (bez awarii, z dokładnością do godziny). */
@@ -71,37 +85,81 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 		return `Linia, ${units} maszyny: ok. ${Math.ceil(hours / units)} h na planie`;
 	};
 
-	const onSubmit = (form: BlockForm) => {
-		const draft: BlockDraft = {
-			machineId: form.machineId,
-			orderNo: form.orderNo.trim(),
-			project: form.project.trim(),
-			operation: form.operation.trim(),
-			hours: form.hours,
-			programmerId: form.programmerId || undefined,
-			note: form.note.trim() || undefined,
-			start: form.startMode === 'manual' ? fromLocalInputValue(form.start) : undefined
-		};
-		if (isEdit) {
-			updateBlock(block.id, { ...draft, start: draft.start ?? block.start });
-		} else {
+	/** `again` - zapisz i zostań w formularzu, żeby wpisać kolejną operację tego samego zamówienia. */
+	const submit = (again: boolean) =>
+		handleSubmit((form) => {
+			const draft: BlockDraft = {
+				machineId: form.machineId,
+				orderNo: form.orderNo.trim(),
+				project: form.project.trim(),
+				operation: form.operation.trim(),
+				hours: Number(form.hours),
+				programmerId: form.programmerId || undefined,
+				note: form.note.trim() || undefined,
+				start: form.startMode === 'manual' ? fromLocalInputValue(form.start) : undefined
+			};
+			if (isEdit) {
+				updateBlock(block.id, { ...draft, start: draft.start ?? block.start });
+				onHide();
+				return;
+			}
 			addBlock(draft);
-		}
-		onHide();
-	};
+			lastMachineId = draft.machineId;
+			if (!again) {
+				onHide();
+				return;
+			}
+			// zostają: zamówienie, projekt, maszyna, programista; czyścimy to, co dotyczy jednej operacji
+			reset({ ...form, operation: '', hours: '', note: '', startMode: 'queue', start: '' });
+			setAddedCount((n) => n + 1);
+			setTimeout(() => setFocus('operation'));
+		});
 
 	const required = { required: 'Pole wymagane', validate: (v: string) => v.trim().length > 0 || 'Pole wymagane' };
 
 	return (
 		<Modal show={show} onHide={onHide} centered size="lg">
-			<Form noValidate onSubmit={handleSubmit(onSubmit)}>
+			<Form
+				noValidate
+				onSubmit={submit(false)}
+				onKeyDown={(e) => {
+					if (!isEdit && e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+						e.preventDefault();
+						submit(true)();
+					}
+				}}>
 				<Modal.Header closeButton>
 					<Modal.Title>{isEdit ? 'Edytuj zlecenie' : 'Nowe zlecenie'}</Modal.Title>
 				</Modal.Header>
 				<Modal.Body>
 					<Row className="g-3">
+						<Form.Group as={Col} md={6} controlId="orderNo">
+							<Form.Label>Nr zamówienia</Form.Label>
+							<Form.Control autoFocus {...register('orderNo', required)} isInvalid={!!errors.orderNo} placeholder="np. ZAM/2026/0450" />
+							<Form.Control.Feedback type="invalid">{errors.orderNo?.message}</Form.Control.Feedback>
+						</Form.Group>
+						<Form.Group as={Col} md={6} controlId="project">
+							<Form.Label>Projekt</Form.Label>
+							<Form.Control list="projectSuggestions" autoComplete="off" {...register('project', required)} isInvalid={!!errors.project} />
+							<datalist id="projectSuggestions">
+								{projects.map((p) => (
+									<option key={p} value={p} />
+								))}
+							</datalist>
+							<Form.Control.Feedback type="invalid">{errors.project?.message}</Form.Control.Feedback>
+						</Form.Group>
+						<Form.Group as={Col} md={6} controlId="operation">
+							<Form.Label>Operacja / stopień</Form.Label>
+							<Form.Control list="operationSuggestions" autoComplete="off" {...register('operation', required)} isInvalid={!!errors.operation} />
+							<datalist id="operationSuggestions">
+								{operations.map((o) => (
+									<option key={o} value={o} />
+								))}
+							</datalist>
+							<Form.Control.Feedback type="invalid">{errors.operation?.message}</Form.Control.Feedback>
+						</Form.Group>
 						<Form.Group as={Col} md={6} controlId="machineId">
-							<Form.Label>Maszyna</Form.Label>
+							<Form.Label>Maszyna / linia</Form.Label>
 							<Form.Select {...register('machineId', { required: 'Wybierz maszynę' })} isInvalid={!!errors.machineId}>
 								{state.machines.map((m) => (
 									<option key={m.id} value={m.id}>
@@ -111,21 +169,6 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 							</Form.Select>
 							<Form.Control.Feedback type="invalid">{errors.machineId?.message}</Form.Control.Feedback>
 						</Form.Group>
-						<Form.Group as={Col} md={6} controlId="orderNo">
-							<Form.Label>Nr zamówienia</Form.Label>
-							<Form.Control autoFocus {...register('orderNo', required)} isInvalid={!!errors.orderNo} placeholder="np. ZAM/2026/0450" />
-							<Form.Control.Feedback type="invalid">{errors.orderNo?.message}</Form.Control.Feedback>
-						</Form.Group>
-						<Form.Group as={Col} md={6} controlId="project">
-							<Form.Label>Projekt</Form.Label>
-							<Form.Control {...register('project', required)} isInvalid={!!errors.project} />
-							<Form.Control.Feedback type="invalid">{errors.project?.message}</Form.Control.Feedback>
-						</Form.Group>
-						<Form.Group as={Col} md={6} controlId="operation">
-							<Form.Label>Operacja / stopień</Form.Label>
-							<Form.Control {...register('operation', required)} isInvalid={!!errors.operation} />
-							<Form.Control.Feedback type="invalid">{errors.operation?.message}</Form.Control.Feedback>
-						</Form.Group>
 						<Form.Group as={Col} md={6} controlId="hours">
 							<Form.Label>Czas pracy jednej maszyny [h]</Form.Label>
 							<Form.Control
@@ -133,9 +176,8 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 								step="0.5"
 								min="0.5"
 								{...register('hours', {
-									valueAsNumber: true,
 									required: 'Podaj liczbę godzin',
-									min: { value: 0.5, message: 'Minimum 0,5 h' }
+									validate: (v) => Number(v) >= 0.5 || 'Minimum 0,5 h'
 								})}
 								isInvalid={!!errors.hours}
 							/>
@@ -177,9 +219,19 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 					</Row>
 				</Modal.Body>
 				<Modal.Footer>
+					{!isEdit && (
+						<span className="me-auto small text-secondary">
+							{addedCount > 0 ? `Dodano ${addedCount} · ` : ''}Ctrl+Enter: zapisz i dodaj kolejne
+						</span>
+					)}
 					<Button variant="light" onClick={onHide}>
-						Anuluj
+						{addedCount > 0 ? 'Zamknij' : 'Anuluj'}
 					</Button>
+					{!isEdit && (
+						<Button variant="outline-primary" onClick={submit(true)}>
+							Zapisz i dodaj kolejne
+						</Button>
+					)}
 					<Button type="submit" variant="primary">
 						{isEdit ? 'Zapisz' : 'Dodaj'}
 					</Button>

@@ -1,21 +1,34 @@
 import React, { useState } from 'react';
-import { Button, Container, Nav, Navbar } from 'react-bootstrap';
+import { Button, Container, Nav, Navbar, Toast, ToastContainer } from 'react-bootstrap';
 import { NavLink, Route, Routes } from 'react-router-dom';
 import ConfirmModal from './components/ConfirmModal';
 import { usePlan } from './data/PlanContext';
 import ListPage from './pages/ListPage';
+import LoadPage from './pages/LoadPage';
 import MachinesPage from './pages/MachinesPage';
 import TimelinePage from './pages/TimelinePage';
 
+const NOTICE_DELAY_MS = 6000;
+
+const Logo = () => (
+	<svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true" className="me-2">
+		<rect x="1" y="1" width="24" height="24" rx="6" fill="#2563eb" />
+		<rect x="5" y="7" width="10" height="3" rx="1.5" fill="#fff" />
+		<rect x="9" y="12" width="12" height="3" rx="1.5" fill="#93c5fd" />
+		<rect x="5" y="17" width="7" height="3" rx="1.5" fill="#fff" />
+	</svg>
+);
+
 function App() {
-	const { resetDemo } = usePlan();
+	const { resetDemo, notice, dismissNotice, undo, canUndo } = usePlan();
 	const [confirmReset, setConfirmReset] = useState(false);
 
 	return (
 		<>
-			<Navbar bg="dark" data-bs-theme="dark" expand="md">
+			<Navbar bg="dark" data-bs-theme="dark" expand="md" className="app-navbar">
 				<Container fluid>
-					<Navbar.Brand as={NavLink} to="/">
+					<Navbar.Brand as={NavLink} to="/" className="d-flex align-items-center fw-semibold">
+						<Logo />
 						FactoryOps
 					</Navbar.Brand>
 					<Navbar.Toggle aria-controls="main-nav" />
@@ -26,6 +39,9 @@ function App() {
 							</Nav.Link>
 							<Nav.Link as={NavLink} to="/list">
 								Lista zleceń
+							</Nav.Link>
+							<Nav.Link as={NavLink} to="/load">
+								Obciążenie
 							</Nav.Link>
 							<Nav.Link as={NavLink} to="/machines">
 								Maszyny
@@ -38,14 +54,30 @@ function App() {
 				</Container>
 			</Navbar>
 			<Container fluid className="py-3">
-				<div className="card p-3">
+				<div className="card p-3 app-card">
 					<Routes>
 						<Route path="/" element={<TimelinePage />} />
 						<Route path="/list" element={<ListPage />} />
+						<Route path="/load" element={<LoadPage />} />
 						<Route path="/machines" element={<MachinesPage />} />
 					</Routes>
 				</div>
 			</Container>
+			<ToastContainer position="bottom-center" className="mb-3 notice-container">
+				{notice && (
+					<Toast key={notice.id} bg="dark" onClose={dismissNotice} delay={NOTICE_DELAY_MS} autohide>
+						<Toast.Body className="d-flex align-items-center gap-3 text-white">
+							<span className="flex-grow-1">{notice.text}</span>
+							{notice.undoable && canUndo && (
+								<Button size="sm" variant="outline-light" onClick={undo}>
+									Cofnij
+								</Button>
+							)}
+							<button type="button" className="btn-close btn-close-white" aria-label="Zamknij" onClick={dismissNotice} />
+						</Toast.Body>
+					</Toast>
+				)}
+			</ToastContainer>
 			<ConfirmModal show={confirmReset} title="Zresetować demo?" confirmLabel="Resetuj" onConfirm={resetDemo} onHide={() => setConfirmReset(false)}>
 				Wszystkie zmiany zostaną utracone, a plan wróci do danych przykładowych.
 			</ConfirmModal>
