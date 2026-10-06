@@ -4,7 +4,7 @@ import Timeline, { DateHeader, SidebarHeader, TimelineHeaders, TimelineItemBase,
 import type { ItemRendererProps } from 'react-calendar-timeline/dist/lib/items/Item';
 import 'react-calendar-timeline/style.css';
 import { usePlan } from '../data/PlanContext';
-import { calendarLookup, nonWorkingPeriods, nonWorkingSegments, workMode } from '../domain/calendar';
+import { calendarLookup, capacityLookup, isLine, nonWorkingPeriods, nonWorkingSegments, unitCount, unitLabel, workMode } from '../domain/calendar';
 import { formatDateTime, formatHours, programmerName, timelineLabel } from '../domain/format';
 import { blockStatus, previewMove } from '../domain/schedule';
 import { nearestHourStart, shiftDayStart } from '../domain/shifts';
@@ -15,9 +15,14 @@ import DayContextMenu, { DayMenuTarget } from './DayContextMenu';
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
-/** Prefiks id tła z dniami wolnymi - takich elementów nie da się zaznaczyć ani przesunąć. */
+/** Prefiksy id elementów pomocniczych (czas wolny, awarie, kreska przy przeciąganiu) - nie da się ich zaznaczyć ani przesunąć. */
 const OFF_PREFIX = 'off:';
+const BREAKDOWN_PREFIX = 'brk:';
 const DROP_INDICATOR_PREFIX = 'drop:';
+const isHelperItem = (id: Id) => [OFF_PREFIX, BREAKDOWN_PREFIX, DROP_INDICATOR_PREFIX].some((prefix) => String(id).startsWith(prefix));
+/** Zakres, w którym rysujemy czas wolny maszyn. */
+const BACKGROUND_DAYS_BEFORE = 30;
+const BACKGROUND_DAYS_AFTER = 120;
 
 const PROJECT_COLORS = ['#2563eb', '#0d9488', '#d97706', '#7c3aed', '#db2777', '#059669', '#dc2626', '#4f46e5'];
 
@@ -41,11 +46,16 @@ function blockBackground(color: string, start: number, end: number, offSegments:
 	return `${solid}, ${stripes}`;
 }
 
-/** Element timeline z wariantami opisu - renderer wybiera najdłuższy, który mieści się w kafelku. */
-type PlanItem = TimelineItemBase<number> & { labels?: string[] };
+/**
+ * Element timeline: zlecenie z wariantami opisu (renderer wybiera najdłuższy, który mieści się w kafelku)
+ * albo nakładka awarii - zamalowana część wysokości odpowiada części maszyn linii, które stoją.
+ */
+type PlanItem = TimelineItemBase<number> & { labels?: string[]; breakdown?: { down: number; units: number; labels: string[] } };
 
 /** Przybliżona szerokość znaku przy czcionce 0.8rem + odstępy wewnątrz kafelka. */
 const CHAR_WIDTH = 7;
+/** Napis awarii jest mniejszy (0.65rem). */
+const BREAKDOWN_CHAR_WIDTH = 6;
 const LABEL_PADDING = 14;
 
 function blockLabels(block: Block): string[] {
@@ -60,7 +70,22 @@ function blockLabels(block: Block): string[] {
 function renderItem({ item, itemContext, getItemProps }: ItemRendererProps<PlanItem>) {
 	const { key, ref, ...props } = getItemProps(item.itemProps ?? {});
 	const width = itemContext.dimensions.width;
-	const label = item.labels ? (item.labels.find((l) => l.length * CHAR_WIDTH + LABEL_PADDING <= width) ?? '') : itemContext.title;
+	const fitting = (labels: string[], charWidth: number) => labels.find((l) => l.length * charWidth + LABEL_PADDING <= width) ?? '';
+	if (item.breakdown) {
+		const { down, units, labels } = item.breakdown;
+		const label = fitting(labels, BREAKDOWN_CHAR_WIDTH);
+		return (
+			<div {...props} ref={ref} key={key}>
+				<div key="fill" className="breakdown-fill" style={{ height: `${(down / units) * 100}%` }} />
+				{label && (
+					<span key="label" className="breakdown-label">
+						{label}
+					</span>
+				)}
+			</div>
+		);
+	}
+	const label = item.labels ? fitting(item.labels, CHAR_WIDTH) : itemContext.title;
 	return (
 		<div
 			{...props}
@@ -107,10 +132,10 @@ const FactoryOpsTimeline = () => {
 		return () => window.removeEventListener('pointerup', end);
 	}, [dragging]);
 
-	const preview = useMemo(() => drag && previewMove(state.blocks, drag.id, drag.start, drag.machineId, calendarLookup(state)), [drag, state]);
+	const preview = useMemo(() => drag && previewMove(state.blocks, drag.id, drag.start, drag.machineId, capacityLookup(state), Date.now()), [drag, state]);
 
 	const selected = state.blocks.find((b) => b.id === selectedId);
-	const select = (id: Id) => !String(id).startsWith(OFF_PREFIX) && !String(id).startsWith(DROP_INDICATOR_PREFIX) && setSelectedId(String(id));
+	const select = (id: Id) => !isHelperItem(id) && setSelectedId(String(id));
 
 	const openDayMenu = (machineId: Id, time: number, e: React.SyntheticEvent) => {
 		e.preventDefault();
@@ -122,11 +147,12 @@ const FactoryOpsTimeline = () => {
 	// dzięki temu tło z dniami wolnymi leży pod zleceniami
 	const groups = useMemo<MachineGroup[]>(() => state.machines.map((m) => ({ id: m.id, title: m.name, machine: m, stackItems: false })), [state.machines]);
 
+	// tło zależy tylko od kalendarzy - nie przeliczamy go przy każdym przesunięciu zlecenia
 	const offItems = useMemo<PlanItem[]>(() => {
-		const calendars = calendarLookup(state);
+		const calendars = calendarLookup({ calendar: state.calendar, machines: state.machines });
 		const now = Date.now();
-		const from = Math.min(now, ...state.blocks.map((b) => b.start)) - 30 * DAY;
-		const to = Math.max(now, ...state.blocks.map((b) => b.end)) + 120 * DAY;
+		const from = now - BACKGROUND_DAYS_BEFORE * DAY;
+		const to = now + BACKGROUND_DAYS_AFTER * DAY;
 		return state.machines.flatMap((machine) =>
 			nonWorkingPeriods(calendars(machine.id), from, to).map(([start, end]) => ({
 				id: `${OFF_PREFIX}${machine.id}:${start}`,
@@ -140,20 +166,47 @@ const FactoryOpsTimeline = () => {
 				className: 'non-working-item'
 			}))
 		);
-	}, [state]);
+	}, [state.calendar, state.machines]);
+
+	// awarie leżą nad zleceniami (półprzezroczyste), żeby było widać, które zlecenie zwalniają
+	const breakdownItems = useMemo<PlanItem[]>(() => {
+		const machines = new Map(state.machines.map((m) => [m.id, m]));
+		return state.breakdowns.map((breakdown) => {
+			const machine = machines.get(breakdown.machineId);
+			const units = unitCount(machine);
+			const machinesDown = breakdown.units.map(unitLabel).join(', ');
+			// od najdłuższego - renderer wybierze ten, który się zmieści
+			const labels = isLine(machine) ? [`Awaria ${machinesDown}`, machinesDown, '!'] : ['Awaria', '!'];
+			return {
+				id: `${BREAKDOWN_PREFIX}${breakdown.id}`,
+				group: breakdown.machineId,
+				title: labels[0],
+				start_time: breakdown.start,
+				end_time: breakdown.end,
+				canMove: false,
+				canResize: false,
+				canChangeGroup: false,
+				className: 'breakdown-item',
+				breakdown: { down: Math.min(breakdown.units.length, units), units, labels }
+			};
+		});
+	}, [state.breakdowns, state.machines]);
 
 	const draggedId = drag?.id;
 	const blockItems = useMemo<PlanItem[]>(() => {
 		const now = Date.now();
 		const calendars = calendarLookup({ calendar: state.calendar, machines: state.machines });
+		const machines = new Map(state.machines.map((m) => [m.id, m]));
 		return state.blocks.map((block) => {
 			const color = projectColor(block.project);
 			const programmer = state.programmers.find((p) => p.id === block.programmerId);
+			const machine = machines.get(block.machineId);
 			const tooltip = [
 				`${block.orderNo} · ${block.project}`,
 				block.operation,
-				formatHours(block.hours),
+				isLine(machine) ? `${formatHours(block.hours)} pracy maszyny · linia: ${unitCount(machine)} maszyny` : formatHours(block.hours),
 				`${formatDateTime(block.start)} → ${formatDateTime(block.end)}`,
+				block.pinnedStart !== undefined ? `Termin: nie wcześniej niż ${formatDateTime(block.pinnedStart)}` : '',
 				programmerName(programmer)
 			]
 				.filter(Boolean)
@@ -186,7 +239,10 @@ const FactoryOpsTimeline = () => {
 	// kreska w miejscu, gdzie faktycznie wyląduje przenoszony bloczek (po zepchnięciu kolejki)
 	const indicatorItems = useMemo<PlanItem[]>(() => {
 		if (!drag || !preview) return [];
-		const neighbours = [preview.after && `po ${preview.after.orderNo}`, preview.before && `przed ${preview.before.orderNo}`].filter(Boolean);
+		const neighbours = [
+			preview.after && (preview.pinned ? `przerwa po ${preview.after.orderNo}` : `po ${preview.after.orderNo}`),
+			preview.before && `przed ${preview.before.orderNo}`
+		].filter(Boolean);
 		return [
 			{
 				// nowe id przy każdej zmianie: w trakcie przeciągania biblioteka nie przelicza położenia istniejących elementów
@@ -203,7 +259,7 @@ const FactoryOpsTimeline = () => {
 		];
 	}, [drag, preview]);
 
-	const items = useMemo(() => [...offItems, ...blockItems, ...indicatorItems], [offItems, blockItems, indicatorItems]);
+	const items = useMemo(() => [...offItems, ...blockItems, ...breakdownItems, ...indicatorItems], [offItems, blockItems, breakdownItems, indicatorItems]);
 
 	return (
 		<>
@@ -223,7 +279,8 @@ const FactoryOpsTimeline = () => {
 					</Button>
 				</ButtonToolbar>
 				<small className="text-secondary">
-					<span className="legend-swatch non-working-item" /> czas wolny maszyny · prawy klik na planie: dni i godziny pracy
+					<span className="legend-swatch non-working-item" /> czas wolny <span className="legend-swatch breakdown-swatch ms-2" /> awaria · prawy klik na planie:
+					godziny pracy i awarie
 				</small>
 			</div>
 
@@ -235,7 +292,7 @@ const FactoryOpsTimeline = () => {
 				minZoom={DAY}
 				maxZoom={90 * DAY}
 				dragSnap={HOUR}
-				lineHeight={44}
+				lineHeight={38}
 				itemHeightRatio={0.8}
 				canMove
 				canChangeGroup
@@ -273,11 +330,18 @@ const FactoryOpsTimeline = () => {
 						<span className="text-truncate" title={group.title}>
 							{group.title}
 						</span>
-						{workMode(group.machine) === 'continuous' && (
-							<Badge bg="success" pill title="System 4-brygadowy">
-								24/7
-							</Badge>
-						)}
+						<span className="d-flex gap-1">
+							{isLine(group.machine) && (
+								<Badge bg="primary" pill title={`Linia: ${unitCount(group.machine)} maszyny pracujące równolegle`}>
+									{unitCount(group.machine)}×
+								</Badge>
+							)}
+							{workMode(group.machine) === 'continuous' && (
+								<Badge bg="success" pill title="System 4-brygadowy">
+									24/7
+								</Badge>
+							)}
+						</span>
 					</div>
 				)}>
 				<TimelineHeaders className="sticky">

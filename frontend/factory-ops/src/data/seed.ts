@@ -1,23 +1,45 @@
-import { calendarLookup } from '../domain/calendar';
+import { capacityLookup } from '../domain/calendar';
 import { addBlock } from '../domain/schedule';
-import { addHours, firstWorkingHourFrom } from '../domain/shifts';
-import { Block, Machine, PlanState, Programmer, WorkMode } from '../domain/types';
+import { addHours, hourStartAtOrBefore, shiftDayStart } from '../domain/shifts';
+import { Block, Breakdown, Machine, PlanState, Programmer } from '../domain/types';
 
+/** Linie produkcyjne: po 3 jednakowe maszyny, system 4-brygadowy (24/7). */
+const LINE_COUNT = 8;
+const LINE_UNITS = 3;
+
+/** Pojedyncze maszyny pracujące pon-pt. */
 const MACHINE_NAMES = [
+	'HSTM 301',
+	'HSTM 302',
+	'HSTM 303',
 	'HSTM 305',
 	'HSTM 308',
 	'HSTM 502',
 	'HSTM 505',
+	'HSTM 508',
+	'DMU 65',
+	'DMU 85',
 	'DMU 125',
+	'DMU 160',
 	'DMU 210',
+	'CTX 510',
+	'CTX 800',
 	'CTX 1250',
+	'CTX beta 2000',
+	'Mazak Integrex i-200',
 	'Mazak Integrex i-400',
+	'Mazak QTN 350',
+	'Okuma MU-5000V',
 	'Okuma MU-8000V',
-	'Haas VF-4'
+	'Okuma LB3000',
+	'Haas VF-2',
+	'Haas VF-4',
+	'Haas ST-30',
+	'Hermle C42',
+	'Hermle C52',
+	'Doosan Puma 2600',
+	'Doosan DNM 5700'
 ];
-
-/** Te maszyny chodzą w systemie 4-brygadowym (24/7), reszta pon-pt. */
-const CONTINUOUS_MACHINES = ['HSTM 305', 'HSTM 308'];
 
 const PROGRAMMERS: Omit<Programmer, 'id'>[] = [
 	{ name: 'Jan', surname: 'Kowalski' },
@@ -28,7 +50,10 @@ const PROGRAMMERS: Omit<Programmer, 'id'>[] = [
 
 const PROJECTS = ['Manzanillo', 'Kosovo', 'HPC', 'Bergen', 'Rotterdam', 'Gdańsk Port'];
 const OPERATIONS = ['Stopień 1', 'Stopień 2', 'Stopień 3', 'Wirnik', 'Korpus', 'Wał', 'Pokrywa'];
-const HOURS = [4, 6, 8, 8, 12, 16, 16, 20, 24, 30, 40];
+/** Godziny pracy jednej maszyny z przewodnika. */
+const MACHINE_HOURS = [4, 6, 8, 8, 12, 16, 16, 20, 24, 30, 40];
+/** Na linii godziny dzielą się na 3 maszyny, więc zlecenia są większe. */
+const LINE_HOURS = [24, 30, 36, 48, 48, 60, 72, 90];
 
 /** Deterministyczny generator, żeby demo zawsze wyglądało tak samo. */
 function random(seed: number) {
@@ -46,40 +71,56 @@ export function createSeedState(now: number): PlanState {
 	const pick = <T>(list: T[]) => list[Math.floor(rnd() * list.length)];
 	const calendar = { overrides: {} };
 
-	const machines: Machine[] = MACHINE_NAMES.map((name, i) => {
-		const workMode: WorkMode = CONTINUOUS_MACHINES.includes(name) ? 'continuous' : 'weekdays';
-		return { id: `m${i + 1}`, name, workMode };
-	});
+	const machines: Machine[] = [
+		...Array.from({ length: LINE_COUNT }, (_, i): Machine => ({ id: `l${i + 1}`, name: `Linia ${i + 1}`, workMode: 'continuous', units: LINE_UNITS })),
+		...MACHINE_NAMES.map((name, i): Machine => ({ id: `m${i + 1}`, name, workMode: 'weekdays' }))
+	];
 	const programmers: Programmer[] = PROGRAMMERS.map((p, i) => ({ ...p, id: `p${i + 1}` }));
 
-	let blocks: Block[] = [];
-	let orderCounter = 412;
-	const calendars = calendarLookup({ calendar, machines });
+	// przykładowe awarie: na linii stoi część maszyn, zwykła maszyna stoi całkiem
+	const today = hourStartAtOrBefore(now);
+	const tomorrow = addHours(shiftDayStart(now), 24);
+	const breakdowns: Breakdown[] = [
+		{ id: 'a1', machineId: 'l2', units: [1], start: addHours(today, 2), end: addHours(today, 14) },
+		{ id: 'a2', machineId: 'l5', units: [0, 2], start: tomorrow, end: addHours(tomorrow, 12) },
+		{ id: 'a3', machineId: 'm11', units: [0], start: tomorrow, end: addHours(tomorrow, 8) }
+	];
+	const capacities = capacityLookup({ calendar, machines, breakdowns });
 
+	let orderCounter = 412;
+	const blocks: Block[] = [];
 	for (const machine of machines) {
-		let cursor = firstWorkingHourFrom(now - 4 * 24 * 3600_000, calendars(machine.id));
-		for (let i = 0, count = 6 + Math.floor(rnd() * 6); i < count; i++) {
-			// czasem przerwa między zleceniami
-			if (rnd() < 0.25) cursor = addHours(cursor, 4 + Math.floor(rnd() * 12));
-			const id = `b${blocks.length + 1}`;
-			blocks = addBlock(
-				blocks,
+		const hours = machine.units ? LINE_HOURS : MACHINE_HOURS;
+		// każda maszyna liczona osobno - kolejki maszyn są od siebie niezależne
+		let queue: Block[] = [];
+		// dane tworzą też historię, więc liczymy je od początku planu, nie od „teraz”
+		const planStart = now - 4 * 24 * 3600_000;
+		let start: number | undefined = planStart;
+		// linie przerabiają zlecenia 3 razy szybciej, więc mają ich więcej, żeby plan sięgał podobnie daleko
+		const minCount = machine.units ? 16 : 6;
+		for (let i = 0, count = minCount + Math.floor(rnd() * 6); i < count; i++) {
+			// czasem zlecenie czeka z przerwą (np. na materiał) - dostaje własny termin
+			const lastEnd = queue.length ? queue[queue.length - 1].end : undefined;
+			if (lastEnd !== undefined) start = rnd() < 0.15 ? addHours(lastEnd, 8 + Math.floor(rnd() * 16)) : undefined;
+			const id = `b${blocks.length + queue.length + 1}`;
+			queue = addBlock(
+				queue,
 				{
 					machineId: machine.id,
 					orderNo: `ZAM/2026/${String(orderCounter++).padStart(4, '0')}`,
 					project: pick(PROJECTS),
 					operation: pick(OPERATIONS),
-					hours: pick(HOURS),
+					hours: pick(hours),
 					programmerId: rnd() < 0.7 ? pick(programmers).id : undefined,
-					start: cursor
+					start
 				},
 				id,
-				calendars,
-				now
-			);
-			cursor = blocks.find((b) => b.id === id)!.end;
+				capacities,
+				planStart
+			).sort((a, b) => a.start - b.start);
 		}
+		blocks.push(...queue);
 	}
 
-	return { machines, programmers, blocks, calendar };
+	return { machines, programmers, blocks, calendar, breakdowns };
 }

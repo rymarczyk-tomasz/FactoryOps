@@ -25,6 +25,20 @@ export interface Machine {
 	workMode?: WorkMode;
 	/** Wyjątki tylko dla tej maszyny, mają pierwszeństwo przed kalendarzem zakładu. Klucz: 'YYYY-MM-DD'. */
 	overrides?: Record<string, DayOverride>;
+	/**
+	 * Ile jednakowych maszyn pracuje równolegle - linia produkcyjna to 3, zwykła maszyna 1 (brak = 1).
+	 * Zlecenie na linii dzieli się między pracujące maszyny, więc trwa krócej.
+	 */
+	units?: number;
+}
+
+/** Awaria: wybrane maszyny (numery w linii, od 0) stoją w przedziale [start, end). */
+export interface Breakdown {
+	id: Id;
+	machineId: Id;
+	units: number[];
+	start: number;
+	end: number;
 }
 
 export interface Programmer {
@@ -40,17 +54,22 @@ export interface Block {
 	orderNo: string;
 	project: string;
 	operation: string;
-	/** Godziny wpisane przez użytkownika; na planie zaokrąglane w górę do pełnej godziny. */
+	/** Godziny pracy jednej maszyny z przewodnika; linia dzieli je między pracujące maszyny. Plan liczy pełne godziny. */
 	hours: number;
 	/** Początek (ms, pełna godzina). Wyliczany przez harmonogram. */
 	start: number;
-	/** Koniec (ms, pełna godzina, z pominięciem dni wolnych). Wyliczany przez harmonogram. */
+	/** Koniec (ms, pełna godzina, z pominięciem czasu wolnego i awarii). Wyliczany przez harmonogram. */
 	end: number;
+	/**
+	 * Termin, przed którym zlecenie nie startuje - ustawiany, gdy zlecenie postawiono celowo z przerwą
+	 * (np. czeka na materiał). Bez niego zlecenie „przykleja się” do poprzedniego i cofa się razem z kolejką.
+	 */
+	pinnedStart?: number;
 	programmerId?: Id;
 	note?: string;
 }
 
-export type BlockDraft = Omit<Block, 'id' | 'start' | 'end'> & {
+export type BlockDraft = Omit<Block, 'id' | 'start' | 'end' | 'pinnedStart'> & {
 	/** Brak = dopisz na koniec kolejki maszyny. */
 	start?: number;
 };
@@ -68,4 +87,5 @@ export interface PlanState {
 	programmers: Programmer[];
 	blocks: Block[];
 	calendar: WorkCalendar;
+	breakdowns: Breakdown[];
 }

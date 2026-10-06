@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Button, Col, Form, Modal, Row } from 'react-bootstrap';
 import { useForm } from 'react-hook-form';
 import { usePlan } from '../data/PlanContext';
+import { isLine, unitCount } from '../domain/calendar';
 import { formatHours, fromLocalInputValue, programmerName, toLocalInputValue } from '../domain/format';
 import { Block, BlockDraft, Id } from '../domain/types';
 
@@ -60,6 +61,15 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 
 	const startMode = watch('startMode');
 	const hours = watch('hours');
+	const machine = state.machines.find((m) => m.id === watch('machineId'));
+
+	/** Podpowiedź pod polem godzin: na linii czas dzieli się między maszyny (bez awarii, z dokładnością do godziny). */
+	const hoursHint = () => {
+		if (!(hours > 0)) return ' ';
+		if (!isLine(machine)) return `Na planie: ${formatHours(hours)}`;
+		const units = unitCount(machine);
+		return `Linia, ${units} maszyny: ok. ${Math.ceil(hours / units)} h na planie`;
+	};
 
 	const onSubmit = (form: BlockForm) => {
 		const draft: BlockDraft = {
@@ -95,7 +105,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 							<Form.Select {...register('machineId', { required: 'Wybierz maszynę' })} isInvalid={!!errors.machineId}>
 								{state.machines.map((m) => (
 									<option key={m.id} value={m.id}>
-										{m.name}
+										{isLine(m) ? `${m.name} (${unitCount(m)} maszyny)` : m.name}
 									</option>
 								))}
 							</Form.Select>
@@ -117,7 +127,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 							<Form.Control.Feedback type="invalid">{errors.operation?.message}</Form.Control.Feedback>
 						</Form.Group>
 						<Form.Group as={Col} md={6} controlId="hours">
-							<Form.Label>Czas pracy [h]</Form.Label>
+							<Form.Label>Czas pracy jednej maszyny [h]</Form.Label>
 							<Form.Control
 								type="number"
 								step="0.5"
@@ -129,7 +139,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 								})}
 								isInvalid={!!errors.hours}
 							/>
-							<Form.Text muted>{hours > 0 ? `Na planie: ${formatHours(hours)}` : ' '}</Form.Text>
+							<Form.Text muted>{hoursHint()}</Form.Text>
 							<Form.Control.Feedback type="invalid">{errors.hours?.message}</Form.Control.Feedback>
 						</Form.Group>
 						<Form.Group as={Col} md={6} controlId="programmerId">

@@ -27,7 +27,7 @@ export function isWeekend(date: Date): boolean {
 /** Czy godzina zaczynająca się w `hourStart` jest pracująca - kalendarz konkretnej maszyny. */
 export type IsWorkingHour = (hourStart: number) => boolean;
 
-/** Czas zlecenia na planie: godziny zaokrąglone w górę do pełnej godziny, minimum 1 h. */
+/** Czas zlecenia na zwykłej maszynie: godziny zaokrąglone w górę do pełnej godziny, minimum 1 h. */
 export function roundUpHours(hours: number): number {
 	return Math.max(1, Math.ceil(hours));
 }
@@ -52,26 +52,36 @@ export function shiftDayStart(ms: number): number {
 	return new Date(d.getFullYear(), d.getMonth(), d.getDate() + dayOffset, firstShift).getTime();
 }
 
-/** Pierwsza pracująca pełna godzina nie wcześniej niż `ms`. */
-export function firstWorkingHourFrom(ms: number, isWorkingHour: IsWorkingHour): number {
+/**
+ * Ile maszyn-godzin da się wykonać w godzinie zaczynającej się w `hourStart`: 0 gdy maszyna stoi
+ * (czas wolny, awaria), 1 dla zwykłej maszyny, do 3 dla linii.
+ */
+export type CapacityAt = (hourStart: number) => number;
+
+/** Pierwsza pełna godzina nie wcześniej niż `ms`, w której cokolwiek pracuje. */
+export function firstProductiveHourFrom(ms: number, capacityAt: CapacityAt): number {
 	let h = hourStartAtOrBefore(ms);
 	if (h < ms) h = addHours(h, 1);
-	// zabezpieczenie przed nieskończoną pętlą przy kalendarzu bez dni pracujących
+	// zabezpieczenie przed nieskończoną pętlą przy kalendarzu bez godzin pracy
 	for (let i = 0; i < 24 * 366; i++) {
-		if (isWorkingHour(h)) return h;
+		if (capacityAt(h) > 0) return h;
 		h = addHours(h, 1);
 	}
 	return h;
 }
 
-/** Koniec zlecenia zajmującego `hours` pracujących godzin od pracującej godziny `start` - wolne godziny są pomijane. */
-export function endAfterHours(start: number, hours: number, isWorkingHour: IsWorkingHour): number {
-	const needed = roundUpHours(hours);
+/**
+ * Koniec zlecenia wymagającego `hours` godzin pracy jednej maszyny, od produktywnej godziny `start`.
+ * Każda godzina zdejmuje tyle, ile maszyn wtedy pracuje; koniec wypada na pełnej godzinie.
+ */
+export function endAfterWork(start: number, hours: number, capacityAt: CapacityAt): number {
 	let h = start;
-	let counted = 0;
+	let remaining = hours;
 	for (let i = 0; i < 24 * 366 * 5; i++) {
-		if (isWorkingHour(h)) counted++;
-		if (counted >= needed) break;
+		const capacity = capacityAt(h);
+		remaining -= capacity;
+		// pierwsza godzina z pracą zawsze się liczy - zlecenie zajmuje co najmniej godzinę
+		if (capacity > 0 && remaining <= 1e-9) break;
 		h = addHours(h, 1);
 	}
 	return addHours(h, 1);

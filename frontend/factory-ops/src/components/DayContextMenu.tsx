@@ -1,8 +1,9 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { usePlan } from '../data/PlanContext';
-import { effectiveDay, formatWorkingHours, isValidWorkingHours, workMode, WORK_MODE_LABELS } from '../domain/calendar';
-import { dayKey, SHIFT_START_HOURS } from '../domain/shifts';
-import { DayOverride, Id, WorkingHours } from '../domain/types';
+import { effectiveDay, formatWorkingHours, isLine, isValidWorkingHours, unitCount, unitLabel, workMode, WORK_MODE_LABELS } from '../domain/calendar';
+import { formatDateTime, fromLocalInputValue, toLocalInputValue } from '../domain/format';
+import { addHours, dayKey, nearestHourStart, SHIFT_START_HOURS } from '../domain/shifts';
+import { Breakdown, DayOverride, Id, WorkingHours } from '../domain/types';
 
 export interface DayMenuTarget {
 	x: number;
@@ -29,6 +30,22 @@ const DEFAULT_HOURS: WorkingHours = { from: 6, to: 14 };
 
 const sameOverride = (a: DayOverride, b: DayOverride) => JSON.stringify(a) === JSON.stringify(b);
 
+interface BreakdownForm {
+	units: number[];
+	/** Wartość pola datetime-local. */
+	from: string;
+	hours: number;
+}
+
+const DEFAULT_BREAKDOWN_HOURS = 4;
+
+function describeBreakdown(breakdown: Breakdown, line: boolean): string {
+	const end = new Date(breakdown.end);
+	const sameDay = new Date(breakdown.start).toDateString() === end.toDateString();
+	const range = `${formatDateTime(breakdown.start)} → ${sameDay ? hourFormat.format(end) : formatDateTime(breakdown.end)}`;
+	return line ? `${breakdown.units.map(unitLabel).join(', ')} · ${range}` : range;
+}
+
 function describeDay(day: DayOverride): string {
 	if (day === true) return 'Dzień pracujący';
 	if (day === false) return 'Dzień wolny';
@@ -36,12 +53,13 @@ function describeDay(day: DayOverride): string {
 }
 
 const DayContextMenu = ({ target, onAddBlock, onClose }: DayContextMenuProps) => {
-	const { state, setDayWorking } = usePlan();
+	const { state, setDayWorking, addBreakdown, removeBreakdown } = usePlan();
 	const ref = useRef<HTMLDivElement>(null);
 	const machine = state.machines.find((m) => m.id === target.machineId);
 	const key = dayKey(new Date(target.day));
 	const current = effectiveDay(state.calendar, machine, target.day);
 	const [hoursForm, setHoursForm] = useState<WorkingHours>();
+	const [breakdownForm, setBreakdownForm] = useState<BreakdownForm>();
 	const [position, setPosition] = useState({ left: target.x, top: target.y });
 
 	// menu kliknięte nisko lub z prawej strony ekranu przesuwamy tak, żeby całe było widoczne
@@ -53,7 +71,7 @@ const DayContextMenu = ({ target, onAddBlock, onClose }: DayContextMenuProps) =>
 			left: Math.max(margin, Math.min(target.x, window.innerWidth - rect.width - margin)),
 			top: Math.max(margin, Math.min(target.y, window.innerHeight - rect.height - margin))
 		});
-	}, [target.x, target.y, hoursForm !== undefined]);
+	}, [target.x, target.y, hoursForm !== undefined, breakdownForm !== undefined]);
 
 	useEffect(() => {
 		const outside = (e: Event) => !ref.current?.contains(e.target as Node) && onClose();
@@ -88,6 +106,19 @@ const DayContextMenu = ({ target, onAddBlock, onClose }: DayContextMenuProps) =>
 			// "do" musi wypadać po "od" w tej samej dobie - jeśli nie, przesuwamy na godzinę później
 			return isValidWorkingHours(next) ? next : { from, to: (from + 1) % 24 };
 		});
+
+	const line = isLine(machine);
+	const dayEnd = addHours(target.day, 24);
+	// awarie tej maszyny, które choć częściowo przypadają na klikniętą dobę
+	const dayBreakdowns = state.breakdowns.filter((b) => b.machineId === machine.id && b.start < dayEnd && b.end > target.day);
+	const openBreakdownForm = () => setBreakdownForm({ units: [0], from: toLocalInputValue(target.hour), hours: DEFAULT_BREAKDOWN_HOURS });
+	const toggleUnit = (unit: number) =>
+		setBreakdownForm((f) => f && { ...f, units: f.units.includes(unit) ? f.units.filter((u) => u !== unit) : [...f.units, unit].sort() });
+	const saveBreakdown = (form: BreakdownForm) => {
+		const start = nearestHourStart(fromLocalInputValue(form.from));
+		addBreakdown({ machineId: machine.id, units: line ? form.units : [0], start, end: addHours(start, Math.max(1, Math.round(form.hours))) });
+	};
+	const breakdownValid = breakdownForm !== undefined && breakdownForm.from !== '' && breakdownForm.hours >= 1 && (!line || breakdownForm.units.length > 0);
 
 	return (
 		<div ref={ref} className="dropdown-menu show shadow day-menu" style={{ position: 'fixed', ...position }}>
@@ -154,6 +185,75 @@ const DayContextMenu = ({ target, onAddBlock, onClose }: DayContextMenuProps) =>
 							Ustaw
 						</button>
 					</div>
+				</form>
+			)}
+			<div className="dropdown-divider" />
+			{dayBreakdowns.map((breakdown) => (
+				<div key={breakdown.id} className="d-flex align-items-center justify-content-between gap-2 px-3 py-1 small">
+					<span className="text-danger">Awaria {describeBreakdown(breakdown, line)}</span>
+					<button type="button" className="btn btn-link btn-sm p-0 text-danger" onClick={run(() => removeBreakdown(breakdown.id))}>
+						Usuń
+					</button>
+				</div>
+			))}
+			{breakdownForm === undefined ? (
+				<button className="dropdown-item text-danger" onClick={openBreakdownForm}>
+					Zgłoś awarię {line ? 'maszyn linii' : machine.name}…
+				</button>
+			) : (
+				<form
+					className="px-3 py-2 day-hours-form"
+					onSubmit={(e) => {
+						e.preventDefault();
+						if (breakdownValid) run(() => saveBreakdown(breakdownForm))();
+					}}>
+					<div className="small text-secondary mb-1">Awaria na {machine.name}</div>
+					{line && (
+						<div className="d-flex gap-3 mb-2">
+							{Array.from({ length: unitCount(machine) }, (_, unit) => (
+								<div key={unit} className="form-check">
+									<input
+										id={`breakdownUnit${unit}`}
+										type="checkbox"
+										className="form-check-input"
+										checked={breakdownForm.units.includes(unit)}
+										onChange={() => toggleUnit(unit)}
+									/>
+									<label className="form-check-label small" htmlFor={`breakdownUnit${unit}`}>
+										{unitLabel(unit)}
+									</label>
+								</div>
+							))}
+						</div>
+					)}
+					<div className="d-flex align-items-center gap-2">
+						<label className="small" htmlFor="breakdownFrom">
+							od
+						</label>
+						<input
+							id="breakdownFrom"
+							type="datetime-local"
+							step={3600}
+							className="form-control form-control-sm"
+							value={breakdownForm.from}
+							onChange={(e) => setBreakdownForm({ ...breakdownForm, from: e.target.value })}
+						/>
+						<label className="small" htmlFor="breakdownHours">
+							na
+						</label>
+						<input
+							id="breakdownHours"
+							type="number"
+							min={1}
+							className="form-control form-control-sm breakdown-hours"
+							value={breakdownForm.hours}
+							onChange={(e) => setBreakdownForm({ ...breakdownForm, hours: Number(e.target.value) })}
+						/>
+						<span className="small">h</span>
+					</div>
+					<button type="submit" className="btn btn-danger btn-sm mt-2" disabled={!breakdownValid}>
+						Zapisz awarię
+					</button>
 				</form>
 			)}
 			<div className="dropdown-divider" />

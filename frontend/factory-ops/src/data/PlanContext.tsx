@@ -1,14 +1,14 @@
 import React, { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { calendarLookup } from '../domain/calendar';
+import { capacityLookup } from '../domain/calendar';
 import * as schedule from '../domain/schedule';
 import { newId } from '../domain/ids';
-import { Block, BlockDraft, DayOverride, Id, PlanState, WorkMode } from '../domain/types';
+import { Block, BlockDraft, Breakdown, DayOverride, Id, PlanState, WorkMode } from '../domain/types';
 import { LocalStoragePlanRepository, PlanRepository } from './PlanRepository';
 
 const HISTORY_LIMIT = 50;
 
-/** Po zmianie kalendarza bloczki trzeba ułożyć od nowa. */
-const withReflow = (s: PlanState): PlanState => ({ ...s, blocks: schedule.reflow(s.blocks, calendarLookup(s)) });
+/** Po zmianie kalendarza, awarii lub liczby maszyn zlecenia trzeba ułożyć od nowa. */
+const withReflow = (s: PlanState): PlanState => ({ ...s, blocks: schedule.reflow(s.blocks, capacityLookup(s), undefined, Date.now()) });
 
 interface PlanActions {
 	addBlock(draft: BlockDraft): Id;
@@ -16,10 +16,14 @@ interface PlanActions {
 	moveBlock(id: Id, start: number, machineId: Id): void;
 	deleteBlock(id: Id): void;
 	compactMachine(machineId: Id): void;
-	addMachine(name: string): Id;
+	/** `units` > 1 to linia produkcyjna z tyloma jednakowymi maszynami. */
+	addMachine(name: string, units?: number): Id;
 	renameMachine(id: Id, name: string): void;
 	deleteMachine(id: Id): void;
 	setMachineWorkMode(id: Id, mode: WorkMode): void;
+	setMachineUnits(id: Id, units: number): void;
+	addBreakdown(breakdown: Omit<Breakdown, 'id'>): Id;
+	removeBreakdown(id: Id): void;
 	/**
 	 * Wyjątek w kalendarzu maszyny (`machineId`) albo całego zakładu (bez `machineId`).
 	 * `undefined` usuwa wyjątek - dzień wraca do ustawienia domyślnego.
@@ -79,16 +83,16 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 		() => ({
 			addBlock(draft) {
 				const id = newId();
-				withBlocks((s) => schedule.addBlock(s.blocks, draft, id, calendarLookup(s), Date.now()));
+				withBlocks((s) => schedule.addBlock(s.blocks, draft, id, capacityLookup(s), Date.now()));
 				return id;
 			},
-			updateBlock: (id, patch) => withBlocks((s) => schedule.updateBlock(s.blocks, id, patch, calendarLookup(s))),
-			moveBlock: (id, start, machineId) => withBlocks((s) => schedule.moveBlock(s.blocks, id, start, machineId, calendarLookup(s))),
-			deleteBlock: (id) => withBlocks((s) => schedule.removeBlock(s.blocks, id)),
-			compactMachine: (machineId) => withBlocks((s) => schedule.compactMachine(s.blocks, machineId, calendarLookup(s))),
-			addMachine(name) {
+			updateBlock: (id, patch) => withBlocks((s) => schedule.updateBlock(s.blocks, id, patch, capacityLookup(s), Date.now())),
+			moveBlock: (id, start, machineId) => withBlocks((s) => schedule.moveBlock(s.blocks, id, start, machineId, capacityLookup(s), Date.now())),
+			deleteBlock: (id) => withBlocks((s) => schedule.removeBlock(s.blocks, id, capacityLookup(s), Date.now())),
+			compactMachine: (machineId) => withBlocks((s) => schedule.compactMachine(s.blocks, machineId, capacityLookup(s), Date.now())),
+			addMachine(name, units = 1) {
 				const id = newId();
-				apply((s) => ({ ...s, machines: [...s.machines, { id, name }] }));
+				apply((s) => ({ ...s, machines: [...s.machines, units > 1 ? { id, name, units, workMode: 'continuous' } : { id, name }] }));
 				return id;
 			},
 			renameMachine: (id, name) => apply((s) => ({ ...s, machines: s.machines.map((m) => (m.id === id ? { ...m, name } : m)) })),
@@ -96,9 +100,28 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 				apply((s) => ({
 					...s,
 					machines: s.machines.filter((m) => m.id !== id),
-					blocks: s.blocks.filter((b) => b.machineId !== id)
+					blocks: s.blocks.filter((b) => b.machineId !== id),
+					breakdowns: s.breakdowns.filter((b) => b.machineId !== id)
 				})),
 			setMachineWorkMode: (id, mode) => apply((s) => withReflow({ ...s, machines: s.machines.map((m) => (m.id === id ? { ...m, workMode: mode } : m)) })),
+			setMachineUnits(id, units) {
+				apply((s) =>
+					withReflow({
+						...s,
+						machines: s.machines.map((m) => (m.id === id ? { ...m, units } : m)),
+						// awarie maszyn, których już nie ma w linii, tracą sens
+						breakdowns: s.breakdowns
+							.map((b) => (b.machineId === id ? { ...b, units: b.units.filter((u) => u < units) } : b))
+							.filter((b) => b.units.length > 0)
+					})
+				);
+			},
+			addBreakdown(breakdown) {
+				const id = newId();
+				apply((s) => withReflow({ ...s, breakdowns: [...s.breakdowns, { ...breakdown, id }] }));
+				return id;
+			},
+			removeBreakdown: (id) => apply((s) => withReflow({ ...s, breakdowns: s.breakdowns.filter((b) => b.id !== id) })),
 			setDayWorking(dayKey, working, machineId) {
 				const withOverride = (overrides: Record<string, DayOverride> = {}) => {
 					const next = { ...overrides };

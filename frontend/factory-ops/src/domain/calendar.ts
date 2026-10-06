@@ -1,5 +1,5 @@
-import { addHours, dayKey, hourOfShiftDay, hourStartAtOrBefore, isWeekend, IsWorkingHour, SHIFT_START_HOURS, shiftDayStart } from './shifts';
-import { DayOverride, Id, Machine, PlanState, WorkCalendar, WorkingHours, WorkMode } from './types';
+import { addHours, CapacityAt, dayKey, hourOfShiftDay, hourStartAtOrBefore, isWeekend, IsWorkingHour, SHIFT_START_HOURS, shiftDayStart } from './shifts';
+import { Breakdown, DayOverride, Id, Machine, PlanState, WorkCalendar, WorkingHours, WorkMode } from './types';
 
 export const WORK_MODE_LABELS: Record<WorkMode, string> = {
 	weekdays: 'Pon–pt, 3 zmiany',
@@ -40,7 +40,56 @@ export function effectiveDay(plant: WorkCalendar, machine: Machine | undefined, 
 }
 
 export function machineCalendar(plant: WorkCalendar, machine: Machine | undefined): IsWorkingHour {
-	return (hourStart) => overrideCoversHour(effectiveDay(plant, machine, hourStart), hourStart);
+	// ustawienie dnia liczymy raz na dobę - plan sprawdza dziesiątki tysięcy godzin
+	const days = new Map<number, DayOverride>();
+	return (hourStart) => {
+		const day = shiftDayStart(hourStart);
+		let override = days.get(day);
+		if (override === undefined) {
+			override = effectiveDay(plant, machine, day);
+			days.set(day, override);
+		}
+		return overrideCoversHour(override, hourStart);
+	};
+}
+
+export function unitCount(machine: Machine | undefined): number {
+	return machine?.units ?? 1;
+}
+
+export function isLine(machine: Machine | undefined): boolean {
+	return unitCount(machine) > 1;
+}
+
+/** Nazwy maszyn w linii do wyboru przy awarii: M1, M2, M3. */
+export function unitLabel(unit: number): string {
+	return `M${unit + 1}`;
+}
+
+/** Awarie maszyny trwające w danej godzinie. */
+export function breakdownsAt(breakdowns: Breakdown[], machineId: Id, hourStart: number): Breakdown[] {
+	return breakdowns.filter((b) => b.machineId === machineId && b.start <= hourStart && hourStart < b.end);
+}
+
+/** Ile maszyn pracuje w danej godzinie: 0 w czasie wolnym, mniej niż komplet podczas awarii części linii. */
+export function machineCapacity(plant: WorkCalendar, machine: Machine, breakdowns: Breakdown[]): CapacityAt {
+	const isWorkingHour = machineCalendar(plant, machine);
+	const units = unitCount(machine);
+	const own = breakdowns.filter((b) => b.machineId === machine.id);
+	return (hourStart) => {
+		if (!isWorkingHour(hourStart)) return 0;
+		if (own.length === 0) return units;
+		const down = new Set(own.filter((b) => b.start <= hourStart && hourStart < b.end).flatMap((b) => b.units));
+		return Math.max(0, units - down.size);
+	};
+}
+
+export type CapacityLookup = (machineId: Id) => CapacityAt;
+
+export function capacityLookup({ calendar, machines, breakdowns }: Pick<PlanState, 'calendar' | 'machines' | 'breakdowns'>): CapacityLookup {
+	const byId = new Map(machines.map((m) => [m.id, machineCapacity(calendar, m, breakdowns)]));
+	const fallback = machineCalendar(calendar, undefined);
+	return (machineId) => byId.get(machineId) ?? ((hourStart) => (fallback(hourStart) ? 1 : 0));
 }
 
 export type CalendarLookup = (machineId: Id) => IsWorkingHour;
