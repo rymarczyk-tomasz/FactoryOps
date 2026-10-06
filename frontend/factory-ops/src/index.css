@@ -44,6 +44,11 @@ body {
 	font-size: 0.8rem;
 }
 
+/* czytelny napis także na zakreskowanym (wolnym) fragmencie zlecenia */
+.react-calendar-timeline .rct-item .rct-item-content {
+	text-shadow: 0 0 3px rgba(0, 0, 0, 0.55);
+}
+
 .react-calendar-timeline .rct-item.selected {
 	box-shadow: 0 0 0 2px #111827;
 }

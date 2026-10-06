@@ -47,3 +47,10 @@ export function nonWorkingPeriods(isWorkingDay: IsWorkingDay, from: number, to: 
 	}
 	return periods;
 }
+
+/** Wolne fragmenty wewnątrz [start, end) - np. weekend, przez który przechodzi zlecenie na maszynie pon-pt. */
+export function nonWorkingSegments(isWorkingDay: IsWorkingDay, start: number, end: number): [number, number][] {
+	return nonWorkingPeriods(isWorkingDay, start, end)
+		.map(([from, to]): [number, number] => [Math.max(from, start), Math.min(to, end)])
+		.filter(([from, to]) => from < to);
+}

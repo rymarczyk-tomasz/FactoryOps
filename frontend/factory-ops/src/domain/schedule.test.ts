@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calendarLookup, machineCalendar, nonWorkingPeriods } from './calendar';
+import { calendarLookup, machineCalendar, nonWorkingPeriods, nonWorkingSegments } from './calendar';
 import { endAfterShifts, firstWorkingShiftFrom, nearestShiftStart, shiftsForHours, shiftStartAtOrBefore } from './shifts';
 import { addBlock, compactMachine, moveBlock, previewMove, reflow } from './schedule';
 import { Block, BlockDraft, Machine, WorkCalendar } from './types';
@@ -52,6 +52,12 @@ describe('kalendarz maszyny', () => {
 		expect(firstWorkingShiftFrom(at(7, 6), machineCalendar(holiday, continuous))).toBe(at(8, 6));
 		const exception: Machine = { ...continuous, overrides: { '2026-10-07': true } };
 		expect(firstWorkingShiftFrom(at(7, 6), machineCalendar(holiday, exception))).toBe(at(7, 6));
+	});
+
+	it('wycina wolny weekend z zakresu zlecenia', () => {
+		// zlecenie pt 22:00 -> pon 14:00 na maszynie pon-pt: wolne od sob 6:00 do pon 6:00
+		expect(nonWorkingSegments(weekdays, at(9, 22), at(12, 14))).toEqual([[at(10, 6), at(12, 6)]]);
+		expect(nonWorkingSegments(weekdays, at(6, 6), at(8, 6))).toEqual([]);
 	});
 
 	it('wylicza wolne okresy od 6:00 do 6:00, sklejając weekend', () => {

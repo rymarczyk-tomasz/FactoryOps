@@ -3,7 +3,7 @@ import { Badge, Button, ButtonToolbar } from 'react-bootstrap';
 import Timeline, { DateHeader, SidebarHeader, TimelineHeaders, TimelineItemBase, TimelineMarkers, TodayMarker } from 'react-calendar-timeline';
 import 'react-calendar-timeline/style.css';
 import { usePlan } from '../data/PlanContext';
-import { calendarLookup, nonWorkingPeriods, workMode } from '../domain/calendar';
+import { calendarLookup, nonWorkingPeriods, nonWorkingSegments, workMode } from '../domain/calendar';
 import { formatDateTime, formatHours, programmerName, timelineLabel } from '../domain/format';
 import { blockStatus, previewMove } from '../domain/schedule';
 import { nearestShiftStart, shiftDayStart } from '../domain/shifts';
@@ -24,6 +24,20 @@ function projectColor(project: string): string {
 	let hash = 0;
 	for (const char of project) hash = (hash * 31 + char.charCodeAt(0)) | 0;
 	return PROJECT_COLORS[Math.abs(hash) % PROJECT_COLORS.length];
+}
+
+/**
+ * Tło zlecenia: pełny kolor, a fragmenty przypadające na dni wolne maszyny (np. weekend między
+ * piątkiem a poniedziałkiem) zakreskowane - zlecenie stoi, ale wciąż zajmuje maszynę.
+ */
+function blockBackground(color: string, start: number, end: number, offSegments: [number, number][]): string {
+	if (offSegments.length === 0) return color;
+	const pct = (ms: number) => `${(((ms - start) / (end - start)) * 100).toFixed(3)}%`;
+	// warstwa wierzchnia: pełny kolor z przezroczystymi "oknami", przez które widać paski spod spodu
+	const stops = offSegments.flatMap(([from, to]) => [`${color} ${pct(from)}`, `transparent ${pct(from)}`, `transparent ${pct(to)}`, `${color} ${pct(to)}`]);
+	const solid = `linear-gradient(to right, ${color} 0%, ${stops.join(', ')}, ${color} 100%)`;
+	const stripes = `repeating-linear-gradient(-45deg, ${color}59 0 6px, ${color}a6 6px 12px)`;
+	return `${solid}, ${stripes}`;
 }
 
 type MachineGroup = { id: Id; title: string; machine: Machine; stackItems: boolean };
@@ -97,6 +111,7 @@ const FactoryOpsTimeline = () => {
 	const draggedId = drag?.id;
 	const blockItems = useMemo<TimelineItemBase<number>[]>(() => {
 		const now = Date.now();
+		const calendars = calendarLookup({ calendar: state.calendar, machines: state.machines });
 		return state.blocks.map((block) => {
 			const color = projectColor(block.project);
 			const programmer = state.programmers.find((p) => p.id === block.programmerId);
@@ -124,14 +139,14 @@ const FactoryOpsTimeline = () => {
 					title: tooltip,
 					onDoubleClick: () => setForm({ show: true, block }),
 					style: {
-						background: color,
+						background: blockBackground(color, block.start, block.end, nonWorkingSegments(calendars(block.machineId), block.start, block.end)),
 						borderColor: color,
 						opacity: blockStatus(block, now) === 'done' ? 0.55 : 1
 					}
 				}
 			};
 		});
-	}, [state.blocks, state.programmers, draggedId]);
+	}, [state.blocks, state.programmers, state.calendar, state.machines, draggedId]);
 
 	// kreska w miejscu, gdzie faktycznie wyląduje przenoszony bloczek (po zepchnięciu kolejki)
 	const indicatorItems = useMemo<TimelineItemBase<number>[]>(() => {
