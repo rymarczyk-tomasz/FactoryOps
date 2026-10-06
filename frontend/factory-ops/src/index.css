@@ -37,6 +37,11 @@ body {
 
 .day-menu {
 	z-index: 1080;
+	min-width: 300px;
+}
+
+.day-hours-form .form-select {
+	width: auto;
 }
 
 .react-calendar-timeline .rct-item {

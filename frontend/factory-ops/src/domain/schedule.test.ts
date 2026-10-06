@@ -54,6 +54,21 @@ describe('kalendarz maszyny', () => {
 		expect(firstWorkingHourFrom(at(7, 6), machineCalendar(holiday, exception))).toBe(at(7, 6));
 	});
 
+	it('sobota pracująca w wybranych godzinach na jednej maszynie', () => {
+		const saturday = machineCalendar(plant, { id: 'm1', name: 'M1', overrides: { '2026-10-10': { from: 6, to: 18 } } });
+		// pt 20:00 - sob 6:00 = 10 h, sob 6:00-18:00 = 12 h, pozostałe 2 h w poniedziałek
+		expect(endAfterHours(at(9, 20), 24, saturday)).toBe(at(12, 8));
+		expect(firstWorkingHourFrom(at(10, 18), saturday)).toBe(at(12, 6));
+		// zakreskowana tylko reszta soboty i niedziela
+		expect(nonWorkingSegments(saturday, at(9, 20), at(12, 8))).toEqual([[at(10, 18), at(12, 6)]]);
+	});
+
+	it('godziny pracy przez północ (22:00-6:00) należą do doby, w której się zaczynają', () => {
+		const night = machineCalendar(plant, { id: 'm1', name: 'M1', overrides: { '2026-10-10': { from: 22, to: 6 } } });
+		expect(firstWorkingHourFrom(at(10, 7), night)).toBe(at(10, 22));
+		expect(endAfterHours(at(10, 22), 8, night)).toBe(at(11, 6));
+	});
+
 	it('wycina wolny weekend z zakresu zlecenia', () => {
 		// zlecenie pt 22:00 -> pon 14:00 na maszynie pon-pt: wolne od sob 6:00 do pon 6:00
 		expect(nonWorkingSegments(weekdays, at(9, 22), at(12, 14))).toEqual([[at(10, 6), at(12, 6)]]);
@@ -61,9 +76,9 @@ describe('kalendarz maszyny', () => {
 	});
 
 	it('wylicza wolne okresy od 6:00 do 6:00, sklejając weekend', () => {
-		// niedziela 4.10 trwa do pon 6:00, więc zahacza o początek zakresu
+		// niedziela 4.10 trwa do pon 6:00, więc zahacza o początek zakresu (od 0:00)
 		expect(nonWorkingPeriods(weekdays, at(5, 0), at(13, 0))).toEqual([
-			[at(4, 6), at(5, 6)],
+			[at(5, 0), at(5, 6)],
 			[at(10, 6), at(12, 6)]
 		]);
 	});

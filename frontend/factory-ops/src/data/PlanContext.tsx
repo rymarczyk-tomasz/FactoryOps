@@ -2,7 +2,7 @@ import React, { createContext, ReactNode, useCallback, useContext, useEffect, us
 import { calendarLookup } from '../domain/calendar';
 import * as schedule from '../domain/schedule';
 import { newId } from '../domain/ids';
-import { Block, BlockDraft, Id, PlanState, WorkMode } from '../domain/types';
+import { Block, BlockDraft, DayOverride, Id, PlanState, WorkMode } from '../domain/types';
 import { LocalStoragePlanRepository, PlanRepository } from './PlanRepository';
 
 const HISTORY_LIMIT = 50;
@@ -24,7 +24,7 @@ interface PlanActions {
 	 * Wyjątek w kalendarzu maszyny (`machineId`) albo całego zakładu (bez `machineId`).
 	 * `undefined` usuwa wyjątek - dzień wraca do ustawienia domyślnego.
 	 */
-	setDayWorking(dayKey: string, working: boolean | undefined, machineId?: Id): void;
+	setDayWorking(dayKey: string, working: DayOverride | undefined, machineId?: Id): void;
 	undo(): void;
 	resetDemo(): Promise<void>;
 }
@@ -100,7 +100,7 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 				})),
 			setMachineWorkMode: (id, mode) => apply((s) => withReflow({ ...s, machines: s.machines.map((m) => (m.id === id ? { ...m, workMode: mode } : m)) })),
 			setDayWorking(dayKey, working, machineId) {
-				const withOverride = (overrides: Record<string, boolean> = {}) => {
+				const withOverride = (overrides: Record<string, DayOverride> = {}) => {
 					const next = { ...overrides };
 					if (working === undefined) delete next[dayKey];
 					else next[dayKey] = working;

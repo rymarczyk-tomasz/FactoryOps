@@ -24,8 +24,8 @@ export function isWeekend(date: Date): boolean {
 	return day === 0 || day === 6;
 }
 
-/** Czy dany dzień (licząc od 6:00) jest pracujący - kalendarz konkretnej maszyny. */
-export type IsWorkingDay = (date: Date) => boolean;
+/** Czy godzina zaczynająca się w `hourStart` jest pracująca - kalendarz konkretnej maszyny. */
+export type IsWorkingHour = (hourStart: number) => boolean;
 
 /** Czas zlecenia na planie: godziny zaokrąglone w górę do pełnej godziny, minimum 1 h. */
 export function roundUpHours(hours: number): number {
@@ -52,31 +52,32 @@ export function shiftDayStart(ms: number): number {
 	return new Date(d.getFullYear(), d.getMonth(), d.getDate() + dayOffset, firstShift).getTime();
 }
 
-export function isWorkingHour(hourStart: number, isWorkingDay: IsWorkingDay): boolean {
-	return isWorkingDay(new Date(shiftDayStart(hourStart)));
-}
-
 /** Pierwsza pracująca pełna godzina nie wcześniej niż `ms`. */
-export function firstWorkingHourFrom(ms: number, isWorkingDay: IsWorkingDay): number {
+export function firstWorkingHourFrom(ms: number, isWorkingHour: IsWorkingHour): number {
 	let h = hourStartAtOrBefore(ms);
 	if (h < ms) h = addHours(h, 1);
 	// zabezpieczenie przed nieskończoną pętlą przy kalendarzu bez dni pracujących
 	for (let i = 0; i < 24 * 366; i++) {
-		if (isWorkingHour(h, isWorkingDay)) return h;
+		if (isWorkingHour(h)) return h;
 		h = addHours(h, 1);
 	}
 	return h;
 }
 
-/** Koniec zlecenia zajmującego `hours` pracujących godzin od pracującej godziny `start` - dni wolne są pomijane. */
-export function endAfterHours(start: number, hours: number, isWorkingDay: IsWorkingDay): number {
+/** Koniec zlecenia zajmującego `hours` pracujących godzin od pracującej godziny `start` - wolne godziny są pomijane. */
+export function endAfterHours(start: number, hours: number, isWorkingHour: IsWorkingHour): number {
 	const needed = roundUpHours(hours);
 	let h = start;
 	let counted = 0;
 	for (let i = 0; i < 24 * 366 * 5; i++) {
-		if (isWorkingHour(h, isWorkingDay)) counted++;
+		if (isWorkingHour(h)) counted++;
 		if (counted >= needed) break;
 		h = addHours(h, 1);
 	}
 	return addHours(h, 1);
+}
+
+/** Godzina doby liczona od 6:00 (0 = 6:00, 23 = 5:00 następnego dnia). */
+export function hourOfShiftDay(hourStart: number): number {
+	return (new Date(hourStart).getHours() - SHIFT_START_HOURS[0] + 24) % 24;
 }

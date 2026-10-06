@@ -6,13 +6,25 @@ export type Id = string;
  */
 export type WorkMode = 'weekdays' | 'continuous';
 
+/**
+ * Godziny pracy w danym dniu, pełne godziny zegarowe. Doba trwa od 6:00 do 6:00,
+ * więc np. { from: 6, to: 18 } to 6:00-18:00, a { from: 22, to: 6 } to noc do 6:00 następnego dnia.
+ */
+export interface WorkingHours {
+	from: number;
+	to: number;
+}
+
+/** Wyjątek dla dnia: cały dzień pracujący (true), wolny (false) albo tylko wybrane godziny. */
+export type DayOverride = boolean | WorkingHours;
+
 export interface Machine {
 	id: Id;
 	name: string;
 	/** Brak = 'weekdays' (dane zapisane przed dodaniem systemów pracy). */
 	workMode?: WorkMode;
 	/** Wyjątki tylko dla tej maszyny, mają pierwszeństwo przed kalendarzem zakładu. Klucz: 'YYYY-MM-DD'. */
-	overrides?: Record<string, boolean>;
+	overrides?: Record<string, DayOverride>;
 }
 
 export interface Programmer {
@@ -48,7 +60,7 @@ export type BlockStatus = 'done' | 'in_progress' | 'planned';
 /** Kalendarz zakładu - wyjątki dla wszystkich maszyn (np. święto, pracująca sobota). */
 export interface WorkCalendar {
 	/** Klucz: 'YYYY-MM-DD'. */
-	overrides: Record<string, boolean>;
+	overrides: Record<string, DayOverride>;
 }
 
 export interface PlanState {

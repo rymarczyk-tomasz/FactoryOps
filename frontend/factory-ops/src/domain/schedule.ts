@@ -1,5 +1,5 @@
 import { CalendarLookup } from './calendar';
-import { endAfterHours, firstWorkingHourFrom, IsWorkingDay, nearestHourStart } from './shifts';
+import { endAfterHours, firstWorkingHourFrom, IsWorkingHour, nearestHourStart } from './shifts';
 import { Block, BlockDraft, BlockStatus, Id } from './types';
 
 /**
@@ -7,12 +7,12 @@ import { Block, BlockDraft, BlockStatus, Id } from './types';
  * nie wcześniej niż jego własny start i koniec poprzedniego. Bloczki są tylko spychane do przodu,
  * nigdy cofane. `priorityId` wygrywa remis (bloczek upuszczony na miejsce innego wchodzi przed niego).
  */
-function reflowMachine(blocks: Block[], isWorkingDay: IsWorkingDay, priorityId?: Id): Block[] {
+function reflowMachine(blocks: Block[], isWorkingHour: IsWorkingHour, priorityId?: Id): Block[] {
 	const sorted = [...blocks].sort((a, b) => a.start - b.start || Number(b.id === priorityId) - Number(a.id === priorityId));
 	let cursor = -Infinity;
 	return sorted.map((block) => {
-		const start = firstWorkingHourFrom(Math.max(block.start, cursor), isWorkingDay);
-		const end = endAfterHours(start, block.hours, isWorkingDay);
+		const start = firstWorkingHourFrom(Math.max(block.start, cursor), isWorkingHour);
+		const end = endAfterHours(start, block.hours, isWorkingHour);
 		cursor = end;
 		return block.start === start && block.end === end ? block : { ...block, start, end };
 	});

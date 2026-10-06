@@ -223,7 +223,7 @@ const FactoryOpsTimeline = () => {
 					</Button>
 				</ButtonToolbar>
 				<small className="text-secondary">
-					<span className="legend-swatch non-working-item" /> dzień wolny maszyny · prawy klik na planie: dni pracujące/wolne
+					<span className="legend-swatch non-working-item" /> czas wolny maszyny · prawy klik na planie: dni i godziny pracy
 				</small>
 			</div>
 
