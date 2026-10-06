@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { calendarLookup, machineCalendar, nonWorkingPeriods } from './calendar';
 import { endAfterShifts, firstWorkingShiftFrom, nearestShiftStart, shiftsForHours, shiftStartAtOrBefore } from './shifts';
-import { addBlock, compactMachine, moveBlock, reflow } from './schedule';
+import { addBlock, compactMachine, moveBlock, previewMove, reflow } from './schedule';
 import { Block, BlockDraft, Machine, WorkCalendar } from './types';
 
 // 2026-10-05 to poniedziałek, 2026-10-10/11 to weekend
@@ -110,6 +110,14 @@ describe('harmonogram', () => {
 		const friday = addBlock([], { ...draft(24), start: at(9, 14) }, 'f', calendars, now);
 		expect(friday[0].end).toBe(at(12, 14));
 		expect(moveBlock(friday, 'f', at(9, 14), 'm2', calendars)[0].end).toBe(at(10, 14));
+	});
+
+	it('podgląd przeniesienia pokazuje, między którymi zleceniami wyląduje bloczek', () => {
+		const blocks = plan(8, 8, 8);
+		const preview = previewMove(blocks, 'b2', at(5, 22), 'm1', calendars);
+		expect(preview).toMatchObject({ start: at(5, 22), end: at(6, 6), after: { id: 'b0' }, before: { id: 'b1' } });
+		// podgląd nie zmienia planu
+		expect(blocks.find((b) => b.id === 'b2')?.start).toBe(at(6, 6));
 	});
 
 	it('kompaktowanie usuwa przerwy', () => {

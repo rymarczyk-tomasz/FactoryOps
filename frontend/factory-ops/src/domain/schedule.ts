@@ -47,6 +47,26 @@ export function moveBlock(blocks: Block[], id: Id, start: number, machineId: Id,
 	return updateBlock(blocks, id, { start: nearestShiftStart(start), machineId }, calendars);
 }
 
+export interface MovePreview {
+	start: number;
+	end: number;
+	/** Zlecenie, za którym wyląduje przenoszony bloczek. */
+	after?: Block;
+	/** Zlecenie, przed którym wyląduje przenoszony bloczek. */
+	before?: Block;
+}
+
+/** Gdzie faktycznie wyląduje bloczek upuszczony w danym miejscu (podgląd w trakcie przeciągania). */
+export function previewMove(blocks: Block[], id: Id, start: number, machineId: Id, calendars: CalendarLookup): MovePreview | undefined {
+	const moved = blocks.find((b) => b.id === id);
+	if (!moved) return undefined;
+	// wystarczy przeliczyć docelową maszynę
+	const machineBlocks = [...blocks.filter((b) => b.machineId === machineId && b.id !== id), moved];
+	const result = moveBlock(machineBlocks, id, start, machineId, calendars).sort((a, b) => a.start - b.start);
+	const index = result.findIndex((b) => b.id === id);
+	return { start: result[index].start, end: result[index].end, after: result[index - 1], before: result[index + 1] };
+}
+
 export function removeBlock(blocks: Block[], id: Id): Block[] {
 	return blocks.filter((b) => b.id !== id);
 }

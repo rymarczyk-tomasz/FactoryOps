@@ -1,11 +1,11 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, Button, ButtonToolbar } from 'react-bootstrap';
 import Timeline, { DateHeader, SidebarHeader, TimelineHeaders, TimelineItemBase, TimelineMarkers, TodayMarker } from 'react-calendar-timeline';
 import 'react-calendar-timeline/style.css';
 import { usePlan } from '../data/PlanContext';
 import { calendarLookup, nonWorkingPeriods, workMode } from '../domain/calendar';
 import { formatDateTime, formatHours, programmerName, timelineLabel } from '../domain/format';
-import { blockStatus } from '../domain/schedule';
+import { blockStatus, previewMove } from '../domain/schedule';
 import { nearestShiftStart, shiftDayStart } from '../domain/shifts';
 import { Block, Id, Machine } from '../domain/types';
 import BlockFormModal, { BlockFormDefaults } from './BlockFormModal';
@@ -16,6 +16,7 @@ const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
 /** Prefiks id tła z dniami wolnymi - takich elementów nie da się zaznaczyć ani przesunąć. */
 const OFF_PREFIX = 'off:';
+const DROP_INDICATOR_PREFIX = 'drop:';
 
 const PROJECT_COLORS = ['#2563eb', '#0d9488', '#d97706', '#7c3aed', '#db2777', '#059669', '#dc2626', '#4f46e5'];
 
@@ -30,6 +31,9 @@ type MachineGroup = { id: Id; title: string; machine: Machine; stackItems: boole
 // treść zostaje po zamknięciu, żeby modal nie zmieniał się w trakcie animacji zamykania
 type FormState = { show: boolean; block?: Block; defaults?: BlockFormDefaults };
 
+/** Bloczek w trakcie przeciągania: docelowa maszyna i początek przyciągnięty do zmiany. */
+type DragState = { id: Id; machineId: Id; start: number };
+
 const FactoryOpsTimeline = () => {
 	const { state, moveBlock, deleteBlock, undo, canUndo } = usePlan();
 	const [selectedId, setSelectedId] = useState<Id>();
@@ -37,9 +41,28 @@ const FactoryOpsTimeline = () => {
 	const [confirmDelete, setConfirmDelete] = useState(false);
 	const [dayMenu, setDayMenu] = useState<DayMenuTarget>();
 	const closeDayMenu = useCallback(() => setDayMenu(undefined), []);
+	const [drag, setDrag] = useState<DragState>();
+	// ostatnia pozycja podglądu bez czekania na render - przy upuszczeniu bloczek ląduje dokładnie tam, gdzie kreska
+	const dragRef = useRef<DragState>();
+
+	// upuszczenie bez zmiany miejsca nie wywołuje onItemMove - podgląd chowamy po puszczeniu przycisku
+	const dragging = drag !== undefined;
+	useEffect(() => {
+		if (!dragging) return;
+		// po onItemMove biblioteki, które też reaguje na puszczenie przycisku i potrzebuje ostatniej pozycji
+		const end = () =>
+			setTimeout(() => {
+				dragRef.current = undefined;
+				setDrag(undefined);
+			});
+		window.addEventListener('pointerup', end);
+		return () => window.removeEventListener('pointerup', end);
+	}, [dragging]);
+
+	const preview = useMemo(() => drag && previewMove(state.blocks, drag.id, drag.start, drag.machineId, calendarLookup(state)), [drag, state]);
 
 	const selected = state.blocks.find((b) => b.id === selectedId);
-	const select = (id: Id) => !String(id).startsWith(OFF_PREFIX) && setSelectedId(String(id));
+	const select = (id: Id) => !String(id).startsWith(OFF_PREFIX) && !String(id).startsWith(DROP_INDICATOR_PREFIX) && setSelectedId(String(id));
 
 	const openDayMenu = (machineId: Id, time: number, e: React.SyntheticEvent) => {
 		e.preventDefault();
@@ -71,6 +94,7 @@ const FactoryOpsTimeline = () => {
 		);
 	}, [state]);
 
+	const draggedId = drag?.id;
 	const blockItems = useMemo<TimelineItemBase<number>[]>(() => {
 		const now = Date.now();
 		return state.blocks.map((block) => {
@@ -95,6 +119,7 @@ const FactoryOpsTimeline = () => {
 				// długość wynika z godzin w zamówieniu - zmienia się ją w formularzu, nie myszką
 				canResize: false,
 				canChangeGroup: true,
+				className: block.id === draggedId ? 'dragging-block' : undefined,
 				itemProps: {
 					title: tooltip,
 					onDoubleClick: () => setForm({ show: true, block }),
@@ -106,9 +131,29 @@ const FactoryOpsTimeline = () => {
 				}
 			};
 		});
-	}, [state.blocks, state.programmers]);
+	}, [state.blocks, state.programmers, draggedId]);
 
-	const items = useMemo(() => [...offItems, ...blockItems], [offItems, blockItems]);
+	// kreska w miejscu, gdzie faktycznie wyląduje przenoszony bloczek (po zepchnięciu kolejki)
+	const indicatorItems = useMemo<TimelineItemBase<number>[]>(() => {
+		if (!drag || !preview) return [];
+		const neighbours = [preview.after && `po ${preview.after.orderNo}`, preview.before && `przed ${preview.before.orderNo}`].filter(Boolean);
+		return [
+			{
+				// nowe id przy każdej zmianie: w trakcie przeciągania biblioteka nie przelicza położenia istniejących elementów
+				id: `${DROP_INDICATOR_PREFIX}${drag.machineId}:${preview.start}`,
+				group: drag.machineId,
+				title: [formatDateTime(preview.start), ...neighbours].join(' · '),
+				start_time: preview.start,
+				end_time: preview.start + 60_000,
+				canMove: false,
+				canResize: false,
+				canChangeGroup: false,
+				className: 'drop-indicator'
+			}
+		];
+	}, [drag, preview]);
+
+	const items = useMemo(() => [...offItems, ...blockItems, ...indicatorItems], [offItems, blockItems, indicatorItems]);
 
 	return (
 		<>
@@ -156,7 +201,22 @@ const FactoryOpsTimeline = () => {
 					if (block) openDayMenu(block.machineId, time, e);
 				}}
 				moveResizeValidator={(_action, _item, time) => nearestShiftStart(time)}
-				onItemMove={(id, time, groupOrder) => moveBlock(String(id), time, state.machines[groupOrder].id)}
+				onItemDrag={(e) => {
+					if (e.eventType !== 'move') return;
+					const next = { id: String(e.itemId), machineId: state.machines[e.newGroupOrder].id, start: nearestShiftStart(e.time) };
+					const last = dragRef.current;
+					// zdarzenie przychodzi przy każdym ruchu myszy - przeliczamy tylko po zmianie zmiany lub maszyny
+					if (last && last.id === next.id && last.machineId === next.machineId && last.start === next.start) return;
+					dragRef.current = next;
+					setDrag(next);
+				}}
+				onItemMove={(id, time, groupOrder) => {
+					const last = dragRef.current;
+					dragRef.current = undefined;
+					setDrag(undefined);
+					if (last && last.id === id) moveBlock(last.id, last.start, last.machineId);
+					else moveBlock(String(id), time, state.machines[groupOrder].id);
+				}}
 				groupRenderer={({ group }) => (
 					<div className="d-flex align-items-center justify-content-between gap-1">
 						<span className="text-truncate" title={group.title}>
