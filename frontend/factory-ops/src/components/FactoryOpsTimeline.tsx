@@ -1,7 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, Button, ButtonGroup, Form, InputGroup } from 'react-bootstrap';
-import Timeline, { DateHeader, SidebarHeader, TimelineHeaders, TimelineItemBase, TimelineMarkers, TodayMarker } from 'react-calendar-timeline';
-import type { ItemRendererProps } from 'react-calendar-timeline/dist/lib/items/Item';
+import Timeline, {
+	DateHeader,
+	ReactCalendarTimelineProps,
+	SidebarHeader,
+	TimelineHeaders,
+	TimelineItemBase,
+	TimelineMarkers,
+	TodayMarker
+} from 'react-calendar-timeline';
 import 'react-calendar-timeline/style.css';
 import { usePlan } from '../data/PlanContext';
 import { calendarLookup, capacityLookup, isLine, nonWorkingPeriods, nonWorkingSegments, unitCount, unitLabel, workMode } from '../domain/calendar';
@@ -52,6 +59,8 @@ function blockBackground(color: string, start: number, end: number, offSegments:
  * albo nakładka awarii - zamalowana część wysokości odpowiada części maszyn linii, które stoją.
  */
 type PlanItem = TimelineItemBase<number> & { labels?: string[]; breakdown?: { down: number; units: number; labels: string[] } };
+/** Biblioteka nie eksportuje typu propsów renderera - bierzemy go z propa `itemRenderer`. */
+type ItemRendererProps = Parameters<NonNullable<ReactCalendarTimelineProps<PlanItem>['itemRenderer']>>[0];
 
 /** Przybliżona szerokość znaku przy czcionce 0.8rem + odstępy wewnątrz kafelka. */
 const CHAR_WIDTH = 7;
@@ -68,7 +77,7 @@ function blockLabels(block: Block): string[] {
  * Opis nigdy nie wychodzi poza kafelek - inaczej przy krótkich zleceniach obok siebie napis
  * zasłaniał sąsiada i kliknięcie trafiało w złe zlecenie. Za wąski kafelek zostaje bez napisu (dane w podpowiedzi).
  */
-function renderItem({ item, itemContext, getItemProps }: ItemRendererProps<PlanItem>) {
+function renderItem({ item, itemContext, getItemProps }: ItemRendererProps) {
 	const { key, ref, ...props } = getItemProps(item.itemProps ?? {});
 	const width = itemContext.dimensions.width;
 	const fitting = (labels: string[], charWidth: number) => labels.find((l) => l.length * charWidth + LABEL_PADDING <= width) ?? '';

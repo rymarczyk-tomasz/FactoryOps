@@ -172,6 +172,13 @@ describe('harmonogram', () => {
 		expect(startsById(blocks)).toEqual({ b0: at(5, 7), b1: at(5, 11), b2: at(5, 19) });
 	});
 
+	it('start wpisany przy edycji przyciąga się do najbliższej pełnej godziny, jak przy dodawaniu', () => {
+		// 10:20 -> 10:00; termin też na pełnej godzinie, nie 10:20
+		const blocks = updateBlock(plan(8, 8), 'b1', { start: at(6, 10, 20) }, capacities);
+		expect(byId(blocks, 'b1')).toMatchObject({ start: at(6, 10), pinnedStart: at(6, 10) });
+		expect(addBlock([], { ...draft(8), start: at(6, 10, 20) }, 'n', capacities, now)[0].start).toBe(at(6, 10));
+	});
+
 	it('usunięcie zlecenia cofa następne na jego miejsce', () => {
 		const blocks = removeBlock(plan(8, 8, 8), 'b1', capacities);
 		expect(startsById(blocks)).toEqual({ b0: at(5, 7), b2: at(5, 15) });

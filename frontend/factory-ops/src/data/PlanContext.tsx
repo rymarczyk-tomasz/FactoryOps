@@ -12,6 +12,13 @@ const HISTORY_LIMIT = 50;
 /** Po zmianie kalendarza, awarii lub liczby maszyn zlecenia trzeba ułożyć od nowa. */
 const withReflow = (s: PlanState): PlanState => ({ ...s, blocks: schedule.reflow(s.blocks, capacityLookup(s), undefined, Date.now()) });
 
+/** Harmonogram zwraca te same obiekty dla zleceń, które się nie zmieniły (kolejność może być inna). */
+const sameBlocks = (a: Block[], b: Block[]) => {
+	if (a.length !== b.length) return false;
+	const previous = new Set(a);
+	return b.every((block) => previous.has(block));
+};
+
 const machineName = (s: PlanState, id: Id | undefined) => s.machines.find((m) => m.id === id)?.name ?? '';
 const orderNo = (s: PlanState, id: Id) => s.blocks.find((b) => b.id === id)?.orderNo ?? '';
 
@@ -88,7 +95,11 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 
 	const withBlocks = useCallback(
 		(change: (s: PlanState) => Block[], describe?: (before: PlanState, after: PlanState) => string) =>
-			apply((s) => ({ ...s, blocks: change(s) }), describe),
+			apply((s) => {
+				const blocks = change(s);
+				// nic się nie zmieniło (np. domknięcie przerw bez przerw) - bez komunikatu i kroku do cofnięcia
+				return sameBlocks(s.blocks, blocks) ? s : { ...s, blocks };
+			}, describe),
 		[apply]
 	);
 
@@ -129,11 +140,14 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 					(s) => schedule.removeBlock(s.blocks, id, capacityLookup(s), Date.now()),
 					(before) => `Usunięto ${orderNo(before, id)}`
 				),
-			compactMachine: (machineId) =>
+			compactMachine(machineId) {
+				const before = stateRef.current;
 				withBlocks(
 					(s) => schedule.compactMachine(s.blocks, machineId, capacityLookup(s), Date.now()),
-					(before) => `Domknięto przerwy na ${machineName(before, machineId)}`
-				),
+					(previous) => `Domknięto przerwy na ${machineName(previous, machineId)}`
+				);
+				if (before && stateRef.current === before) notify(`Brak przerw do domknięcia na ${machineName(before, machineId)}`, false);
+			},
 			saveMachine(draft, existingId) {
 				const id = existingId ?? newId();
 				// system pracy i liczba maszyn w linii zmieniają czas zleceń

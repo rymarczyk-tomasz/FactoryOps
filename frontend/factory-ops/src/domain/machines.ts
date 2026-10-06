@@ -28,7 +28,7 @@ export function applyMachineDraft(
 	const updatedBreakdowns = breakdowns
 		.map((b) => {
 			if (b.machineId !== id) return b;
-			const units = [...new Set(b.units.map(newIndex).filter((u): u is number => u !== undefined))].sort();
+			const units = [...new Set(b.units.map(newIndex).filter((u): u is number => u !== undefined))].sort((a, b) => a - b);
 			return { ...b, units };
 		})
 		.filter((b) => b.units.length > 0);

@@ -57,6 +57,7 @@ const ListPage = () => {
 				return order * sort.direction || a.start - b.start;
 			});
 		// „teraz” do statusu liczymy przy renderze strony
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [state.blocks, query, machineId, project, programmerId, status, sort, machineNames]);
 
 	const toggleSort = (key: SortKey) => setSort((s) => (s.key === key ? { key, direction: s.direction === 1 ? -1 : 1 } : { key, direction: 1 }));

@@ -71,9 +71,11 @@ export function updateBlock(
 	now?: number
 ): Block[] {
 	const current = blocks.find((b) => b.id === id);
-	const updated = blocks.map((b) => (b.id === id ? { ...b, ...patch } : b));
+	// start z formularza przyciągamy do pełnej godziny tak samo jak przy dodawaniu i przeciąganiu
+	const start = patch.start !== undefined ? nearestHourStart(patch.start) : undefined;
+	const updated = blocks.map((b) => (b.id === id ? { ...b, ...patch, start: start ?? b.start } : b));
 	// nowe miejsce tylko przy zmianie startu lub maszyny - sama zmiana godzin czy opisu nie rusza terminu
-	const moved = current && ((patch.start !== undefined && patch.start !== current.start) || (patch.machineId !== undefined && patch.machineId !== current.machineId));
+	const moved = current && ((start !== undefined && start !== current.start) || (patch.machineId !== undefined && patch.machineId !== current.machineId));
 	return reflow(updated, capacities, moved ? { id } : undefined, now);
 }
 

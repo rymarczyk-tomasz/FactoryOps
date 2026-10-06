@@ -56,6 +56,7 @@ const MachineFormModal = ({ show, machine, onHide }: MachineFormModalProps) => {
 		setRows(line ? machine!.lineMachines!.map((n, i) => row(n, i)) : []);
 		setSubmitted(false);
 		// formularz ustawiamy tylko przy otwarciu
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [show]);
 
 	const changeKind = (next: Kind) => {

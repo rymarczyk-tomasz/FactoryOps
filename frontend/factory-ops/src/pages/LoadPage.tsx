@@ -59,6 +59,7 @@ const LoadPage = () => {
 			};
 		});
 		// dni i „teraz” wyznaczamy przy wejściu na stronę; przeliczamy przy zmianie planu
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [state]);
 
 	const average = (subset: MachineRow[]) => {

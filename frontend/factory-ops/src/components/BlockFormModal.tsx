@@ -71,6 +71,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 		});
 		setAddedCount(0);
 		// formularz ustawiamy tylko przy otwarciu, nie przy każdej zmianie planu
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [show]);
 
 	const startMode = watch('startMode');
@@ -203,6 +204,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 								<>
 									<Form.Control
 										type="datetime-local"
+										step={3600}
 										className="mt-2"
 										{...register('start', { validate: (v) => startMode !== 'manual' || v !== '' || 'Podaj datę startu' })}
 										isInvalid={!!errors.start}

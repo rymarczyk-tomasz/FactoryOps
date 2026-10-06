@@ -61,8 +61,11 @@ const DayContextMenu = ({ target, onAddBlock, onClose }: DayContextMenuProps) =>
 	const [hoursForm, setHoursForm] = useState<WorkingHours>();
 	const [breakdownForm, setBreakdownForm] = useState<BreakdownForm>();
 	const [position, setPosition] = useState({ left: target.x, top: target.y });
+	const hoursFormOpen = hoursForm !== undefined;
+	const breakdownFormOpen = breakdownForm !== undefined;
 
-	// menu kliknięte nisko lub z prawej strony ekranu przesuwamy tak, żeby całe było widoczne
+	// menu kliknięte nisko lub z prawej strony ekranu przesuwamy tak, żeby całe było widoczne;
+	// po rozwinięciu formularza menu rośnie, więc liczymy pozycję jeszcze raz
 	useLayoutEffect(() => {
 		const rect = ref.current?.getBoundingClientRect();
 		if (!rect) return;
@@ -71,7 +74,7 @@ const DayContextMenu = ({ target, onAddBlock, onClose }: DayContextMenuProps) =>
 			left: Math.max(margin, Math.min(target.x, window.innerWidth - rect.width - margin)),
 			top: Math.max(margin, Math.min(target.y, window.innerHeight - rect.height - margin))
 		});
-	}, [target.x, target.y, hoursForm !== undefined, breakdownForm !== undefined]);
+	}, [target.x, target.y, hoursFormOpen, breakdownFormOpen]);
 
 	useEffect(() => {
 		const outside = (e: Event) => !ref.current?.contains(e.target as Node) && onClose();
@@ -113,7 +116,7 @@ const DayContextMenu = ({ target, onAddBlock, onClose }: DayContextMenuProps) =>
 	const dayBreakdowns = state.breakdowns.filter((b) => b.machineId === machine.id && b.start < dayEnd && b.end > target.day);
 	const openBreakdownForm = () => setBreakdownForm({ units: [0], from: toLocalInputValue(target.hour), hours: DEFAULT_BREAKDOWN_HOURS });
 	const toggleUnit = (unit: number) =>
-		setBreakdownForm((f) => f && { ...f, units: f.units.includes(unit) ? f.units.filter((u) => u !== unit) : [...f.units, unit].sort() });
+		setBreakdownForm((f) => f && { ...f, units: f.units.includes(unit) ? f.units.filter((u) => u !== unit) : [...f.units, unit].sort((a, b) => a - b) });
 	const saveBreakdown = (form: BreakdownForm) => {
 		const start = nearestHourStart(fromLocalInputValue(form.from));
 		addBreakdown({ machineId: machine.id, units: line ? form.units : [0], start, end: addHours(start, Math.max(1, Math.round(form.hours))) });

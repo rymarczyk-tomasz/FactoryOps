@@ -4,11 +4,11 @@
 		"browser": true,
 		"es2021": true
 	},
-	"extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended", "plugin:react/recommended"],
-	"plugins": ["@typescript-eslint", "react"],
+	"extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended", "plugin:react/recommended", "plugin:react-hooks/recommended"],
+	"plugins": ["@typescript-eslint", "react", "react-hooks"],
 	"settings": {
 		"react": {
-			"version": "18.2.0"
+			"version": "detect"
 		}
 	},
 	"rules": {
@@ -21,7 +21,7 @@
 		"@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
 		"@typescript-eslint/no-non-null-assertion": "off"
 	},
-	"ignorePatterns": ["**/*.scss", "node_modules/*"],
+	"ignorePatterns": ["node_modules/*", "dist/*"],
 	"overrides": [
 		{
 			"files": ["*.ts", "*.tsx"],
@@ -32,16 +32,6 @@
 				},
 				"ecmaVersion": "latest",
 				"sourceType": "module"
-			},
-			"rules": {
-				"max-len": ["error", { "code": 180, "comments": 180, "ignoreComments": true }]
-			}
-		},
-		{
-			"files": ["*.html"],
-			"parser": "@html-eslint/parser",
-			"rules": {
-				"max-len": ["off"]
 			}
 		}
 	]
