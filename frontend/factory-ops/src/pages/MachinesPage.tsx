@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Badge, Button, Table } from 'react-bootstrap';
 import ConfirmModal from '../components/ConfirmModal';
 import MachineFormModal from '../components/MachineFormModal';

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button, Container, Nav, Navbar, Toast, ToastContainer } from 'react-bootstrap';
 import { NavLink, Route, Routes } from 'react-router-dom';
 import ConfirmModal from './components/ConfirmModal';

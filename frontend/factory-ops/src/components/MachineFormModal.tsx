@@ -1,4 +1,4 @@
-import React, { FormEvent, useEffect, useRef, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Button, ButtonGroup, CloseButton, Form, Modal, ToggleButton } from 'react-bootstrap';
 import { usePlan } from '../data/PlanContext';
 import { isLine, workMode, WORK_MODE_LABELS } from '../domain/calendar';

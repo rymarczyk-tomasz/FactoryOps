@@ -1,5 +1,5 @@
 import { saveAs } from 'file-saver';
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Badge, Button, Col, Form, Row, Table } from 'react-bootstrap';
 import { STATUS_VARIANTS } from '../components/BlockDetailsPanel';
 import { usePlan } from '../data/PlanContext';

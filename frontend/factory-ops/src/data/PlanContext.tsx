@@ -1,4 +1,4 @@
-import React, { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { capacityLookup } from '../domain/calendar';
 import { formatDateTime } from '../domain/format';
 import * as schedule from '../domain/schedule';

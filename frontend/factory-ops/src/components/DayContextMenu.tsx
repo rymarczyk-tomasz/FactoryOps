@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { usePlan } from '../data/PlanContext';
 import { effectiveDay, formatWorkingHours, isLine, isValidWorkingHours, unitCount, unitLabel, workMode, WORK_MODE_LABELS } from '../domain/calendar';
 import { formatDateTime, fromLocalInputValue, toLocalInputValue } from '../domain/format';

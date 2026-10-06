@@ -1,4 +1,3 @@
-import React from 'react';
 import { Badge, Button, Form, Offcanvas } from 'react-bootstrap';
 import { usePlan } from '../data/PlanContext';
 import { isLine, unitCount, unitLabel } from '../domain/calendar';
