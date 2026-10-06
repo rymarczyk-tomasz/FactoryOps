@@ -3,14 +3,6 @@
 	"version": "0.1.0",
 	"private": true,
 	"dependencies": {
-		"@testing-library/jest-dom": "^5.17.0",
-		"@testing-library/react": "^13.4.0",
-		"@testing-library/user-event": "^13.5.0",
-		"@types/jest": "^27.5.2",
-		"@types/node": "^20.0.0",
-		"@types/react": "^18.2.20",
-		"@types/react-dom": "^18.2.7",
-		"@vitejs/plugin-react-swc": "^3.6.0",
 		"axios": "^1.3.4",
 		"bootstrap": "^5.3.2",
 		"file-saver": "^2.0.5",
@@ -19,53 +11,37 @@
 		"react-calendar-timeline": "^0.30.0-beta.3",
 		"react-dom": "^18.2.0",
 		"react-hook-form": "^7.49.2",
-		"react-router-dom": "^7.9.3",
-		"sass": "^1.69.7",
-		"typescript": "^4.9.5",
-		"vite": "^5.0.12",
-		"vite-plugin-svgr": "^4.2.0",
-		"vite-tsconfig-paths": "^4.3.1",
-		"web-vitals": "^2.1.4"
+		"react-router-dom": "^7.9.3"
 	},
 	"scripts": {
 		"start": "vite",
 		"build": "tsc && vite build",
-		"serve": "vite preview"
-	},
-	"eslintConfig": {
-		"extends": [
-			"react-app",
-			"react-app/jest"
-		]
-	},
-	"browserslist": {
-		"production": [
-			">0.2%",
-			"not dead",
-			"not op_mini all"
-		],
-		"development": [
-			"last 1 chrome version",
-			"last 1 firefox version",
-			"last 1 safari version"
-		]
+		"serve": "vite preview",
+		"lint": "eslint src --ext .ts,.tsx",
+		"test": "vitest run",
+		"test:watch": "vitest"
 	},
 	"devDependencies": {
 		"@html-eslint/eslint-plugin": "^0.23.1",
 		"@html-eslint/parser": "^0.23.0",
 		"@types/file-saver": "^2.0.5",
-		"@types/react": "^18.0.28",
-		"@types/react-calendar-timeline": "^0.28.6",
-		"@types/react-dom": "^18.0.11",
-		"@types/statuses": "^2.0.1",
+		"@types/node": "^20.19.43",
+		"@types/react": "^18.3.31",
+		"@types/react-dom": "^18.3.7",
 		"@typescript-eslint/eslint-plugin": "^5.54.1",
 		"@typescript-eslint/parser": "^5.54.1",
+		"@vitejs/plugin-react-swc": "^3.11.0",
 		"axios": "^1.6.3",
 		"eslint": "^8.56.0",
 		"eslint-import-resolver-typescript": "^3.5.3",
 		"eslint-plugin-import": "^2.27.5",
 		"eslint-plugin-react": "^7.32.2",
-		"typescript": "^4.9.5"
+		"sass": "^1.105.1",
+		"typescript": "~5.6",
+		"vite": "^5.4.21",
+		"vite-plugin-svgr": "^4.5.0",
+		"vite-tsconfig-paths": "^4.3.2",
+		"vitest": "^2.1.9"
 	},
 	"prettier": {
 		"useTabs": true,
@@ -75,5 +51,6 @@
 		"trailingComma": "none",
 		"printWidth": 180,
 		"proseWrap": "preserve"
-	}
+	},
+	"type": "module"
 }

@@ -1,10 +1,28 @@
 body {
 	margin: 0;
-	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+	background: #f3f4f6;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 }
 
-code {
-	font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+/* Timeline */
+.react-calendar-timeline .rct-vertical-lines .rct-vl.non-working {
+	background: repeating-linear-gradient(-45deg, #f3f4f6, #f3f4f6 6px, #e5e7eb 6px, #e5e7eb 12px);
+}
+
+.react-calendar-timeline .rct-item {
+	border-radius: 4px;
+	font-size: 0.8rem;
+}
+
+.react-calendar-timeline .rct-item.selected {
+	box-shadow: 0 0 0 2px #111827;
+}
+
+.timeline-sidebar-header {
+	display: flex;
+	align-items: center;
+	padding: 0 12px;
+	font-weight: 600;
+	color: #fff;
 }

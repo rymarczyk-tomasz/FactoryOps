@@ -1,15 +1,6 @@
 import React from 'react';
-import FactoryOpsTimeline from '../component/FactoryOpsTimeline';
+import FactoryOpsTimeline from '../components/FactoryOpsTimeline';
 
-const TimelinePage = () => {
-
-	return (
-		<>
-			<div className="card m-5 p-3">
-				<FactoryOpsTimeline />
-			</div>
-		</>
-	);
-};
+const TimelinePage = () => <FactoryOpsTimeline />;
 
 export default TimelinePage;
