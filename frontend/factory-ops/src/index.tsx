@@ -9,7 +9,8 @@ import { PlanProvider } from './data/PlanContext';
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 root.render(
 	<React.StrictMode>
-		<BrowserRouter>
+		{/* na GitHub Pages aplikacja leży w podkatalogu (/FactoryOps/) - base ustawia build */}
+		<BrowserRouter basename={import.meta.env.BASE_URL}>
 			<PlanProvider>
 				<App />
 			</PlanProvider>
