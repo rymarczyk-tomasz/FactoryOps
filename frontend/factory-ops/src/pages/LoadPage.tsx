@@ -39,11 +39,11 @@ interface MachineRow {
 }
 
 const LoadPage = () => {
-	const { state, removeBreakdown } = usePlan();
+	const { state, now, removeBreakdown } = usePlan();
 	const [showDone, setShowDone] = useState(false);
-	const now = Date.now();
+	// tydzień od bieżącej doby - o 6:00 przesuwa się o dzień
 	const today = shiftDayStart(now);
-	const days = Array.from({ length: DAYS }, (_, i) => addHours(today, 24 * i));
+	const days = useMemo(() => Array.from({ length: DAYS }, (_, i) => addHours(today, 24 * i)), [today]);
 
 	const rows = useMemo<MachineRow[]>(() => {
 		const capacities = capacityLookup(state);
@@ -58,9 +58,7 @@ const LoadPage = () => {
 				queued: pending.length
 			};
 		});
-		// dni i „teraz” wyznaczamy przy wejściu na stronę; przeliczamy przy zmianie planu
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [state]);
+	}, [state, now, days]);
 
 	const average = (subset: MachineRow[]) => {
 		const totals = subset.flatMap((r) => r.days).reduce((sum, d) => ({ available: sum.available + d.available, busy: sum.busy + d.busy }), { available: 0, busy: 0 });

@@ -24,23 +24,21 @@ const COLUMNS: { key: SortKey; label: string }[] = [
 const UNASSIGNED = '__none__';
 
 const ListPage = () => {
-	const { state, updateBlock } = usePlan();
+	const { state, now, updateBlock } = usePlan();
 	const [query, setQuery] = useState('');
 	const [machineId, setMachineId] = useState('');
 	const [project, setProject] = useState('');
 	const [programmerId, setProgrammerId] = useState('');
 	const [status, setStatus] = useState<BlockStatus | ''>('');
 	const [sort, setSort] = useState<Sort>({ key: 'start', direction: 1 });
-	const now = Date.now();
 
 	const machineNames = useMemo(() => new Map(state.machines.map((m) => [m.id, m.name])), [state.machines]);
 	const projects = useMemo(() => [...new Set(state.blocks.map((b) => b.project))].sort((a, b) => a.localeCompare(b, 'pl')), [state.blocks]);
 
-	const sortValue = (block: Block, key: SortKey): string | number =>
-		key === 'machine' ? (machineNames.get(block.machineId) ?? '') : (block[key] as string | number);
-
 	const rows = useMemo(() => {
 		const q = query.trim().toLowerCase();
+		const sortValue = (block: Block, key: SortKey): string | number =>
+			key === 'machine' ? (machineNames.get(block.machineId) ?? '') : (block[key] as string | number);
 		return state.blocks
 			.filter(
 				(b) =>
@@ -56,9 +54,7 @@ const ListPage = () => {
 				const order = typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'pl', { numeric: true });
 				return order * sort.direction || a.start - b.start;
 			});
-		// „teraz” do statusu liczymy przy renderze strony
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [state.blocks, query, machineId, project, programmerId, status, sort, machineNames]);
+	}, [state.blocks, now, query, machineId, project, programmerId, status, sort, machineNames]);
 
 	const toggleSort = (key: SortKey) => setSort((s) => (s.key === key ? { key, direction: s.direction === 1 ? -1 : 1 } : { key, direction: 1 }));
 	const filtersActive = query || machineId || project || programmerId || status;

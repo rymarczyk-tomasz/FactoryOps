@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { capacityLookup, machineCalendar, nonWorkingPeriods, nonWorkingSegments } from './calendar';
-import { CapacityAt, endAfterWork, firstProductiveHourFrom, IsWorkingHour, nearestHourStart, roundUpHours, shiftDayStart } from './shifts';
+import { CapacityAt, endAfterWork, firstProductiveHourFrom, IsWorkingHour, nearestHourStart, nextHourStart, roundUpHours, shiftDayStart } from './shifts';
 import { addBlock, compactMachine, moveBlock, previewMove, reflow, removeBlock, updateBlock } from './schedule';
 import { Block, BlockDraft, Breakdown, Machine, WorkCalendar } from './types';
 
@@ -21,6 +21,12 @@ describe('godziny i doba', () => {
 	it('przyciąga do najbliższej pełnej godziny', () => {
 		expect(nearestHourStart(at(6, 10, 29))).toBe(at(6, 10));
 		expect(nearestHourStart(at(6, 10, 31))).toBe(at(6, 11));
+	});
+
+	it('następna pełna godzina - także o pełnej godzinie i przez północ', () => {
+		expect(nextHourStart(at(6, 10, 1))).toBe(at(6, 11));
+		expect(nextHourStart(at(6, 10))).toBe(at(6, 11));
+		expect(nextHourStart(at(6, 23, 59))).toBe(at(7, 0));
 	});
 
 	it('doba zaczyna się o 6:00 - noc należy do dnia, w którym zaczęła się zmiana', () => {

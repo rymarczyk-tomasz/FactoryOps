@@ -6,6 +6,7 @@ import { newId } from '../domain/ids';
 import { applyMachineDraft } from '../domain/machines';
 import { Block, BlockDraft, Breakdown, DayOverride, Id, MachineDraft, PlanState } from '../domain/types';
 import { LocalStoragePlanRepository, PlanRepository } from './PlanRepository';
+import { useHourClock } from './useHourClock';
 
 const HISTORY_LIMIT = 50;
 
@@ -52,6 +53,8 @@ interface PlanActions {
 
 interface PlanContextValue extends PlanActions {
 	state: PlanState;
+	/** „Teraz” dla statusów i widoków, odświeżane co pełną godzinę. Akcje liczą plan od bieżącej chwili. */
+	now: number;
 	canUndo: boolean;
 	notice?: Notice;
 }
@@ -67,6 +70,7 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 	const stateRef = useRef<PlanState>();
 	stateRef.current = state;
 	const noticeId = useRef(0);
+	const now = useHourClock();
 
 	useEffect(() => {
 		repo.load().then(setState);
@@ -213,7 +217,7 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 		return <div className="d-flex justify-content-center align-items-center vh-100 text-secondary">Wczytywanie planu…</div>;
 	}
 
-	return <PlanContext.Provider value={{ state, canUndo: history.length > 0, notice, undo, ...actions }}>{children}</PlanContext.Provider>;
+	return <PlanContext.Provider value={{ state, now, canUndo: history.length > 0, notice, undo, ...actions }}>{children}</PlanContext.Provider>;
 }
 
 export function usePlan(): PlanContextValue {

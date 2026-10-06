@@ -44,6 +44,11 @@ export function nearestHourStart(ms: number): number {
 	return ms - floor < 30 * MINUTE ? floor : addHours(floor, 1);
 }
 
+/** Następna pełna godzina po `ms` - wtedy zmieniają się statusy zleceń i awarii. */
+export function nextHourStart(ms: number): number {
+	return addHours(hourStartAtOrBefore(ms), 1);
+}
+
 /** Początek doby (6:00), do której należy podany moment - np. 3:00 w nocy to jeszcze poprzednia doba. */
 export function shiftDayStart(ms: number): number {
 	const d = new Date(ms);

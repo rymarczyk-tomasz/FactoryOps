@@ -138,7 +138,7 @@ function matchesQuery(block: Block, query: string): boolean {
 }
 
 const FactoryOpsTimeline = () => {
-	const { state, moveBlock, deleteBlock, undo, canUndo } = usePlan();
+	const { state, now, moveBlock, deleteBlock, undo, canUndo } = usePlan();
 	const [selectedId, setSelectedId] = useState<Id>();
 	const [form, setForm] = useState<FormState>({ show: false });
 	const [toDelete, setToDelete] = useState<Block>();
@@ -221,7 +221,7 @@ const FactoryOpsTimeline = () => {
 	// tło zależy tylko od kalendarzy - nie przeliczamy go przy każdym przesunięciu zlecenia
 	const offItems = useMemo<PlanItem[]>(() => {
 		const calendars = calendarLookup({ calendar: state.calendar, machines: state.machines });
-		const now = Date.now();
+		// zakres liczony od „teraz”, więc przy długo otwartym planie przesuwa się razem z nim
 		const from = now - BACKGROUND_DAYS_BEFORE * DAY;
 		const to = now + BACKGROUND_DAYS_AFTER * DAY;
 		return state.machines.flatMap((machine) =>
@@ -237,7 +237,7 @@ const FactoryOpsTimeline = () => {
 				className: 'non-working-item'
 			}))
 		);
-	}, [state.calendar, state.machines]);
+	}, [state.calendar, state.machines, now]);
 
 	// awarie leżą nad zleceniami (półprzezroczyste), żeby było widać, które zlecenie zwalniają
 	const breakdownItems = useMemo<PlanItem[]>(() => {
@@ -266,7 +266,6 @@ const FactoryOpsTimeline = () => {
 	const draggedId = drag?.id;
 	const searching = query.trim() !== '';
 	const blockItems = useMemo<PlanItem[]>(() => {
-		const now = Date.now();
 		const calendars = calendarLookup({ calendar: state.calendar, machines: state.machines });
 		const machines = new Map(state.machines.map((m) => [m.id, m]));
 		return state.blocks.map((block) => {
@@ -307,7 +306,7 @@ const FactoryOpsTimeline = () => {
 				}
 			};
 		});
-	}, [state.blocks, state.programmers, state.calendar, state.machines, draggedId, searching, matchIds]);
+	}, [state.blocks, state.programmers, state.calendar, state.machines, now, draggedId, searching, matchIds]);
 
 	// kreska w miejscu, gdzie faktycznie wyląduje przenoszony bloczek (po zepchnięciu kolejki)
 	const indicatorItems = useMemo<PlanItem[]>(() => {

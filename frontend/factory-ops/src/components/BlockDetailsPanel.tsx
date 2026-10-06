@@ -20,11 +20,11 @@ interface BlockDetailsPanelProps {
 
 /** Panel boczny zaznaczonego zlecenia: szczegóły, programista i akcje. */
 const BlockDetailsPanel = ({ block, onEdit, onDelete, onShow, onClose }: BlockDetailsPanelProps) => {
-	const { state, updateBlock } = usePlan();
+	const { state, now, updateBlock } = usePlan();
 	const machine = state.machines.find((m) => m.id === block?.machineId);
 	// awarie na maszynie w czasie zlecenia - to one je wydłużają
 	const breakdowns = block ? state.breakdowns.filter((b) => b.machineId === block.machineId && b.start < block.end && b.end > block.start) : [];
-	const status = block && blockStatus(block, Date.now());
+	const status = block && blockStatus(block, now);
 
 	return (
 		<Offcanvas show={block !== undefined} onHide={onClose} placement="end" backdrop={false} scroll className="details-panel">
