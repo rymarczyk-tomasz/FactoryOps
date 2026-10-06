@@ -1,4 +1,4 @@
-import { shiftsForHours } from './shifts';
+import { roundUpHours } from './shifts';
 import { BlockStatus, Programmer } from './types';
 
 const dateTimeFormat = new Intl.DateTimeFormat('pl-PL', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -8,8 +8,9 @@ export function formatDateTime(ms: number): string {
 }
 
 export function formatHours(hours: number): string {
-	const shifts = shiftsForHours(hours);
-	return `${hours} h · ${shifts} ${shifts === 1 ? 'zmiana' : shifts < 5 ? 'zmiany' : 'zmian'}`;
+	const planned = roundUpHours(hours);
+	const label = (h: number) => `${String(h).replace('.', ',')} h`;
+	return planned === hours ? label(hours) : `${label(hours)} → ${label(planned)}`;
 }
 
 export function programmerName(programmer: Programmer | undefined): string {

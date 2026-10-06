@@ -10,6 +10,8 @@ export interface DayMenuTarget {
 	machineId: Id;
 	/** Początek doby (6:00), której dotyczy menu. */
 	day: number;
+	/** Pełna godzina w klikniętym miejscu - od niej można dodać zlecenie. */
+	hour: number;
 }
 
 interface DayContextMenuProps {
@@ -19,6 +21,7 @@ interface DayContextMenuProps {
 }
 
 const dayFormat = new Intl.DateTimeFormat('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' });
+const hourFormat = new Intl.DateTimeFormat('pl-PL', { hour: '2-digit', minute: '2-digit' });
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 const DayContextMenu = ({ target, onAddBlock, onClose }: DayContextMenuProps) => {
@@ -64,7 +67,7 @@ const DayContextMenu = ({ target, onAddBlock, onClose }: DayContextMenuProps) =>
 				</div>
 			</h6>
 			<button className="dropdown-item" onClick={run(onAddBlock)}>
-				Dodaj zlecenie od tej zmiany
+				Dodaj zlecenie od {hourFormat.format(target.hour)}
 			</button>
 			<div className="dropdown-divider" />
 			<button className="dropdown-item" onClick={run(() => setForMachine(!working))}>

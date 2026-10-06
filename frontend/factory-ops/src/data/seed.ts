@@ -1,6 +1,6 @@
 import { calendarLookup } from '../domain/calendar';
 import { addBlock } from '../domain/schedule';
-import { firstWorkingShiftFrom, nextShiftStart } from '../domain/shifts';
+import { addHours, firstWorkingHourFrom } from '../domain/shifts';
 import { Block, Machine, PlanState, Programmer, WorkMode } from '../domain/types';
 
 const MACHINE_NAMES = [
@@ -57,10 +57,10 @@ export function createSeedState(now: number): PlanState {
 	const calendars = calendarLookup({ calendar, machines });
 
 	for (const machine of machines) {
-		let cursor = firstWorkingShiftFrom(now - 4 * 24 * 3600_000, calendars(machine.id));
+		let cursor = firstWorkingHourFrom(now - 4 * 24 * 3600_000, calendars(machine.id));
 		for (let i = 0, count = 6 + Math.floor(rnd() * 6); i < count; i++) {
 			// czasem przerwa między zleceniami
-			if (rnd() < 0.25) cursor = nextShiftStart(nextShiftStart(cursor));
+			if (rnd() < 0.25) cursor = addHours(cursor, 4 + Math.floor(rnd() * 12));
 			const id = `b${blocks.length + 1}`;
 			blocks = addBlock(
 				blocks,

@@ -6,7 +6,7 @@ import { usePlan } from '../data/PlanContext';
 import { calendarLookup, nonWorkingPeriods, nonWorkingSegments, workMode } from '../domain/calendar';
 import { formatDateTime, formatHours, programmerName, timelineLabel } from '../domain/format';
 import { blockStatus, previewMove } from '../domain/schedule';
-import { nearestShiftStart, shiftDayStart } from '../domain/shifts';
+import { nearestHourStart, shiftDayStart } from '../domain/shifts';
 import { Block, Id, Machine } from '../domain/types';
 import BlockFormModal, { BlockFormDefaults } from './BlockFormModal';
 import ConfirmModal from './ConfirmModal';
@@ -45,7 +45,7 @@ type MachineGroup = { id: Id; title: string; machine: Machine; stackItems: boole
 // treść zostaje po zamknięciu, żeby modal nie zmieniał się w trakcie animacji zamykania
 type FormState = { show: boolean; block?: Block; defaults?: BlockFormDefaults };
 
-/** Bloczek w trakcie przeciągania: docelowa maszyna i początek przyciągnięty do zmiany. */
+/** Bloczek w trakcie przeciągania: docelowa maszyna i początek przyciągnięty do pełnej godziny. */
 type DragState = { id: Id; machineId: Id; start: number };
 
 const FactoryOpsTimeline = () => {
@@ -81,7 +81,7 @@ const FactoryOpsTimeline = () => {
 	const openDayMenu = (machineId: Id, time: number, e: React.SyntheticEvent) => {
 		e.preventDefault();
 		const { clientX, clientY } = e as React.MouseEvent;
-		setDayMenu({ x: clientX, y: clientY, machineId, day: shiftDayStart(time) });
+		setDayMenu({ x: clientX, y: clientY, machineId, day: shiftDayStart(time), hour: nearestHourStart(time) });
 	};
 
 	// bloczki na maszynie nigdy na siebie nie nachodzą (pilnuje tego harmonogram), więc bez układania w stos -
@@ -209,18 +209,18 @@ const FactoryOpsTimeline = () => {
 				onItemSelect={select}
 				onItemClick={select}
 				onItemDeselect={() => setSelectedId(undefined)}
-				onCanvasDoubleClick={(groupId, time) => setForm({ show: true, defaults: { machineId: String(groupId), start: nearestShiftStart(time) } })}
+				onCanvasDoubleClick={(groupId, time) => setForm({ show: true, defaults: { machineId: String(groupId), start: nearestHourStart(time) } })}
 				onCanvasContextMenu={(groupId, time, e) => openDayMenu(String(groupId), time, e)}
 				onItemContextMenu={(itemId, e, time) => {
 					const block = state.blocks.find((b) => b.id === itemId);
 					if (block) openDayMenu(block.machineId, time, e);
 				}}
-				moveResizeValidator={(_action, _item, time) => nearestShiftStart(time)}
+				moveResizeValidator={(_action, _item, time) => nearestHourStart(time)}
 				onItemDrag={(e) => {
 					if (e.eventType !== 'move') return;
-					const next = { id: String(e.itemId), machineId: state.machines[e.newGroupOrder].id, start: nearestShiftStart(e.time) };
+					const next = { id: String(e.itemId), machineId: state.machines[e.newGroupOrder].id, start: nearestHourStart(e.time) };
 					const last = dragRef.current;
-					// zdarzenie przychodzi przy każdym ruchu myszy - przeliczamy tylko po zmianie zmiany lub maszyny
+					// zdarzenie przychodzi przy każdym ruchu myszy - przeliczamy tylko po zmianie godziny lub maszyny
 					if (last && last.id === next.id && last.machineId === next.machineId && last.start === next.start) return;
 					dragRef.current = next;
 					setDrag(next);
@@ -257,7 +257,7 @@ const FactoryOpsTimeline = () => {
 			{dayMenu && (
 				<DayContextMenu
 					target={dayMenu}
-					onAddBlock={() => setForm({ show: true, defaults: { machineId: dayMenu.machineId, start: dayMenu.day } })}
+					onAddBlock={() => setForm({ show: true, defaults: { machineId: dayMenu.machineId, start: dayMenu.hour } })}
 					onClose={closeDayMenu}
 				/>
 			)}

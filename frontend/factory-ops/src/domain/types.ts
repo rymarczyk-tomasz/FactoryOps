@@ -28,11 +28,11 @@ export interface Block {
 	orderNo: string;
 	project: string;
 	operation: string;
-	/** Godziny wpisane przez użytkownika; na planie zaokrąglane w górę do pełnych zmian. */
+	/** Godziny wpisane przez użytkownika; na planie zaokrąglane w górę do pełnej godziny. */
 	hours: number;
-	/** Początek pierwszej zmiany (ms). Wyliczany przez harmonogram. */
+	/** Początek (ms, pełna godzina). Wyliczany przez harmonogram. */
 	start: number;
-	/** Koniec ostatniej zmiany (ms). Wyliczany przez harmonogram. */
+	/** Koniec (ms, pełna godzina, z pominięciem dni wolnych). Wyliczany przez harmonogram. */
 	end: number;
 	programmerId?: Id;
 	note?: string;

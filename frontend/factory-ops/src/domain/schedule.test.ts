@@ -1,57 +1,57 @@
 import { describe, expect, it } from 'vitest';
 import { calendarLookup, machineCalendar, nonWorkingPeriods, nonWorkingSegments } from './calendar';
-import { endAfterShifts, firstWorkingShiftFrom, nearestShiftStart, shiftsForHours, shiftStartAtOrBefore } from './shifts';
+import { endAfterHours, firstWorkingHourFrom, nearestHourStart, roundUpHours, shiftDayStart } from './shifts';
 import { addBlock, compactMachine, moveBlock, previewMove, reflow } from './schedule';
 import { Block, BlockDraft, Machine, WorkCalendar } from './types';
 
 // 2026-10-05 to poniedziałek, 2026-10-10/11 to weekend
-const at = (day: number, hour: number) => new Date(2026, 9, day, hour).getTime();
+const at = (day: number, hour: number, minute = 0) => new Date(2026, 9, day, hour, minute).getTime();
 const plant: WorkCalendar = { overrides: {} };
 const weekdays = machineCalendar(plant, { id: 'm1', name: 'M1' });
 
 const draft = (hours: number, machineId = 'm1'): BlockDraft => ({ machineId, orderNo: 'Z-1', project: 'P', operation: 'Op', hours });
 
-describe('zmiany', () => {
-	it('zaokrągla godziny w górę do pełnych zmian', () => {
-		expect([0, 1, 8, 9, 16, 17].map(shiftsForHours)).toEqual([1, 1, 1, 2, 2, 3]);
+describe('godziny i doba', () => {
+	it('zaokrągla czas w górę do pełnej godziny', () => {
+		expect([0, 1, 1.5, 8, 8.2, 24].map(roundUpHours)).toEqual([1, 1, 2, 8, 9, 24]);
 	});
 
-	it('znajduje początek bieżącej zmiany, także nocnej po północy', () => {
-		expect(shiftStartAtOrBefore(at(6, 10) + 30 * 60_000)).toBe(at(6, 6));
-		expect(shiftStartAtOrBefore(at(6, 22))).toBe(at(6, 22));
-		expect(shiftStartAtOrBefore(at(7, 3))).toBe(at(6, 22));
+	it('przyciąga do najbliższej pełnej godziny', () => {
+		expect(nearestHourStart(at(6, 10, 29))).toBe(at(6, 10));
+		expect(nearestHourStart(at(6, 10, 31))).toBe(at(6, 11));
 	});
 
-	it('przyciąga do najbliższej granicy zmiany', () => {
-		expect(nearestShiftStart(at(6, 9))).toBe(at(6, 6));
-		expect(nearestShiftStart(at(6, 11))).toBe(at(6, 14));
+	it('doba zaczyna się o 6:00 - noc należy do dnia, w którym zaczęła się zmiana', () => {
+		expect(shiftDayStart(at(6, 10))).toBe(at(6, 6));
+		expect(shiftDayStart(at(7, 3))).toBe(at(6, 6));
+		expect(shiftDayStart(at(7, 6))).toBe(at(7, 6));
 	});
 });
 
 describe('kalendarz maszyny', () => {
 	it('maszyna pon-pt kontynuuje zlecenie z piątku dopiero w poniedziałek', () => {
-		expect(firstWorkingShiftFrom(at(10, 10), weekdays)).toBe(at(12, 6));
-		// pt 14-22, pt 22-6, potem dopiero pon 6-14
-		expect(endAfterShifts(at(9, 14), 3, weekdays)).toBe(at(12, 14));
+		expect(firstWorkingHourFrom(at(10, 10), weekdays)).toBe(at(12, 6));
+		// pt 20:00 - sob 6:00 to 10 h (noc z piątku to jeszcze piątek), pozostałe 2 h w poniedziałek
+		expect(endAfterHours(at(9, 20), 12, weekdays)).toBe(at(12, 8));
 	});
 
 	it('maszyna 4-brygadowa pracuje przez weekend', () => {
 		const continuous = machineCalendar(plant, { id: 'm2', name: 'M2', workMode: 'continuous' });
-		expect(endAfterShifts(at(9, 14), 3, continuous)).toBe(at(10, 14));
+		expect(endAfterHours(at(9, 20), 12, continuous)).toBe(at(10, 8));
 	});
 
 	it('niedziela pracująca tylko na jednej maszynie', () => {
 		const sunday: Machine = { id: 'm1', name: 'M1', overrides: { '2026-10-11': true } };
-		expect(firstWorkingShiftFrom(at(10, 10), machineCalendar(plant, sunday))).toBe(at(11, 6));
-		expect(firstWorkingShiftFrom(at(10, 10), machineCalendar(plant, { id: 'm2', name: 'M2' }))).toBe(at(12, 6));
+		expect(firstWorkingHourFrom(at(10, 10), machineCalendar(plant, sunday))).toBe(at(11, 6));
+		expect(firstWorkingHourFrom(at(10, 10), machineCalendar(plant, { id: 'm2', name: 'M2' }))).toBe(at(12, 6));
 	});
 
 	it('wyjątek zakładu działa na wszystkie maszyny, a wyjątek maszyny ma pierwszeństwo', () => {
 		const holiday: WorkCalendar = { overrides: { '2026-10-07': false } };
 		const continuous: Machine = { id: 'm2', name: 'M2', workMode: 'continuous' };
-		expect(firstWorkingShiftFrom(at(7, 6), machineCalendar(holiday, continuous))).toBe(at(8, 6));
+		expect(firstWorkingHourFrom(at(7, 6), machineCalendar(holiday, continuous))).toBe(at(8, 6));
 		const exception: Machine = { ...continuous, overrides: { '2026-10-07': true } };
-		expect(firstWorkingShiftFrom(at(7, 6), machineCalendar(holiday, exception))).toBe(at(7, 6));
+		expect(firstWorkingHourFrom(at(7, 6), machineCalendar(holiday, exception))).toBe(at(7, 6));
 	});
 
 	it('wycina wolny weekend z zakresu zlecenia', () => {
@@ -70,7 +70,7 @@ describe('kalendarz maszyny', () => {
 });
 
 describe('harmonogram', () => {
-	const now = at(5, 7);
+	const now = at(5, 6, 40);
 	const calendars = calendarLookup({
 		calendar: plant,
 		machines: [
@@ -84,55 +84,56 @@ describe('harmonogram', () => {
 	}
 	const startsById = (blocks: Block[]) => Object.fromEntries(blocks.map((b) => [b.id, b.start]));
 
-	it('dopisuje bloczki na koniec kolejki maszyny, od najbliższej zmiany', () => {
-		const blocks = plan(8, 10, 8);
+	it('dopisuje zlecenia na koniec kolejki maszyny, od najbliższej pełnej godziny', () => {
+		const blocks = plan(8, 9.5, 8);
 		expect(blocks.map((b) => [b.start, b.end])).toEqual([
-			[at(5, 14), at(5, 22)],
-			[at(5, 22), at(6, 14)],
-			[at(6, 14), at(6, 22)]
+			[at(5, 7), at(5, 15)],
+			[at(5, 15), at(6, 1)],
+			[at(6, 1), at(6, 9)]
 		]);
 	});
 
-	it('przesunięcie bloczka spycha następne', () => {
-		// b0 5.10 14-22 opóźniony o jedną zmianę
-		const blocks = moveBlock(plan(8, 8, 8), 'b0', at(5, 22), 'm1', calendars);
-		expect(startsById(blocks)).toEqual({ b0: at(5, 22), b1: at(6, 6), b2: at(6, 14) });
+	it('przesunięcie zlecenia spycha następne', () => {
+		// b0 opóźniony o 2 h
+		const blocks = moveBlock(plan(8, 10, 8), 'b0', at(5, 9), 'm1', calendars);
+		expect(startsById(blocks)).toEqual({ b0: at(5, 9), b1: at(5, 17), b2: at(6, 3) });
 	});
 
-	it('przeciągnięcie za następny bloczek zmienia kolejność', () => {
-		const blocks = moveBlock(plan(8, 8, 8), 'b0', at(6, 6), 'm1', calendars);
-		expect(startsById(blocks)).toEqual({ b1: at(5, 22), b0: at(6, 6), b2: at(6, 14) });
+	it('przeciągnięcie za następne zlecenie zmienia kolejność', () => {
+		const blocks = moveBlock(plan(8, 10, 8), 'b0', at(6, 1), 'm1', calendars);
+		expect(startsById(blocks)).toEqual({ b1: at(5, 15), b0: at(6, 1), b2: at(6, 9) });
 	});
 
-	it('wstawiony między zlecenia zachowuje długość i spycha resztę', () => {
-		const blocks = moveBlock([...plan(8, 8, 8), ...plan(24).map((b) => ({ ...b, id: 'x', machineId: 'm2' }))], 'x', at(5, 22), 'm1', calendars);
+	it('wstawione między zlecenia zachowuje długość i spycha resztę', () => {
+		const other = plan(24).map((b) => ({ ...b, id: 'x', machineId: 'm2' }));
+		const blocks = moveBlock([...plan(8, 8, 8), ...other], 'x', at(5, 15), 'm1', calendars);
 		const x = blocks.find((b) => b.id === 'x')!;
-		expect([x.start, x.end]).toEqual([at(5, 22), at(6, 22)]);
-		expect(startsById(blocks.filter((b) => b.id !== 'x'))).toEqual({ b0: at(5, 14), b1: at(6, 22), b2: at(7, 6) });
+		expect([x.start, x.end]).toEqual([at(5, 15), at(6, 15)]);
+		expect(startsById(blocks.filter((b) => b.id !== 'x'))).toEqual({ b0: at(5, 7), b1: at(6, 15), b2: at(6, 23) });
 	});
 
 	it('przeniesienie na inną maszynę liczy czas wg jej kalendarza', () => {
-		// 3 zmiany od piątku 14:00: na maszynie 24/7 kończy się w sobotę, na pon-pt w poniedziałek
+		// 24 h od piątku 14:00: na maszynie pon-pt 16 h do sob 6:00 i 8 h w poniedziałek, na 24/7 do soboty
 		const friday = addBlock([], { ...draft(24), start: at(9, 14) }, 'f', calendars, now);
 		expect(friday[0].end).toBe(at(12, 14));
 		expect(moveBlock(friday, 'f', at(9, 14), 'm2', calendars)[0].end).toBe(at(10, 14));
 	});
 
-	it('podgląd przeniesienia pokazuje, między którymi zleceniami wyląduje bloczek', () => {
+	it('podgląd przeniesienia pokazuje, między którymi zleceniami wyląduje zlecenie', () => {
 		const blocks = plan(8, 8, 8);
-		const preview = previewMove(blocks, 'b2', at(5, 22), 'm1', calendars);
-		expect(preview).toMatchObject({ start: at(5, 22), end: at(6, 6), after: { id: 'b0' }, before: { id: 'b1' } });
+		const preview = previewMove(blocks, 'b2', at(5, 15), 'm1', calendars);
+		expect(preview).toMatchObject({ start: at(5, 15), end: at(5, 23), after: { id: 'b0' }, before: { id: 'b1' } });
 		// podgląd nie zmienia planu
-		expect(blocks.find((b) => b.id === 'b2')?.start).toBe(at(6, 6));
+		expect(blocks.find((b) => b.id === 'b2')?.start).toBe(at(5, 23));
 	});
 
 	it('kompaktowanie usuwa przerwy', () => {
 		const spread = moveBlock(plan(8, 8), 'b1', at(7, 6), 'm1', calendars);
 		const blocks = compactMachine(spread, 'm1', calendars);
-		expect(blocks.find((b) => b.id === 'b1')?.start).toBe(at(5, 22));
+		expect(blocks.find((b) => b.id === 'b1')?.start).toBe(at(5, 15));
 	});
 
-	it('zmiana kalendarza przesuwa bloczki z dnia wolnego', () => {
+	it('zmiana kalendarza przesuwa zlecenia z dnia wolnego', () => {
 		const blocks = reflow(plan(8), calendarLookup({ calendar: { overrides: { '2026-10-05': false } }, machines: [] }));
 		expect(blocks[0].start).toBe(at(6, 6));
 	});

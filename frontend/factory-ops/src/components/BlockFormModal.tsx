@@ -146,7 +146,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 						<Col md={6}>
 							<Form.Label>Start</Form.Label>
 							{!isEdit && <Form.Check type="radio" id="startQueue" value="queue" label="Na koniec kolejki maszyny" {...register('startMode')} />}
-							<Form.Check type="radio" id="startManual" value="manual" label="Od wybranej zmiany" {...register('startMode')} />
+							<Form.Check type="radio" id="startManual" value="manual" label="Od wybranej godziny" {...register('startMode')} />
 							{startMode === 'manual' && (
 								<>
 									<Form.Control
@@ -155,7 +155,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 										{...register('start', { validate: (v) => startMode !== 'manual' || v !== '' || 'Podaj datę startu' })}
 										isInvalid={!!errors.start}
 									/>
-									<Form.Text muted>Zostanie przyciągnięty do najbliższej zmiany (6:00 / 14:00 / 22:00).</Form.Text>
+									<Form.Text muted>Zostanie zaokrąglony do pełnej godziny.</Form.Text>
 									<Form.Control.Feedback type="invalid">{errors.start?.message}</Form.Control.Feedback>
 								</>
 							)}
