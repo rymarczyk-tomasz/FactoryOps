@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button, Col, Form, Modal, Row } from 'react-bootstrap';
 import { useForm } from 'react-hook-form';
 import { usePlan } from '../data/PlanContext';
-import { isLine, unitCount } from '../domain/calendar';
+import { findLine, lineMachines, standaloneMachines } from '../domain/calendar';
 import { formatHours, fromLocalInputValue, programmerName, toLocalInputValue } from '../domain/format';
 import { Block, BlockDraft, Id } from '../domain/types';
 
@@ -22,6 +22,7 @@ interface BlockFormModalProps {
 interface BlockForm {
 	machineId: Id;
 	orderNo: string;
+	projectNo: string;
 	project: string;
 	operation: string;
 	/** Pusty string, dopóki użytkownik nic nie wpisze (pole liczbowe). */
@@ -47,20 +48,27 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 		reset,
 		watch,
 		setFocus,
+		setValue,
+		getValues,
 		formState: { errors }
 	} = useForm<BlockForm>();
 
 	// podpowiedzi z dotychczasowych zleceń
 	const projects = useMemo(() => uniqueSorted(state.blocks.map((b) => b.project)), [state.blocks]);
+	const projectNos = useMemo(() => uniqueSorted(state.blocks.map((b) => b.projectNo)), [state.blocks]);
+	/** Nazwa projektu po numerze - z ostatniego zlecenia tego projektu. */
+	const projectNames = useMemo(() => new Map(state.blocks.filter((b) => b.projectNo).map((b) => [b.projectNo.toLowerCase(), b.project])), [state.blocks]);
 	const operations = useMemo(() => uniqueSorted(state.blocks.map((b) => b.operation)), [state.blocks]);
 
 	useEffect(() => {
 		if (!show) return;
 		const start = block?.start ?? defaults?.start;
-		const machineId = block?.machineId ?? defaults?.machineId ?? (state.machines.some((m) => m.id === lastMachineId) ? lastMachineId : state.machines[0]?.id);
+		const exists = (id: Id | undefined) => id !== undefined && (state.machines.some((m) => m.id === id) || state.lines.some((l) => l.id === id));
+		const machineId = block?.machineId ?? defaults?.machineId ?? (exists(lastMachineId) ? lastMachineId : (state.lines[0]?.id ?? state.machines[0]?.id));
 		reset({
 			machineId: machineId ?? '',
 			orderNo: block?.orderNo ?? '',
+			projectNo: block?.projectNo ?? '',
 			project: block?.project ?? '',
 			operation: block?.operation ?? '',
 			hours: block?.hours ?? '',
@@ -76,14 +84,20 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 
 	const startMode = watch('startMode');
 	const hours = Number(watch('hours'));
-	const machine = state.machines.find((m) => m.id === watch('machineId'));
+	const line = findLine(state.lines, watch('machineId'));
 
 	/** Podpowiedź pod polem godzin: na linii czas dzieli się między maszyny (bez awarii, z dokładnością do godziny). */
 	const hoursHint = () => {
 		if (!(hours > 0)) return ' ';
-		if (!isLine(machine)) return `Na planie: ${formatHours(hours)}`;
-		const units = unitCount(machine);
-		return `Linia, ${units} maszyny: ok. ${Math.ceil(hours / units)} h na planie`;
+		if (!line) return `Na planie: ${formatHours(hours)}`;
+		const units = Math.max(1, line.machineIds.length);
+		return `Linia, ${units} maszyny: ok. ${Math.ceil(hours / units)} h na planie, gdy pracują wszystkie`;
+	};
+
+	/** Znany numer projektu od razu podpowiada jego nazwę. */
+	const fillProjectName = (projectNo: string) => {
+		const name = projectNames.get(projectNo.trim().toLowerCase());
+		if (name && getValues('project') !== name) setValue('project', name, { shouldValidate: true });
 	};
 
 	/** `again` - zapisz i zostań w formularzu, żeby wpisać kolejną operację tego samego zamówienia. */
@@ -92,6 +106,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 			const draft: BlockDraft = {
 				machineId: form.machineId,
 				orderNo: form.orderNo.trim(),
+				projectNo: form.projectNo.trim(),
 				project: form.project.trim(),
 				operation: form.operation.trim(),
 				hours: Number(form.hours),
@@ -110,7 +125,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 				onHide();
 				return;
 			}
-			// zostają: zamówienie, projekt, maszyna, programista; czyścimy to, co dotyczy jednej operacji
+			// zostają: zamówienie, numer i nazwa projektu, maszyna, programista; czyścimy to, co dotyczy jednej operacji
 			reset({ ...form, operation: '', hours: '', note: '', startMode: 'queue', start: '' });
 			setAddedCount((n) => n + 1);
 			setTimeout(() => setFocus('operation'));
@@ -134,14 +149,26 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 				</Modal.Header>
 				<Modal.Body>
 					<Row className="g-3">
-						<Form.Group as={Col} md={6} controlId="orderNo">
-							<Form.Label>Nr zamówienia</Form.Label>
-							<Form.Control autoFocus {...register('orderNo', required)} isInvalid={!!errors.orderNo} placeholder="np. ZAM/2026/0450" />
-							<Form.Control.Feedback type="invalid">{errors.orderNo?.message}</Form.Control.Feedback>
+						<Form.Group as={Col} md={6} controlId="projectNo">
+							<Form.Label>Nr projektu</Form.Label>
+							<Form.Control
+								autoFocus
+								list="projectNoSuggestions"
+								autoComplete="off"
+								placeholder="np. IMR-6001"
+								{...register('projectNo', { ...required, onChange: (e) => fillProjectName(e.target.value) })}
+								isInvalid={!!errors.projectNo}
+							/>
+							<datalist id="projectNoSuggestions">
+								{projectNos.map((p) => (
+									<option key={p} value={p} />
+								))}
+							</datalist>
+							<Form.Control.Feedback type="invalid">{errors.projectNo?.message}</Form.Control.Feedback>
 						</Form.Group>
 						<Form.Group as={Col} md={6} controlId="project">
-							<Form.Label>Projekt</Form.Label>
-							<Form.Control list="projectSuggestions" autoComplete="off" {...register('project', required)} isInvalid={!!errors.project} />
+							<Form.Label>Nazwa projektu</Form.Label>
+							<Form.Control list="projectSuggestions" autoComplete="off" placeholder="np. Huanyon" {...register('project', required)} isInvalid={!!errors.project} />
 							<datalist id="projectSuggestions">
 								{projects.map((p) => (
 									<option key={p} value={p} />
@@ -159,14 +186,34 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 							</datalist>
 							<Form.Control.Feedback type="invalid">{errors.operation?.message}</Form.Control.Feedback>
 						</Form.Group>
+						<Form.Group as={Col} md={6} controlId="orderNo">
+							<Form.Label>Nr zamówienia</Form.Label>
+							<Form.Control {...register('orderNo', required)} isInvalid={!!errors.orderNo} placeholder="np. ZAM/2026/0450" />
+							<Form.Control.Feedback type="invalid">{errors.orderNo?.message}</Form.Control.Feedback>
+						</Form.Group>
 						<Form.Group as={Col} md={6} controlId="machineId">
-							<Form.Label>Maszyna / linia</Form.Label>
+							<Form.Label>Linia / maszyna</Form.Label>
 							<Form.Select {...register('machineId', { required: 'Wybierz maszynę' })} isInvalid={!!errors.machineId}>
-								{state.machines.map((m) => (
-									<option key={m.id} value={m.id}>
-										{isLine(m) ? `${m.name} (${unitCount(m)} maszyny)` : m.name}
-									</option>
+								{state.lines.map((l) => (
+									<optgroup key={l.id} label={l.name}>
+										<option value={l.id}>
+											{l.name} - cała linia ({l.machineIds.length} maszyny)
+										</option>
+										{lineMachines(l, state.machines).map((m) => (
+											<option key={m.id} value={m.id}>
+												{'   '}
+												{m.name} - tylko ta maszyna
+											</option>
+										))}
+									</optgroup>
 								))}
+								<optgroup label="Maszyny">
+									{standaloneMachines(state).map((m) => (
+										<option key={m.id} value={m.id}>
+											{m.name}
+										</option>
+									))}
+								</optgroup>
 							</Form.Select>
 							<Form.Control.Feedback type="invalid">{errors.machineId?.message}</Form.Control.Feedback>
 						</Form.Group>
@@ -174,8 +221,8 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 							<Form.Label>Czas pracy jednej maszyny [h]</Form.Label>
 							<Form.Control
 								type="number"
-								step="0.5"
-								min="0.5"
+								step="1"
+								min="0"
 								{...register('hours', {
 									required: 'Podaj liczbę godzin',
 									validate: (v) => Number(v) >= 0.5 || 'Minimum 0,5 h'

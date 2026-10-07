@@ -1,6 +1,6 @@
 import { Badge, Button, Form, Offcanvas } from 'react-bootstrap';
 import { usePlan } from '../data/PlanContext';
-import { isLine, unitCount, unitLabel } from '../domain/calendar';
+import { breakdownEnd, findLine, isOngoing, lineOfMachine, resourceName } from '../domain/calendar';
 import { formatDateTime, formatHours, programmerName, STATUS_LABELS } from '../domain/format';
 import { blockStatus } from '../domain/schedule';
 import { Block, BlockStatus } from '../domain/types';
@@ -20,18 +20,21 @@ interface BlockDetailsPanelProps {
 /** Panel boczny zaznaczonego zlecenia: szczegóły, programista i akcje. */
 const BlockDetailsPanel = ({ block, onEdit, onDelete, onShow, onClose }: BlockDetailsPanelProps) => {
 	const { state, now, updateBlock } = usePlan();
+	const line = findLine(state.lines, block?.machineId);
 	const machine = state.machines.find((m) => m.id === block?.machineId);
-	// awarie na maszynie w czasie zlecenia - to one je wydłużają
-	const breakdowns = block ? state.breakdowns.filter((b) => b.machineId === block.machineId && b.start < block.end && b.end > block.start) : [];
+	const parentLine = machine ? lineOfMachine(state.lines, machine.id) : undefined;
+	// awarie maszyn zlecenia w jego czasie - to one je wydłużają
+	const machineIds = new Set(line ? line.machineIds : block ? [block.machineId] : []);
+	const breakdowns = block ? state.breakdowns.filter((b) => machineIds.has(b.machineId) && b.start < block.end && breakdownEnd(b, now) > block.start) : [];
 	const status = block && blockStatus(block, now);
 
 	return (
 		<Offcanvas show={block !== undefined} onHide={onClose} placement="end" backdrop={false} scroll className="details-panel">
-			{block && machine && status && (
+			{block && (machine || line) && status && (
 				<>
 					<Offcanvas.Header closeButton>
 						<Offcanvas.Title>
-							{block.orderNo}
+							{block.operation} · {block.projectNo}
 							<Badge bg={STATUS_VARIANTS[status]} className="ms-2 align-middle fs-6 fw-normal">
 								{STATUS_LABELS[status]}
 							</Badge>
@@ -40,18 +43,23 @@ const BlockDetailsPanel = ({ block, onEdit, onDelete, onShow, onClose }: BlockDe
 					<Offcanvas.Body className="d-flex flex-column gap-3">
 						<dl className="details-list mb-0">
 							<dt>Projekt</dt>
-							<dd>{block.project}</dd>
+							<dd>
+								{block.projectNo} · {block.project}
+							</dd>
 							<dt>Operacja</dt>
 							<dd>{block.operation}</dd>
-							<dt>{isLine(machine) ? 'Linia' : 'Maszyna'}</dt>
+							<dt>Zamówienie</dt>
+							<dd>{block.orderNo}</dd>
+							<dt>{line ? 'Linia' : 'Maszyna'}</dt>
 							<dd>
-								{machine.name}
-								{isLine(machine) && <span className="text-secondary"> · {unitCount(machine)} maszyny</span>}
+								{resourceName(state, block.machineId)}
+								{line && <span className="text-secondary"> · {line.machineIds.length} maszyny</span>}
+								{parentLine && <span className="text-secondary"> · z {parentLine.name}</span>}
 							</dd>
 							<dt>Czas pracy</dt>
 							<dd>
 								{formatHours(block.hours)}
-								{isLine(machine) && <span className="text-secondary"> jednej maszyny · na planie {Math.round((block.end - block.start) / HOUR)} h</span>}
+								{line && <span className="text-secondary"> jednej maszyny · na planie {Math.round((block.end - block.start) / HOUR)} h</span>}
 							</dd>
 							<dt>Start</dt>
 							<dd>{formatDateTime(block.start)}</dd>
@@ -76,8 +84,8 @@ const BlockDetailsPanel = ({ block, onEdit, onDelete, onShow, onClose }: BlockDe
 								<div className="fw-semibold">Awarie w trakcie zlecenia</div>
 								{breakdowns.map((b) => (
 									<div key={b.id}>
-										{isLine(machine) && `${b.units.map((u) => unitLabel(machine, u)).join(', ')} · `}
-										{formatDateTime(b.start)} → {formatDateTime(b.end)}
+										{line && `${resourceName(state, b.machineId)} · `}
+										{formatDateTime(b.start)} → {isOngoing(b) ? 'trwa' : formatDateTime(breakdownEnd(b, now))}
 									</div>
 								))}
 							</div>

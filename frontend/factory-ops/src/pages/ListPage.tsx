@@ -2,23 +2,32 @@ import { saveAs } from 'file-saver';
 import { useMemo, useState } from 'react';
 import { Badge, Button, Col, Form, Row, Table } from 'react-bootstrap';
 import { STATUS_VARIANTS } from '../components/BlockDetailsPanel';
+import MultiSelect, { MultiSelectOption } from '../components/MultiSelect';
 import { usePlan } from '../data/PlanContext';
+import { lineMachines, resourceName, standaloneMachines } from '../domain/calendar';
 import { formatDateTime, formatHours, programmerName, STATUS_LABELS, toLocalInputValue } from '../domain/format';
 import { blockStatus } from '../domain/schedule';
-import { Block, BlockStatus } from '../domain/types';
+import { ARCHIVE_AFTER_DAYS } from '../domain/archive';
+import { ArchivedBlock, Block, BlockStatus } from '../domain/types';
 
-type SortKey = 'start' | 'end' | 'orderNo' | 'project' | 'operation' | 'machine' | 'hours';
+type SortKey = 'start' | 'end' | 'orderNo' | 'projectNo' | 'project' | 'operation' | 'machine' | 'hours';
 type Sort = { key: SortKey; direction: 1 | -1 };
 
 const COLUMNS: { key: SortKey; label: string }[] = [
 	{ key: 'start', label: 'Start' },
 	{ key: 'end', label: 'Koniec' },
-	{ key: 'orderNo', label: 'Nr zamówienia' },
-	{ key: 'project', label: 'Projekt' },
 	{ key: 'operation', label: 'Operacja' },
-	{ key: 'machine', label: 'Maszyna' },
+	{ key: 'projectNo', label: 'Nr projektu' },
+	{ key: 'project', label: 'Projekt' },
+	{ key: 'orderNo', label: 'Nr zamówienia' },
+	{ key: 'machine', label: 'Linia / maszyna' },
 	{ key: 'hours', label: 'Czas' }
 ];
+
+/** Tyle wierszy pokazujemy naraz - plan może mieć tysiące zleceń, a każdy wiersz ma pole wyboru programisty. */
+const PAGE_SIZE = 200;
+
+type ListBlock = Block & Partial<Pick<ArchivedBlock, 'machineName'>>;
 
 /** Filtr programisty: wszyscy, konkretna osoba albo zlecenia bez programisty. */
 const UNASSIGNED = '__none__';
@@ -26,27 +35,49 @@ const UNASSIGNED = '__none__';
 const ListPage = () => {
 	const { state, now, updateBlock } = usePlan();
 	const [query, setQuery] = useState('');
-	const [machineId, setMachineId] = useState('');
-	const [project, setProject] = useState('');
-	const [programmerId, setProgrammerId] = useState('');
-	const [status, setStatus] = useState<BlockStatus | ''>('');
+	const [machineIds, setMachineIds] = useState<string[]>([]);
+	const [projectNos, setProjectNos] = useState<string[]>([]);
+	const [programmerIds, setProgrammerIds] = useState<string[]>([]);
+	const [statuses, setStatuses] = useState<string[]>([]);
 	const [sort, setSort] = useState<Sort>({ key: 'start', direction: 1 });
+	const [archived, setArchived] = useState(false);
 
-	const machineNames = useMemo(() => new Map(state.machines.map((m) => [m.id, m.name])), [state.machines]);
-	const projects = useMemo(() => [...new Set(state.blocks.map((b) => b.project))].sort((a, b) => a.localeCompare(b, 'pl')), [state.blocks]);
+	const machineNames = useMemo(() => new Map([...state.lines, ...state.machines].map((m) => [m.id, resourceName(state, m.id)])), [state]);
+
+	// opcje filtrów: linie z ich maszynami, samodzielne maszyny, projekty po numerze
+	const machineOptions = useMemo<MultiSelectOption[]>(
+		() => [
+			...state.lines.flatMap((line) => [
+				{ value: line.id, label: `${line.name} (cała linia)`, group: 'Linie produkcyjne' },
+				...lineMachines(line, state.machines).map((m) => ({ value: m.id, label: m.name, group: 'Linie produkcyjne', indent: true }))
+			]),
+			...standaloneMachines(state).map((m) => ({ value: m.id, label: m.name, group: 'Maszyny' }))
+		],
+		[state]
+	);
+	const projectOptions = useMemo<MultiSelectOption[]>(() => {
+		const names = new Map([...state.archive, ...state.blocks].map((b) => [b.projectNo, b.project]));
+		return [...names.entries()].sort(([a], [b]) => a.localeCompare(b, 'pl', { numeric: true })).map(([no, name]) => ({ value: no, label: `${no} · ${name}` }));
+	}, [state.blocks, state.archive]);
+
+	// archiwum: zlecenia zakończone ponad 30 dni temu, tylko do wglądu
+	const source: ListBlock[] = archived ? state.archive : state.blocks;
+	const statusOf = (b: Block): BlockStatus => (archived ? 'done' : blockStatus(b, now));
+	const nameOf = (b: ListBlock) => b.machineName ?? machineNames.get(b.machineId) ?? '';
+	const statusOptions = (Object.keys(STATUS_LABELS) as BlockStatus[]).map((s) => ({ value: s, label: STATUS_LABELS[s] }));
+	const programmerOptions = [{ value: UNASSIGNED, label: '— nie przypisano —' }, ...state.programmers.map((p) => ({ value: p.id, label: programmerName(p) }))];
 
 	const rows = useMemo(() => {
 		const q = query.trim().toLowerCase();
-		const sortValue = (block: Block, key: SortKey): string | number =>
-			key === 'machine' ? (machineNames.get(block.machineId) ?? '') : (block[key] as string | number);
-		return state.blocks
+		const sortValue = (block: ListBlock, key: SortKey): string | number => (key === 'machine' ? nameOf(block) : (block[key] as string | number));
+		return source
 			.filter(
 				(b) =>
-					(!q || [b.orderNo, b.project, b.operation].some((f) => f.toLowerCase().includes(q))) &&
-					(!machineId || b.machineId === machineId) &&
-					(!project || b.project === project) &&
-					(!programmerId || (programmerId === UNASSIGNED ? !b.programmerId : b.programmerId === programmerId)) &&
-					(!status || blockStatus(b, now) === status)
+					(!q || [b.orderNo, b.projectNo, b.project, b.operation].some((f) => f.toLowerCase().includes(q))) &&
+					(machineIds.length === 0 || machineIds.includes(b.machineId)) &&
+					(projectNos.length === 0 || projectNos.includes(b.projectNo)) &&
+					(programmerIds.length === 0 || programmerIds.includes(b.programmerId ?? UNASSIGNED)) &&
+					(statuses.length === 0 || statuses.includes(statusOf(b)))
 			)
 			.sort((a, b) => {
 				const x = sortValue(a, sort.key);
@@ -54,33 +85,41 @@ const ListPage = () => {
 				const order = typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'pl', { numeric: true });
 				return order * sort.direction || a.start - b.start;
 			});
-	}, [state.blocks, now, query, machineId, project, programmerId, status, sort, machineNames]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [source, archived, now, query, machineIds, projectNos, programmerIds, statuses, sort, machineNames]);
+
+	// po zmianie filtrów lub sortowania znowu pokazujemy pierwszą porcję wierszy
+	const pageKey = JSON.stringify([archived, query, machineIds, projectNos, programmerIds, statuses, sort]);
+	const [page, setPage] = useState({ key: pageKey, limit: PAGE_SIZE });
+	const limit = page.key === pageKey ? page.limit : PAGE_SIZE;
+	const shown = rows.slice(0, limit);
 
 	const toggleSort = (key: SortKey) => setSort((s) => (s.key === key ? { key, direction: s.direction === 1 ? -1 : 1 } : { key, direction: 1 }));
-	const filtersActive = query || machineId || project || programmerId || status;
+	const filtersActive = query !== '' || machineIds.length + projectNos.length + programmerIds.length + statuses.length > 0;
 	const clearFilters = () => {
 		setQuery('');
-		setMachineId('');
-		setProject('');
-		setProgrammerId('');
-		setStatus('');
+		setMachineIds([]);
+		setProjectNos([]);
+		setProgrammerIds([]);
+		setStatuses([]);
 	};
 
 	/** Eksport widocznych wierszy - CSV ze średnikami i BOM, który polski Excel otwiera bez importu. */
 	const exportCsv = () => {
-		const header = ['Start', 'Koniec', 'Nr zamówienia', 'Projekt', 'Operacja', 'Maszyna', 'Czas pracy [h]', 'Status', 'Programista', 'Uwagi'];
+		const header = ['Start', 'Koniec', 'Operacja', 'Nr projektu', 'Projekt', 'Nr zamówienia', 'Linia / maszyna', 'Czas pracy [h]', 'Status', 'Programista', 'Uwagi'];
 		const cell = (value: string) => (/[";\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value);
 		const date = (ms: number) => toLocalInputValue(ms).replace('T', ' ');
 		const lines = rows.map((b) =>
 			[
 				date(b.start),
 				date(b.end),
-				b.orderNo,
-				b.project,
 				b.operation,
-				machineNames.get(b.machineId) ?? '',
+				b.projectNo,
+				b.project,
+				b.orderNo,
+				nameOf(b),
 				String(b.hours).replace('.', ','),
-				STATUS_LABELS[blockStatus(b, now)],
+				STATUS_LABELS[statusOf(b)],
 				programmerName(state.programmers.find((p) => p.id === b.programmerId)),
 				b.note ?? ''
 			]
@@ -94,49 +133,27 @@ const ListPage = () => {
 	return (
 		<>
 			<Row className="g-2 align-items-end mb-3">
-				<Col md={3}>
+				<Col md={2}>
 					<Form.Control type="search" placeholder="Szukaj: nr, projekt, operacja" aria-label="Szukaj" value={query} onChange={(e) => setQuery(e.target.value)} />
 				</Col>
 				<Col md={2}>
-					<Form.Select aria-label="Maszyna" value={machineId} onChange={(e) => setMachineId(e.target.value)}>
-						<option value="">Wszystkie maszyny</option>
-						{state.machines.map((m) => (
-							<option key={m.id} value={m.id}>
-								{m.name}
-							</option>
-						))}
-					</Form.Select>
+					<MultiSelect id="filterStatus" label="Status" allLabel="Wszystkie statusy" options={statusOptions} selected={statuses} onChange={setStatuses} />
 				</Col>
 				<Col md={2}>
-					<Form.Select aria-label="Projekt" value={project} onChange={(e) => setProject(e.target.value)}>
-						<option value="">Wszystkie projekty</option>
-						{projects.map((p) => (
-							<option key={p} value={p}>
-								{p}
-							</option>
-						))}
-					</Form.Select>
+					<MultiSelect id="filterMachine" label="Maszyny" allLabel="Wszystkie maszyny" options={machineOptions} selected={machineIds} onChange={setMachineIds} />
 				</Col>
 				<Col md={2}>
-					<Form.Select aria-label="Programista" value={programmerId} onChange={(e) => setProgrammerId(e.target.value)}>
-						<option value="">Wszyscy programiści</option>
-						<option value={UNASSIGNED}>— nie przypisano —</option>
-						{state.programmers.map((p) => (
-							<option key={p.id} value={p.id}>
-								{programmerName(p)}
-							</option>
-						))}
-					</Form.Select>
+					<MultiSelect id="filterProject" label="Projekty" allLabel="Wszystkie projekty" options={projectOptions} selected={projectNos} onChange={setProjectNos} />
 				</Col>
-				<Col md={1}>
-					<Form.Select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value as BlockStatus | '')}>
-						<option value="">Status</option>
-						{(Object.keys(STATUS_LABELS) as BlockStatus[]).map((s) => (
-							<option key={s} value={s}>
-								{STATUS_LABELS[s]}
-							</option>
-						))}
-					</Form.Select>
+				<Col md={2}>
+					<MultiSelect
+						id="filterProgrammer"
+						label="Programiści"
+						allLabel="Wszyscy programiści"
+						options={programmerOptions}
+						selected={programmerIds}
+						onChange={setProgrammerIds}
+					/>
 				</Col>
 				<Col md={2} className="d-flex gap-2 justify-content-end">
 					{filtersActive && (
@@ -149,8 +166,18 @@ const ListPage = () => {
 					</Button>
 				</Col>
 			</Row>
-			<div className="small text-secondary mb-2">
-				Pokazano {rows.length} z {state.blocks.length} zleceń
+			<div className="d-flex align-items-center justify-content-between mb-2">
+				<span className="small text-secondary">
+					{archived ? 'Archiwum: ' : ''}
+					{rows.length} z {source.length} zleceń{rows.length > shown.length ? ` · na ekranie pierwsze ${shown.length}` : ''}
+				</span>
+				<Form.Check
+					type="switch"
+					id="showArchive"
+					label={`Archiwum (${state.archive.length}) · zakończone ponad ${ARCHIVE_AFTER_DAYS} dni temu`}
+					checked={archived}
+					onChange={(e) => setArchived(e.target.checked)}
+				/>
 			</div>
 			<Table hover responsive className="align-middle mb-0 list-table">
 				<thead>
@@ -168,33 +195,38 @@ const ListPage = () => {
 					</tr>
 				</thead>
 				<tbody>
-					{rows.map((block) => {
-						const blockState = blockStatus(block, now);
+					{shown.map((block) => {
+						const blockState = statusOf(block);
 						return (
 							<tr key={block.id}>
 								<td className="text-nowrap">{formatDateTime(block.start)}</td>
 								<td className="text-nowrap">{formatDateTime(block.end)}</td>
-								<td className="text-nowrap">{block.orderNo}</td>
-								<td>{block.project}</td>
 								<td>{block.operation}</td>
-								<td>{machineNames.get(block.machineId)}</td>
+								<td className="text-nowrap">{block.projectNo}</td>
+								<td>{block.project}</td>
+								<td className="text-nowrap">{block.orderNo}</td>
+								<td>{nameOf(block)}</td>
 								<td className="text-nowrap">{formatHours(block.hours)}</td>
 								<td>
 									<Badge bg={STATUS_VARIANTS[blockState]}>{STATUS_LABELS[blockState]}</Badge>
 								</td>
 								<td>
-									<Form.Select
+									{archived ? (
+										programmerName(state.programmers.find((p) => p.id === block.programmerId))
+									) : (
+										<Form.Select
 										size="sm"
 										aria-label="Programista"
 										value={block.programmerId ?? ''}
 										onChange={(e) => updateBlock(block.id, { programmerId: e.target.value || undefined })}>
-										<option value="">— nie przypisano —</option>
-										{state.programmers.map((p) => (
-											<option key={p.id} value={p.id}>
-												{programmerName(p)}
-											</option>
-										))}
-									</Form.Select>
+											<option value="">— nie przypisano —</option>
+											{state.programmers.map((p) => (
+												<option key={p.id} value={p.id}>
+													{programmerName(p)}
+												</option>
+											))}
+										</Form.Select>
+									)}
 								</td>
 							</tr>
 						);
@@ -208,6 +240,13 @@ const ListPage = () => {
 					)}
 				</tbody>
 			</Table>
+			{rows.length > shown.length && (
+				<div className="text-center mt-3">
+					<Button variant="outline-secondary" onClick={() => setPage({ key: pageKey, limit: limit + PAGE_SIZE })}>
+						Pokaż kolejne {Math.min(PAGE_SIZE, rows.length - shown.length)} (zostało {rows.length - shown.length})
+					</Button>
+				</div>
+			)}
 		</>
 	);
 };

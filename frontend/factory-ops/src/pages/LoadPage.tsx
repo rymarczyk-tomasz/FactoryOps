@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { Badge, Button, Form, Table } from 'react-bootstrap';
+import BreakdownModal from '../components/BreakdownModal';
 import { usePlan } from '../data/PlanContext';
-import { capacityLookup, isLine, unitCount, unitLabel } from '../domain/calendar';
+import { breakdownEnd, isOngoing, lineOfMachine, resourceName, standaloneMachines } from '../domain/calendar';
 import { formatDateTime } from '../domain/format';
-import { dailyLoad, DayLoad, loadPercent } from '../domain/load';
+import { dailyLoad, DayLoad, loadPercent, loadUnits } from '../domain/load';
 import { addHours, shiftDayStart } from '../domain/shifts';
-import { Breakdown, Machine } from '../domain/types';
+import { Id } from '../domain/types';
 
 const DAYS = 7;
 const HOUR = 3600_000;
@@ -18,20 +19,11 @@ function loadStyle(percent: number | undefined): React.CSSProperties {
 	return { background: `rgba(37, 99, 235, ${alpha.toFixed(2)})`, color: percent > 55 ? '#fff' : '#1e293b' };
 }
 
-type BreakdownStatus = 'active' | 'planned' | 'done';
-const BREAKDOWN_STATUS: Record<BreakdownStatus, { label: string; variant: string }> = {
-	active: { label: 'Trwa', variant: 'danger' },
-	planned: { label: 'Zaplanowana', variant: 'warning' },
-	done: { label: 'Zakończona', variant: 'secondary' }
-};
-
-function breakdownStatus(breakdown: Breakdown, now: number): BreakdownStatus {
-	if (breakdown.end <= now) return 'done';
-	return breakdown.start <= now ? 'active' : 'planned';
-}
-
-interface MachineRow {
-	machine: Machine;
+interface ResourceRow {
+	id: Id;
+	name: string;
+	/** Liczba maszyn linii (brak = zwykła maszyna). */
+	units?: number;
 	days: DayLoad[];
 	/** Koniec ostatniego zlecenia w kolejce, jeśli jest po „teraz”. */
 	freeFrom?: number;
@@ -39,37 +31,44 @@ interface MachineRow {
 }
 
 const LoadPage = () => {
-	const { state, now, removeBreakdown } = usePlan();
+	const { state, now, endBreakdown, removeBreakdown } = usePlan();
 	const [showDone, setShowDone] = useState(false);
+	const [reporting, setReporting] = useState(false);
 	// tydzień od bieżącej doby - o 6:00 przesuwa się o dzień
 	const today = shiftDayStart(now);
 	const days = useMemo(() => Array.from({ length: DAYS }, (_, i) => addHours(today, 24 * i)), [today]);
 
-	const rows = useMemo<MachineRow[]>(() => {
-		const capacities = capacityLookup(state);
-		return state.machines.map((machine) => {
-			const blocks = state.blocks.filter((b) => b.machineId === machine.id);
-			const pending = blocks.filter((b) => b.end > now);
+	const rows = useMemo(() => {
+		const row = (id: Id, units?: number): ResourceRow => {
+			// zlecenia linii liczą się razem ze zleceniami jej maszyn
+			const ids = new Set([id, ...(state.lines.find((l) => l.id === id)?.machineIds ?? [])]);
+			const pending = state.blocks.filter((b) => ids.has(b.machineId) && b.end > now);
 			const lastEnd = Math.max(-Infinity, ...pending.map((b) => b.end));
+			const unitsOfRow = loadUnits(state, state.blocks, id, now);
 			return {
-				machine,
-				days: days.map((day) => dailyLoad(blocks, capacities(machine.id), day)),
+				id,
+				name: resourceName(state, id),
+				units,
+				days: days.map((day) => dailyLoad(unitsOfRow, day)),
 				freeFrom: lastEnd > now ? lastEnd : undefined,
 				queued: pending.length
 			};
-		});
+		};
+		return {
+			lines: state.lines.map((l) => row(l.id, l.machineIds.length)),
+			machines: standaloneMachines(state).map((m) => row(m.id))
+		};
 	}, [state, now, days]);
 
-	const average = (subset: MachineRow[]) => {
+	const average = (subset: ResourceRow[]) => {
 		const totals = subset.flatMap((r) => r.days).reduce((sum, d) => ({ available: sum.available + d.available, busy: sum.busy + d.busy }), { available: 0, busy: 0 });
 		return loadPercent({ dayStart: 0, ...totals });
 	};
-	const lines = rows.filter((r) => isLine(r.machine));
-	const machines = rows.filter((r) => !isLine(r.machine));
-	const breakdowns = [...state.breakdowns].filter((b) => showDone || breakdownStatus(b, now) !== 'done').sort((a, b) => a.start - b.start);
-	const activeCount = state.breakdowns.filter((b) => breakdownStatus(b, now) === 'active').length;
+	const { lines, machines } = rows;
+	const breakdowns = [...state.breakdowns].filter((b) => showDone || isOngoing(b)).sort((a, b) => Number(isOngoing(b)) - Number(isOngoing(a)) || b.start - a.start);
+	const activeCount = state.breakdowns.filter(isOngoing).length;
 
-	const renderRows = (title: string, subset: MachineRow[]) =>
+	const renderRows = (title: string, subset: ResourceRow[]) =>
 		subset.length > 0 && (
 			<>
 				<tr className="table-group-row">
@@ -77,13 +76,13 @@ const LoadPage = () => {
 						{title} <span className="fw-normal text-secondary">· średnio {average(subset) ?? 0}% przez {DAYS} dni</span>
 					</th>
 				</tr>
-				{subset.map(({ machine, days: loads, freeFrom, queued }) => (
-					<tr key={machine.id}>
+				{subset.map(({ id, name, units, days: loads, freeFrom, queued }) => (
+					<tr key={id}>
 						<td className="text-nowrap fw-medium">
-							{machine.name}
-							{isLine(machine) && (
+							{name}
+							{units !== undefined && (
 								<Badge bg="primary" pill className="ms-2">
-									{unitCount(machine)}×
+									{units}×
 								</Badge>
 							)}
 						</td>
@@ -149,18 +148,23 @@ const LoadPage = () => {
 			</div>
 
 			<div>
-				<div className="d-flex align-items-center justify-content-between mb-2">
+				<div className="d-flex align-items-center justify-content-between gap-3 mb-2">
 					<h2 className="h5 mb-0">Awarie</h2>
-					<Form.Check type="switch" id="showDoneBreakdowns" label="Pokaż zakończone" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} />
+					<div className="d-flex align-items-center gap-3">
+						<Form.Check type="switch" id="showDoneBreakdowns" label="Pokaż zakończone" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} />
+						<Button size="sm" variant="outline-danger" onClick={() => setReporting(true)}>
+							Zgłoś awarię
+						</Button>
+					</div>
 				</div>
 				{breakdowns.length === 0 ? (
-					<p className="text-secondary mb-0">Brak awarii. Awarię zgłasza się prawym kliknięciem na planie.</p>
+					<p className="text-secondary mb-0">Brak trwających awarii.</p>
 				) : (
 					<Table hover size="sm" className="align-middle mb-0">
 						<thead>
 							<tr>
-								<th>Maszyna / linia</th>
-								<th>Stoją</th>
+								<th>Maszyna</th>
+								<th>Linia</th>
 								<th>Od</th>
 								<th>Do</th>
 								<th>Czas</th>
@@ -170,20 +174,25 @@ const LoadPage = () => {
 						</thead>
 						<tbody>
 							{breakdowns.map((breakdown) => {
-								const machine = state.machines.find((m) => m.id === breakdown.machineId);
-								const status = BREAKDOWN_STATUS[breakdownStatus(breakdown, now)];
+								const ongoing = isOngoing(breakdown);
+								const end = ongoing ? now : breakdownEnd(breakdown, now);
 								return (
 									<tr key={breakdown.id}>
-										<td className="fw-medium">{machine?.name}</td>
-										<td>{isLine(machine) ? breakdown.units.map((u) => unitLabel(machine, u)).join(', ') : 'cała maszyna'}</td>
+										<td className="fw-medium">{resourceName(state, breakdown.machineId)}</td>
+										<td>{lineOfMachine(state.lines, breakdown.machineId)?.name ?? <span className="text-secondary">—</span>}</td>
 										<td className="text-nowrap">{formatDateTime(breakdown.start)}</td>
-										<td className="text-nowrap">{formatDateTime(breakdown.end)}</td>
-										<td>{Math.round((breakdown.end - breakdown.start) / HOUR)} h</td>
+										<td className="text-nowrap">{ongoing ? <span className="text-danger">trwa</span> : formatDateTime(end)}</td>
+										<td>{Math.max(0, Math.round((end - breakdown.start) / HOUR))} h</td>
 										<td>
-											<Badge bg={status.variant}>{status.label}</Badge>
+											<Badge bg={ongoing ? 'danger' : 'secondary'}>{ongoing ? 'Trwa' : 'Zakończona'}</Badge>
 										</td>
-										<td className="text-end">
-											<Button size="sm" variant="outline-danger" onClick={() => removeBreakdown(breakdown.id)}>
+										<td className="text-end text-nowrap">
+											{ongoing && (
+												<Button size="sm" variant="danger" className="me-2" onClick={() => endBreakdown(breakdown.id)}>
+													Zakończ teraz
+												</Button>
+											)}
+											<Button size="sm" variant="outline-secondary" onClick={() => removeBreakdown(breakdown.id)}>
 												Usuń
 											</Button>
 										</td>
@@ -194,6 +203,7 @@ const LoadPage = () => {
 					</Table>
 				)}
 			</div>
+			<BreakdownModal show={reporting} onHide={() => setReporting(false)} />
 		</div>
 	);
 };

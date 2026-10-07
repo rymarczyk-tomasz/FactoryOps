@@ -1,4 +1,4 @@
-import { CapacityLookup } from './calendar';
+import { capacityLookup, CapacityLookup, PlanResources } from './calendar';
 import { CapacityAt, endAfterWork, firstProductiveHourFrom, nearestHourStart } from './shifts';
 import { Block, BlockDraft, BlockStatus, Id } from './types';
 
@@ -43,31 +43,62 @@ function reflowMachine(blocks: Block[], capacityAt: CapacityAt, placement?: Plac
 	});
 }
 
-export function reflow(blocks: Block[], capacities: CapacityLookup, placement?: Placement, now?: number): Block[] {
+function reflowEach(blocks: Block[], capacities: CapacityLookup, placement?: Placement, now?: number): Block[] {
 	const byMachine = new Map<Id, Block[]>();
 	for (const block of blocks) {
-		byMachine.set(block.machineId, [...(byMachine.get(block.machineId) ?? []), block]);
+		const queue = byMachine.get(block.machineId);
+		if (queue) queue.push(block);
+		else byMachine.set(block.machineId, [block]);
 	}
 	return [...byMachine.entries()].flatMap(([machineId, machineBlocks]) => reflowMachine(machineBlocks, capacities(machineId), placement, now));
 }
 
-/** Moment, od którego można dopisać nowe zlecenie na koniec kolejki maszyny. */
-export function queueEnd(blocks: Block[], machineId: Id, capacities: CapacityLookup, now: number): number {
-	const lastEnd = Math.max(-Infinity, ...blocks.filter((b) => b.machineId === machineId).map((b) => b.end));
-	return firstProductiveHourFrom(Math.max(lastEnd, now), capacities(machineId));
+/**
+ * Układa plan. Najpierw zlecenia przypisane do maszyn, potem zlecenia linii - linia pracuje tylko
+ * maszynami, które nie mają w danej godzinie własnego zlecenia, awarii ani czasu wolnego.
+ * `scope` - maszyny/linie, których dotyczy zmiana: tylko ich kolejki (i linie z tymi maszynami) są liczone
+ * od nowa, reszta zostaje bez zmian. Bez `scope` - cały plan. Bez `now` trwające awarie kończą się godzinę po starcie (testy).
+ */
+export function reflow(blocks: Block[], resources: PlanResources, placement?: Placement, now?: number, scope?: Iterable<Id>): Block[] {
+	const lineIds = new Set(resources.lines.map((l) => l.id));
+	const clock = now ?? 0;
+	let affected: Set<Id> | undefined;
+	if (scope) {
+		affected = new Set(scope);
+		// linia zależy od zleceń i awarii swoich maszyn
+		for (const line of resources.lines) if (line.machineIds.some((id) => affected!.has(id))) affected.add(line.id);
+	}
+	const inScope = (b: Block) => !affected || affected.has(b.machineId);
+	const machineBlocks = blocks.filter((b) => !lineIds.has(b.machineId));
+	const onMachines = [
+		...machineBlocks.filter((b) => !inScope(b)),
+		...reflowEach(machineBlocks.filter(inScope), capacityLookup(resources, clock), placement, now)
+	];
+	const lineBlocks = blocks.filter((b) => lineIds.has(b.machineId));
+	const onLines = [
+		...lineBlocks.filter((b) => !inScope(b)),
+		...reflowEach(lineBlocks.filter(inScope), capacityLookup(resources, clock, onMachines), placement, now)
+	];
+	return [...onMachines, ...onLines];
 }
 
-export function addBlock(blocks: Block[], draft: BlockDraft, id: Id, capacities: CapacityLookup, now: number): Block[] {
-	const start = draft.start !== undefined ? nearestHourStart(draft.start) : queueEnd(blocks, draft.machineId, capacities, now);
+/** Moment, od którego można dopisać nowe zlecenie na koniec kolejki maszyny lub linii. */
+export function queueEnd(blocks: Block[], machineId: Id, resources: PlanResources, now: number): number {
+	const lastEnd = Math.max(-Infinity, ...blocks.filter((b) => b.machineId === machineId).map((b) => b.end));
+	return firstProductiveHourFrom(Math.max(lastEnd, now), capacityLookup(resources, now, blocks)(machineId));
+}
+
+export function addBlock(blocks: Block[], draft: BlockDraft, id: Id, resources: PlanResources, now: number): Block[] {
+	const start = draft.start !== undefined ? nearestHourStart(draft.start) : queueEnd(blocks, draft.machineId, resources, now);
 	const block: Block = { ...draft, id, start, end: start };
-	return reflow([...blocks, block], capacities, { id }, now);
+	return reflow([...blocks, block], resources, { id }, now, [draft.machineId]);
 }
 
 export function updateBlock(
 	blocks: Block[],
 	id: Id,
 	patch: Partial<Omit<Block, 'id' | 'end' | 'pinnedStart'>>,
-	capacities: CapacityLookup,
+	resources: PlanResources,
 	now?: number
 ): Block[] {
 	const current = blocks.find((b) => b.id === id);
@@ -76,12 +107,14 @@ export function updateBlock(
 	const updated = blocks.map((b) => (b.id === id ? { ...b, ...patch, start: start ?? b.start } : b));
 	// nowe miejsce tylko przy zmianie startu lub maszyny - sama zmiana godzin czy opisu nie rusza terminu
 	const moved = current && ((start !== undefined && start !== current.start) || (patch.machineId !== undefined && patch.machineId !== current.machineId));
-	return reflow(updated, capacities, moved ? { id } : undefined, now);
+	const scope = [current?.machineId, patch.machineId].filter((m): m is Id => m !== undefined);
+	return reflow(updated, resources, moved ? { id } : undefined, now, scope);
 }
 
-export function moveBlock(blocks: Block[], id: Id, start: number, machineId: Id, capacities: CapacityLookup, now?: number): Block[] {
+export function moveBlock(blocks: Block[], id: Id, start: number, machineId: Id, resources: PlanResources, now?: number): Block[] {
+	const from = blocks.find((b) => b.id === id)?.machineId;
 	const updated = blocks.map((b) => (b.id === id ? { ...b, start: nearestHourStart(start), machineId } : b));
-	return reflow(updated, capacities, { id, attachWithin: ATTACH_WITHIN_HOURS }, now);
+	return reflow(updated, resources, { id, attachWithin: ATTACH_WITHIN_HOURS }, now, from ? [from, machineId] : [machineId]);
 }
 
 export interface MovePreview {
@@ -101,40 +134,46 @@ export function previewMove(
 	id: Id,
 	start: number,
 	machineId: Id,
-	capacities: CapacityLookup,
+	resources: PlanResources,
 	now?: number
 ): MovePreview | undefined {
 	const moved = blocks.find((b) => b.id === id);
 	if (!moved) return undefined;
-	// wystarczy przeliczyć docelową maszynę
-	const machineBlocks = [...blocks.filter((b) => b.machineId === machineId && b.id !== id), moved];
-	const result = moveBlock(machineBlocks, id, start, machineId, capacities, now).sort((a, b) => a.start - b.start);
+	// wystarczy przeliczyć docelową maszynę, a dla linii - także zlecenia jej maszyn, które zajmują linię
+	const affecting = new Set([machineId, ...(resources.lines.find((l) => l.id === machineId)?.machineIds ?? [])]);
+	const subset = [...blocks.filter((b) => affecting.has(b.machineId) && b.id !== id), moved];
+	const result = moveBlock(subset, id, start, machineId, resources, now)
+		.filter((b) => b.machineId === machineId)
+		.sort((a, b) => a.start - b.start);
 	const index = result.findIndex((b) => b.id === id);
 	const placed = result[index];
 	return { start: placed.start, end: placed.end, after: result[index - 1], before: result[index + 1], pinned: placed.pinnedStart !== undefined && index > 0 };
 }
 
 /** Usuwa zlecenie; kolejne zlecenia bez terminu cofają się na jego miejsce. */
-export function removeBlock(blocks: Block[], id: Id, capacities: CapacityLookup, now?: number): Block[] {
+export function removeBlock(blocks: Block[], id: Id, resources: PlanResources, now?: number): Block[] {
+	const removed = blocks.find((b) => b.id === id);
 	return reflow(
 		blocks.filter((b) => b.id !== id),
-		capacities,
+		resources,
 		undefined,
-		now
+		now,
+		removed ? [removed.machineId] : []
 	);
 }
 
 /** Usuwa przerwy między zleceniami maszyny - zdejmuje terminy, wszystko od pierwszego zlecenia idzie jedno za drugim. */
-export function compactMachine(blocks: Block[], machineId: Id, capacities: CapacityLookup, now?: number): Block[] {
+export function compactMachine(blocks: Block[], machineId: Id, resources: PlanResources, now?: number): Block[] {
 	const machineBlocks = blocks.filter((b) => b.machineId === machineId).sort((a, b) => a.start - b.start);
 	if (machineBlocks.length === 0) return blocks;
-	const unpinned = machineBlocks.map((b, i) => {
-		if (i === 0 || b.pinnedStart === undefined) return b;
+	const first = machineBlocks[0];
+	const unpinned = blocks.map((b) => {
+		if (b.machineId !== machineId || b === first || b.pinnedStart === undefined) return b;
 		const next = { ...b };
 		delete next.pinnedStart;
 		return next;
 	});
-	return [...blocks.filter((b) => b.machineId !== machineId), ...reflowMachine(unpinned, capacities(machineId), undefined, now)];
+	return reflow(unpinned, resources, undefined, now, [machineId]);
 }
 
 export function blockStatus(block: Block, now: number): BlockStatus {
