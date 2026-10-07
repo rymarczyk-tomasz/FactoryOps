@@ -63,17 +63,19 @@ function App() {
 					</Routes>
 				</div>
 			</Container>
-			<ToastContainer position="bottom-center" className="mb-3 notice-container">
+			<ToastContainer position="top-center" className="mt-2 notice-container">
 				{notice && (
-					<Toast key={notice.id} bg="dark" onClose={dismissNotice} delay={NOTICE_DELAY_MS} autohide>
-						<Toast.Body className="d-flex align-items-center gap-3 text-white">
-							<span className="flex-grow-1">{notice.text}</span>
+					<Toast key={notice.id} onClose={dismissNotice} delay={NOTICE_DELAY_MS} autohide>
+						<Toast.Body className="d-flex align-items-center gap-3">
+							<span className="flex-grow-1 notice-text" title={notice.text}>
+								{notice.text}
+							</span>
 							{notice.undoable && canUndo && (
-								<Button size="sm" variant="outline-light" onClick={undo}>
+								<Button size="sm" variant="outline-dark" className="py-0" onClick={undo}>
 									Cofnij
 								</Button>
 							)}
-							<button type="button" className="btn-close btn-close-white" aria-label="Zamknij" onClick={dismissNotice} />
+							<button type="button" className="btn-close" aria-label="Zamknij" onClick={dismissNotice} />
 						</Toast.Body>
 					</Toast>
 				)}

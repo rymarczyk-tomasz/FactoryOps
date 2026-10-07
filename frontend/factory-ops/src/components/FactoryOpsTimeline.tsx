@@ -20,6 +20,7 @@ import {
 	lineOfMachine,
 	nonWorkingPeriods,
 	nonWorkingSegments,
+	resourceName,
 	standaloneMachines,
 	workMode
 } from '../domain/calendar';
@@ -47,6 +48,11 @@ const isHelperItem = (id: Id) => [OFF_PREFIX, BREAKDOWN_PREFIX, LINE_DOWN_PREFIX
  * a przy przewijaniu w obrębie tygodnia elementy nie są liczone od nowa.
  */
 const WINDOW_STEP = 7 * 24 * 60 * 60 * 1000;
+/** Przeciągany bloczek tak blisko krawędzi planu [px] przewija plan w tę stronę. */
+const AUTO_SCROLL_EDGE = 70;
+/** Co ile ms i o jaką część widocznego zakresu (przy samej krawędzi) przewija się plan. */
+const AUTO_SCROLL_INTERVAL = 50;
+const AUTO_SCROLL_STEP = 0.02;
 
 const PROJECT_COLORS = ['#2563eb', '#0d9488', '#d97706', '#7c3aed', '#db2777', '#059669', '#dc2626', '#4f46e5'];
 
@@ -221,6 +227,40 @@ const FactoryOpsTimeline = () => {
 			});
 		window.addEventListener('pointerup', end);
 		return () => window.removeEventListener('pointerup', end);
+	}, [dragging]);
+
+	// przeciąganie przy lewej lub prawej krawędzi planu przewija plan - im bliżej krawędzi, tym szybciej
+	const timelineRef = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+		if (!dragging) return;
+		let pointer: { x: number; y: number } | undefined;
+		const track = (e: PointerEvent) => {
+			if (e.isTrusted) pointer = { x: e.clientX, y: e.clientY };
+		};
+		window.addEventListener('pointermove', track, true);
+		const timer = setInterval(() => {
+			const canvas = timelineRef.current?.querySelector('.rct-scroll');
+			if (!pointer || !canvas) return;
+			const rect = canvas.getBoundingClientRect();
+			const fromLeft = pointer.x - rect.left;
+			const fromRight = rect.right - pointer.x;
+			const direction = fromLeft < AUTO_SCROLL_EDGE ? -1 : fromRight < AUTO_SCROLL_EDGE ? 1 : 0;
+			if (direction === 0) return;
+			const depth = Math.min(1, (AUTO_SCROLL_EDGE - Math.max(0, Math.min(fromLeft, fromRight))) / AUTO_SCROLL_EDGE);
+			setRange((r) => {
+				const step = (r.end - r.start) * AUTO_SCROLL_STEP * (0.25 + depth) * direction;
+				return { start: r.start + step, end: r.end + step };
+			});
+			// biblioteka liczy miejsce upuszczenia tylko przy ruchu myszy - po przewinięciu podsyłamy ruch w tym samym miejscu
+			const { x, y } = pointer;
+			requestAnimationFrame(() =>
+				document.dispatchEvent(new PointerEvent('pointermove', { clientX: x, clientY: y, bubbles: true, pointerType: 'mouse', isPrimary: true, buttons: 1, pointerId: 1 }))
+			);
+		}, AUTO_SCROLL_INTERVAL);
+		return () => {
+			window.removeEventListener('pointermove', track, true);
+			clearInterval(timer);
+		};
 	}, [dragging]);
 
 	const preview = useMemo(() => drag && previewMove(state.blocks, drag.id, drag.start, drag.machineId, state, Date.now()), [drag, state]);
@@ -438,19 +478,25 @@ const FactoryOpsTimeline = () => {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [state.blocks, blockLooks, now, draggedId, selectedId, searching, matchIds, windowFrom, windowTo, visibleIds]);
 
+	// gdzie wyląduje przenoszony bloczek - opis na pasku narzędzi, żeby nie zasłaniał zleceń na planie
+	const dropInfo = preview && [
+		resourceName(state, drag?.machineId),
+		formatDateTime(preview.start),
+		preview.after && (preview.pinned ? `przerwa po ${preview.after.orderNo}` : `po ${preview.after.orderNo}`),
+		preview.before && `przed ${preview.before.orderNo}`
+	]
+		.filter(Boolean)
+		.join(' · ');
+
 	// kreska w miejscu, gdzie faktycznie wyląduje przenoszony bloczek (po zepchnięciu kolejki)
 	const indicatorItems = useMemo<PlanItem[]>(() => {
 		if (!drag || !preview) return [];
-		const neighbours = [
-			preview.after && (preview.pinned ? `przerwa po ${preview.after.orderNo}` : `po ${preview.after.orderNo}`),
-			preview.before && `przed ${preview.before.orderNo}`
-		].filter(Boolean);
 		return [
 			{
 				// nowe id przy każdej zmianie: w trakcie przeciągania biblioteka nie przelicza położenia istniejących elementów
 				id: `${DROP_INDICATOR_PREFIX}${drag.machineId}:${preview.start}`,
 				group: drag.machineId,
-				title: [formatDateTime(preview.start), ...neighbours].join(' · '),
+				title: '',
 				start_time: preview.start,
 				end_time: preview.start + 60_000,
 				canMove: false,
@@ -568,13 +614,18 @@ const FactoryOpsTimeline = () => {
 						</>
 					)}
 				</InputGroup>
-				<small className="text-secondary ms-auto">
-					<span className="legend-swatch non-working-item" /> czas wolny <span className="legend-swatch breakdown-swatch ms-2" /> awaria · kliknij dzień w nagłówku:
-					pracujący / wolny
-				</small>
+				{dropInfo ? (
+					<span className="ms-auto drop-info">Wstawisz: {dropInfo}</span>
+				) : (
+					<small className="text-secondary ms-auto">
+						<span className="legend-swatch non-working-item" /> czas wolny <span className="legend-swatch breakdown-swatch ms-2" /> awaria · kliknij dzień w nagłówku:
+						pracujący / wolny
+					</small>
+				)}
 			</div>
 
 			<div
+				ref={timelineRef}
 				className="plan-timeline"
 				onPointerDownCapture={(e) => {
 					panBlocked.current = e.pointerType === 'mouse' && !(e.target as HTMLElement).closest('.rct-item');
@@ -723,8 +774,9 @@ const FactoryOpsTimeline = () => {
 				</Timeline>
 			</div>
 
+			{/* panel chowa się na czas przeciągania, żeby nie zasłaniał miejsca, w które przenosimy zlecenie */}
 			<BlockDetailsPanel
-				block={selected}
+				block={dragging ? undefined : selected}
 				onEdit={(block) => setForm({ show: true, block })}
 				onDelete={setToDelete}
 				onShow={showBlock}
