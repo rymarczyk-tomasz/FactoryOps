@@ -1,17 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { capacityLookup, machineCalendar, nonWorkingPeriods, nonWorkingSegments } from './calendar';
+import { capacityLookup, machineCalendar, machineDays, nonWorkingPeriods, nonWorkingSegments } from './calendar';
 import { CapacityAt, endAfterWork, firstProductiveHourFrom, IsWorkingHour, nearestHourStart, nextHourStart, roundUpHours, shiftDayStart } from './shifts';
 import { addBlock, compactMachine, moveBlock, previewMove, reflow, removeBlock, updateBlock } from './schedule';
-import { Block, BlockDraft, Breakdown, Machine, WorkCalendar } from './types';
+import { Block, BlockDraft, Breakdown, Line, Machine, WorkCalendar } from './types';
 
 // 2026-10-05 to poniedziałek, 2026-10-10/11 to weekend
 const at = (day: number, hour: number, minute = 0) => new Date(2026, 9, day, hour, minute).getTime();
 const plant: WorkCalendar = { overrides: {} };
 const weekdays = machineCalendar(plant, { id: 'm1', name: 'M1' });
+const weekdayDays = machineDays(plant, { id: 'm1', name: 'M1' });
 /** Zwykła maszyna: pracuje (1) albo stoi (0). */
 const single = (isWorkingHour: IsWorkingHour): CapacityAt => (h) => (isWorkingHour(h) ? 1 : 0);
 
-const draft = (hours: number, machineId = 'm1'): BlockDraft => ({ machineId, orderNo: 'Z-1', project: 'P', operation: 'Op', hours });
+const draft = (hours: number, machineId = 'm1'): BlockDraft => ({ machineId, orderNo: 'Z-1', projectNo: 'IMR-1', project: 'P', operation: 'Op', hours });
 
 describe('godziny i doba', () => {
 	it('zaokrągla czas w górę do pełnej godziny', () => {
@@ -63,12 +64,13 @@ describe('kalendarz maszyny', () => {
 	});
 
 	it('sobota pracująca w wybranych godzinach na jednej maszynie', () => {
-		const saturday = machineCalendar(plant, { id: 'm1', name: 'M1', overrides: { '2026-10-10': { from: 6, to: 18 } } });
+		const saturdayMachine: Machine = { id: 'm1', name: 'M1', overrides: { '2026-10-10': { from: 6, to: 18 } } };
+		const saturday = machineCalendar(plant, saturdayMachine);
 		// pt 20:00 - sob 6:00 = 10 h, sob 6:00-18:00 = 12 h, pozostałe 2 h w poniedziałek
 		expect(endAfterWork(at(9, 20), 24, single(saturday))).toBe(at(12, 8));
 		expect(firstProductiveHourFrom(at(10, 18), single(saturday))).toBe(at(12, 6));
 		// zakreskowana tylko reszta soboty i niedziela
-		expect(nonWorkingSegments(saturday, at(9, 20), at(12, 8))).toEqual([[at(10, 18), at(12, 6)]]);
+		expect(nonWorkingSegments(machineDays(plant, saturdayMachine), at(9, 20), at(12, 8))).toEqual([[at(10, 18), at(12, 6)]]);
 	});
 
 	it('godziny pracy przez północ (22:00-6:00) należą do doby, w której się zaczynają', () => {
@@ -79,13 +81,13 @@ describe('kalendarz maszyny', () => {
 
 	it('wycina wolny weekend z zakresu zlecenia', () => {
 		// zlecenie pt 22:00 -> pon 14:00 na maszynie pon-pt: wolne od sob 6:00 do pon 6:00
-		expect(nonWorkingSegments(weekdays, at(9, 22), at(12, 14))).toEqual([[at(10, 6), at(12, 6)]]);
-		expect(nonWorkingSegments(weekdays, at(6, 6), at(8, 6))).toEqual([]);
+		expect(nonWorkingSegments(weekdayDays, at(9, 22), at(12, 14))).toEqual([[at(10, 6), at(12, 6)]]);
+		expect(nonWorkingSegments(weekdayDays, at(6, 6), at(8, 6))).toEqual([]);
 	});
 
 	it('wylicza wolne okresy z dokładnością do godziny, sklejając weekend', () => {
 		// niedziela 4.10 trwa do pon 6:00, więc zahacza o początek zakresu (od 0:00)
-		expect(nonWorkingPeriods(weekdays, at(5, 0), at(13, 0))).toEqual([
+		expect(nonWorkingPeriods(weekdayDays, at(5, 0), at(13, 0))).toEqual([
 			[at(5, 0), at(5, 6)],
 			[at(10, 6), at(12, 6)]
 		]);
@@ -93,9 +95,11 @@ describe('kalendarz maszyny', () => {
 });
 
 describe('linie i awarie', () => {
-	const line: Machine = { id: 'l1', name: 'Linia 1', workMode: 'continuous', lineMachines: ['M1', 'M2', 'M3'] };
-	const lineCapacity = (breakdowns: Breakdown[] = []) => capacityLookup({ calendar: plant, machines: [line], breakdowns })('l1');
-	const breakdown = (units: number[], start: number, end: number, machineId = 'l1'): Breakdown => ({ id: 'a', machineId, units, start, end });
+	const members: Machine[] = ['a', 'b', 'c'].map((id) => ({ id, name: id.toUpperCase(), workMode: 'continuous' }));
+	const line: Line = { id: 'l1', name: 'Linia 1', machineIds: ['a', 'b', 'c'] };
+	const resources = (breakdowns: Breakdown[] = []) => ({ calendar: plant, machines: [...members, { id: 'm1', name: 'M1' }], lines: [line], breakdowns });
+	const lineCapacity = (breakdowns: Breakdown[] = [], now = 0, blocks: Block[] = []) => capacityLookup(resources(breakdowns), now, blocks)('l1');
+	const breakdown = (machineId: string, start: number, end?: number, id = machineId): Breakdown => ({ id, machineId, start, end });
 
 	it('linia z 3 maszynami robi zlecenie 3 razy szybciej, z dokładnością do pełnej godziny', () => {
 		expect(endAfterWork(at(5, 6), 30, lineCapacity())).toBe(at(5, 16));
@@ -105,40 +109,74 @@ describe('linie i awarie', () => {
 
 	it('awaria jednej maszyny linii spowalnia zlecenie na czas awarii', () => {
 		// 6 h na 2 maszynach = 12 h pracy, pozostałe 18 h na 3 maszynach = 6 h
-		expect(endAfterWork(at(5, 6), 30, lineCapacity([breakdown([1], at(5, 6), at(5, 12))]))).toBe(at(5, 18));
+		expect(endAfterWork(at(5, 6), 30, lineCapacity([breakdown('b', at(5, 6), at(5, 12))]))).toBe(at(5, 18));
 	});
 
 	it('awaria dwóch maszyn linii - pracuje jedna', () => {
 		// 6 h na 1 maszynie = 6 h pracy, pozostałe 24 h na 3 maszynach = 8 h
-		expect(endAfterWork(at(5, 6), 30, lineCapacity([breakdown([0, 2], at(5, 6), at(5, 12))]))).toBe(at(5, 20));
+		expect(endAfterWork(at(5, 6), 30, lineCapacity([breakdown('a', at(5, 6), at(5, 12)), breakdown('c', at(5, 6), at(5, 12))]))).toBe(at(5, 20));
 	});
 
 	it('nakładające się awarie tej samej maszyny nie liczą się podwójnie', () => {
-		const overlapping = [breakdown([1], at(5, 6), at(5, 12)), { ...breakdown([1], at(5, 8), at(5, 10)), id: 'b' }];
+		const overlapping = [breakdown('b', at(5, 6), at(5, 12)), breakdown('b', at(5, 8), at(5, 10), 'b2')];
 		expect(endAfterWork(at(5, 6), 30, lineCapacity(overlapping))).toBe(at(5, 18));
 	});
 
-	it('awaria całej linii zatrzymuje zlecenie', () => {
-		expect(endAfterWork(at(5, 6), 30, lineCapacity([breakdown([0, 1, 2], at(5, 8), at(5, 12))]))).toBe(at(5, 20));
+	it('awaria wszystkich maszyn linii zatrzymuje zlecenie', () => {
+		const all = ['a', 'b', 'c'].map((id) => breakdown(id, at(5, 8), at(5, 12)));
+		expect(endAfterWork(at(5, 6), 30, lineCapacity(all))).toBe(at(5, 20));
 	});
 
 	it('awaria zwykłej maszyny przesuwa koniec zlecenia', () => {
-		const capacity = capacityLookup({ calendar: plant, machines: [{ id: 'm1', name: 'M1' }], breakdowns: [breakdown([0], at(5, 9), at(5, 12), 'm1')] })('m1');
+		const capacity = capacityLookup(resources([breakdown('m1', at(5, 9), at(5, 12))]), 0)('m1');
 		// 7-9 (2 h), postój 9-12, 12-18 (6 h)
 		expect(endAfterWork(at(5, 7), 8, capacity)).toBe(at(5, 18));
+	});
+
+	it('trwająca awaria kończy się z bieżącą godziną i rośnie z upływem czasu', () => {
+		const ongoing = [breakdown('m1', at(5, 9))];
+		// o 10:30 maszyna stoi do 11:00, o 13:10 - do 14:00
+		expect(endAfterWork(at(5, 7), 8, capacityLookup(resources(ongoing), at(5, 10, 30))('m1'))).toBe(at(5, 17));
+		expect(endAfterWork(at(5, 7), 8, capacityLookup(resources(ongoing), at(5, 13, 10))('m1'))).toBe(at(5, 20));
+	});
+
+	it('maszyna linii zajęta własnym zleceniem nie pracuje na zlecenie linii', () => {
+		const own: Block = { id: 'x', machineId: 'a', orderNo: 'X', projectNo: 'IMR-1', project: 'P', operation: 'Op', hours: 6, start: at(5, 6), end: at(5, 12) };
+		// jak awaria jednej maszyny przez 6 h
+		expect(endAfterWork(at(5, 6), 30, lineCapacity([], 0, [own]))).toBe(at(5, 18));
+	});
+
+	it('harmonogram układa najpierw zlecenia maszyn, potem linii na tym, co zostało', () => {
+		const planned = addBlock([], { ...draft(30, 'l1'), start: at(5, 6) }, 'line', resources(), at(5, 6));
+		expect(planned[0].end).toBe(at(5, 16));
+		// zlecenie wstawione na maszynę linii wydłuża zlecenie linii
+		const withOwn = addBlock(planned, { ...draft(6, 'a'), start: at(5, 6) }, 'own', resources(), at(5, 6));
+		expect(withOwn.find((b) => b.id === 'line')!.end).toBe(at(5, 18));
+		expect(withOwn.find((b) => b.id === 'own')).toMatchObject({ start: at(5, 6), end: at(5, 12) });
+		// po usunięciu zlecenia maszyny linia znowu kończy wcześniej
+		expect(removeBlock(withOwn, 'own', resources(), at(5, 6))[0].end).toBe(at(5, 16));
+	});
+
+	it('podgląd przeniesienia na linię uwzględnia zlecenia jej maszyn', () => {
+		const blocks = [
+			...addBlock([], { ...draft(6, 'a'), start: at(5, 6) }, 'own', resources(), at(5, 6)),
+			...addBlock([], { ...draft(30, 'm1'), start: at(5, 6) }, 'moved', resources(), at(5, 6))
+		];
+		expect(previewMove(blocks, 'moved', at(5, 6), 'l1', resources(), at(5, 6))).toMatchObject({ start: at(5, 6), end: at(5, 18) });
 	});
 });
 
 describe('harmonogram', () => {
 	const now = at(5, 6, 40);
-	const capacities = capacityLookup({
+	const capacities = {
 		calendar: plant,
 		machines: [
 			{ id: 'm1', name: 'M1' },
-			{ id: 'm2', name: 'M2', workMode: 'continuous' }
+			{ id: 'm2', name: 'M2', workMode: 'continuous' as const }
 		],
+		lines: [],
 		breakdowns: []
-	});
+	};
 
 	function plan(...hours: number[]): Block[] {
 		return hours.reduce<Block[]>((blocks, h, i) => addBlock(blocks, draft(h), `b${i}`, capacities, now), []);
@@ -242,7 +280,7 @@ describe('harmonogram', () => {
 	});
 
 	it('zmiana kalendarza przesuwa zlecenia z dnia wolnego', () => {
-		const blocks = reflow(plan(8), capacityLookup({ calendar: { overrides: { '2026-10-05': false } }, machines: [], breakdowns: [] }));
+		const blocks = reflow(plan(8), { calendar: { overrides: { '2026-10-05': false } }, machines: [], lines: [], breakdowns: [] });
 		expect(blocks[0].start).toBe(at(6, 6));
 	});
 });

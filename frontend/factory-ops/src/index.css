@@ -40,9 +40,6 @@ body {
 	min-width: 300px;
 }
 
-.day-hours-form .form-select {
-	width: auto;
-}
 
 .react-calendar-timeline .rct-item {
 	border-radius: 4px;
@@ -93,28 +90,32 @@ body {
 	z-index: 200 !important;
 }
 
-.react-calendar-timeline .rct-item.drop-indicator .rct-item-content {
-	/* nad wierszem, żeby nie zasłaniać zleceń, między które wstawiamy */
-	position: absolute;
-	bottom: calc(100% + 8px);
-	left: 6px;
-	/* kompensata scaleY rodzica, żeby tekst nie był rozciągnięty */
-	transform: scaleY(0.8);
-	transform-origin: bottom left;
-	padding: 0 6px;
+/* opis miejsca wstawienia - tej samej wysokości co legenda, którą zastępuje, żeby plan nie podskakiwał */
+.drop-info {
+	padding: 0 8px;
 	border-radius: 4px;
 	background: #111827;
 	color: #fff;
-	font-size: 0.75rem;
-	line-height: 1.6;
+	font-size: 0.875em;
 	white-space: nowrap;
-	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-	max-width: none;
-	overflow: visible;
 }
 
-/* awaria: półprzezroczysta nakładka nad zleceniami, zamalowana część wysokości = część maszyn linii, które stoją */
-.react-calendar-timeline .rct-item.breakdown-item {
+/* awaria maszyny: czerwony bloczek w jej wierszu, nad zleceniem, które przerywa */
+.react-calendar-timeline .rct-item.breakdown-block {
+	background: repeating-linear-gradient(45deg, #dc2626 0 6px, #b91c1c 6px 12px) !important;
+	border: 1px solid #991b1b !important;
+	color: #fff;
+	font-weight: 600;
+	z-index: 95 !important;
+}
+
+/* trwająca awaria: prawa krawędź „otwarta” - rośnie z czasem */
+.react-calendar-timeline .rct-item.breakdown-block.ongoing {
+	border-right: 3px dashed #fecaca !important;
+}
+
+/* awaria na wierszu linii: nakładka, zamalowana część wysokości = część maszyn linii, które stoją */
+.react-calendar-timeline .rct-item.line-breakdown-item {
 	background: transparent !important;
 	border: 1px dashed #b91c1c !important;
 	pointer-events: none;
@@ -147,8 +148,119 @@ body {
 	white-space: nowrap;
 }
 
-.day-hours-form .breakdown-hours {
-	width: 4.5rem;
+/* maszyny linii wyświetlane pod linią */
+.react-calendar-timeline .rct-horizontal-lines .line-machine-row {
+	background: #f8fafc;
+}
+
+.line-machine-label {
+	padding-left: 18px;
+	font-size: 0.8rem;
+	color: #475569;
+}
+
+.line-toggle {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 0;
+	border: none;
+	background: transparent;
+	color: inherit;
+	text-align: left;
+}
+
+/* przeciąganie pustego planu nie przesuwa widoku, więc bez kursora „przesuń” */
+.plan-timeline .react-calendar-timeline .rct-scroll {
+	cursor: default !important;
+}
+
+/* dni w nagłówku: kliknięcie otwiera kalendarz dnia */
+.react-calendar-timeline .rct-dateHeader.day-header-cell {
+	position: relative;
+	cursor: pointer;
+}
+
+.react-calendar-timeline .rct-dateHeader.day-header-cell:hover {
+	background: #dbeafe !important;
+}
+
+.react-calendar-timeline .rct-dateHeader.day-header-cell.day-off {
+	background: #fee2e2 !important;
+	color: #991b1b;
+}
+
+.react-calendar-timeline .rct-dateHeader.day-header-cell.day-working {
+	background: #dcfce7 !important;
+	color: #166534;
+}
+
+.react-calendar-timeline .rct-dateHeader.day-header-cell.day-hours {
+	background: #fef9c3 !important;
+	color: #854d0e;
+}
+
+.day-exception-dot {
+	position: absolute;
+	top: 4px;
+	right: 4px;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: #f59e0b;
+}
+
+/* kalendarz dnia */
+.hours-select,
+.day-choice-select {
+	width: auto;
+}
+
+.day-filter {
+	max-width: 200px;
+}
+
+.day-result {
+	font-size: 0.85rem;
+	font-weight: 500;
+}
+
+.day-result.on {
+	color: #15803d;
+}
+
+.day-result.off {
+	color: #b91c1c;
+}
+
+/* filtry z wielokrotnym wyborem */
+.multi-select .dropdown-toggle {
+	overflow: hidden;
+}
+
+.multi-select .dropdown-toggle.has-selection {
+	border-color: #2563eb;
+	color: #1d4ed8;
+}
+
+.multi-select-menu {
+	max-height: 360px;
+	overflow-y: auto;
+	min-width: 100%;
+}
+
+.multi-select-option {
+	padding: 2px 16px 2px 40px;
+	white-space: nowrap;
+}
+
+.multi-select-option.indent {
+	padding-left: 60px;
+}
+
+.line-member-row {
+	padding: 4px 0;
+	border-bottom: 1px solid #f1f5f9;
 }
 
 /* ---- motyw planu (zamiast domyślnego czerwonego nagłówka biblioteki) ---- */
@@ -256,9 +368,24 @@ body {
 	white-space: pre-wrap;
 }
 
-/* komunikaty po zmianach planu */
+/* komunikaty po zmianach planu - w górnym pasku, żeby nie zasłaniały planu */
 .notice-container {
 	z-index: 1090;
+}
+
+.notice-container .toast {
+	width: auto;
+	max-width: min(720px, calc(100vw - 32px));
+}
+
+.notice-container .toast-body {
+	padding: 6px 12px;
+	white-space: nowrap;
+}
+
+.notice-container .notice-text {
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 /* obciążenie */

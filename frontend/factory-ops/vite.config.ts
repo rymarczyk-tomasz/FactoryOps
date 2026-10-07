@@ -6,13 +6,16 @@ export default defineConfig({
 	base: '/',
 	plugins: [react()],
 	build: {
-		rollupOptions: {
+		rolldownOptions: {
 			output: {
 				// biblioteki zmieniają się rzadziej niż kod aplikacji - osobne pliki dłużej zostają w cache przeglądarki
-				manualChunks: {
-					react: ['react', 'react-dom', 'react-router-dom'],
-					ui: ['react-bootstrap', 'react-hook-form'],
-					timeline: ['react-calendar-timeline']
+				codeSplitting: {
+					groups: [
+						{ name: 'react', test: /node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/ },
+						{ name: 'ui', test: /node_modules[\\/](react-bootstrap|react-hook-form)[\\/]/ },
+						// bez CSS - style biblioteki muszą zostać w głównym pliku po index.css, jak przed Vite 8
+						{ name: 'timeline', test: /node_modules[\\/]react-calendar-timeline[\\/].*\.js$/ }
+					]
 				}
 			}
 		}
