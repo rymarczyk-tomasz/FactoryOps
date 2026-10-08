@@ -28,7 +28,6 @@ import {
 	workMode
 } from '../domain/calendar';
 import { formatDateTime, formatHours, programmerName, timelineLabel } from '../domain/format';
-import { dailyLoad, loadPercent, loadUnits } from '../domain/load';
 import { blockStatus, previewMove } from '../domain/schedule';
 import { addHours, dayKey, isWeekend, nearestHourStart, shiftDayStart } from '../domain/shifts';
 import { Block, Breakdown, Id, Line, Machine } from '../domain/types';
@@ -38,6 +37,7 @@ import BreakdownModal, { BreakdownModalTarget } from './BreakdownModal';
 import ConfirmModal from './ConfirmModal';
 import DayCalendarModal from './DayCalendarModal';
 import PageHeader from './PageHeader';
+import { loadByDay, totalPercent } from './planSelectors';
 import { PlanNavigationState } from './planNavigation';
 import { projectColor } from './projectColor';
 import RowContextMenu, { RowMenuTarget } from './RowContextMenu';
@@ -532,22 +532,8 @@ const FactoryOpsTimeline = () => {
 
 	// obciążenie każdego zasobu w najbliższych dobach (od 6:00 bieżącej) - mini-pasek w wierszu planu
 	const loadByResource = useMemo(() => {
-		const from = shiftDayStart(now);
-		const to = addHours(from, 24 * LOAD_DAYS);
-		const blocks = state.blocks.filter((b) => b.end > from && b.start < to);
-		const result = new Map<Id, number | undefined>();
-		for (const id of [...state.lines.map((l) => l.id), ...state.machines.map((m) => m.id)]) {
-			const units = loadUnits(state, blocks, id, now);
-			let available = 0;
-			let busy = 0;
-			for (let day = 0; day < LOAD_DAYS; day++) {
-				const load = dailyLoad(units, addHours(from, 24 * day));
-				available += load.available;
-				busy += load.busy;
-			}
-			result.set(id, loadPercent({ dayStart: from, available, busy }));
-		}
-		return result;
+		const days = loadByDay(state, now, shiftDayStart(now), LOAD_DAYS);
+		return new Map([...days].map(([id, loads]) => [id, totalPercent(loads)]));
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [state.blocks, state.lines, state.machines, state.calendar, state.breakdowns, now]);
 

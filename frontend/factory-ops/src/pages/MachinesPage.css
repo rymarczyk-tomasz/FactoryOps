@@ -1,0 +1,259 @@
+/* Maszyny (#2c): linie jako karty, maszyny samodzielne w tabeli */
+
+.machines-search {
+	width: 260px;
+}
+
+.machines-page {
+	display: flex;
+	flex-direction: column;
+	gap: 22px;
+}
+
+.machines-section {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.machines-section-head {
+	display: flex;
+	align-items: baseline;
+	gap: 10px;
+}
+
+.machines-section-title {
+	margin: 0;
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.machines-section-count {
+	font-size: 12px;
+	color: oklch(0.5 0.02 260);
+}
+
+.machines-section-note {
+	font-size: 13px;
+	color: oklch(0.5 0.02 260);
+}
+
+.machines-empty {
+	margin: 0;
+	padding: 14px 16px;
+	font-size: 13px;
+	color: var(--ink-3);
+}
+
+/* ---- karty linii ---- */
+
+.line-cards {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 12px;
+}
+
+.line-card {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 14px 16px;
+	border: 1px solid var(--line);
+	border-radius: var(--radius-md);
+	background: var(--surface);
+}
+
+.line-card.is-down {
+	border-color: oklch(0.88 0.05 25);
+}
+
+.line-card-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.line-card-name {
+	font-size: 14.5px;
+	font-weight: 600;
+}
+
+.line-card-meta {
+	font-size: 11.5px;
+	color: oklch(0.55 0.02 260);
+}
+
+.line-card .pill {
+	padding: 1px 7px;
+	font-size: 11.5px;
+}
+
+.line-card-members {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.machine-chip {
+	padding: 2px 7px;
+	border: 1px solid oklch(0.92 0.006 255);
+	border-radius: 4px;
+	background: oklch(0.97 0.004 255);
+	font-size: 11.5px;
+	color: oklch(0.35 0.02 260);
+	transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.machine-chip:hover {
+	border-color: var(--input-border);
+	background: var(--surface);
+}
+
+.machine-chip.is-down {
+	border-color: oklch(0.85 0.06 25);
+	background: oklch(0.95 0.03 25);
+	color: var(--danger-ink);
+}
+
+.line-card-foot {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-size: 12.5px;
+	color: oklch(0.45 0.02 260);
+}
+
+.line-card-orders {
+	white-space: nowrap;
+}
+
+/* mini-pasek obciążenia */
+.machine-load {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.machine-load.is-wide {
+	flex: 1;
+}
+
+.machine-load-bar {
+	display: flex;
+	width: 120px;
+	height: 4px;
+	border-radius: 2px;
+	background: oklch(0.94 0.006 255);
+	overflow: hidden;
+}
+
+.machine-load.is-wide .machine-load-bar {
+	flex: 1;
+	width: auto;
+}
+
+.machine-load-bar > span {
+	background: #64748b;
+}
+
+.machine-load-value {
+	width: 34px;
+	font-size: 11.5px;
+	text-align: right;
+}
+
+/* menu „⋯” */
+.more-toggle {
+	width: 28px;
+	height: 24px;
+	padding: 0;
+	border: none;
+	border-radius: var(--radius);
+	background: transparent;
+	font-size: 16px;
+	line-height: 1;
+	letter-spacing: 1px;
+	color: oklch(0.55 0.02 260);
+}
+
+.more-toggle:hover,
+.more-toggle.show {
+	background: var(--hover);
+	color: var(--ink);
+}
+
+.more-toggle:focus-visible {
+	outline: none;
+	box-shadow: var(--focus-ring);
+}
+
+/* ---- tabela maszyn samodzielnych ---- */
+
+.machines-table {
+	border: 1px solid var(--line);
+	border-radius: var(--radius-md);
+	background: var(--surface);
+}
+
+.machines-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1.2fr) 90px 150px 40px;
+	align-items: center;
+	padding: 0 16px;
+}
+
+.machines-head {
+	height: 36px;
+	border-bottom: 1px solid oklch(0.92 0.006 255);
+	font-family: var(--font-mono);
+	font-size: 10.5px;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: oklch(0.52 0.02 260);
+}
+
+.machines-row {
+	height: 40px;
+	border-bottom: 1px solid var(--line-2);
+}
+
+.machines-row:last-child {
+	border-bottom: none;
+}
+
+.machines-name {
+	overflow: hidden;
+	font-size: 13px;
+	font-weight: 500;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.machines-mode {
+	font-size: 13px;
+	color: oklch(0.45 0.02 260);
+}
+
+.machines-row .mono.text-end {
+	font-size: 12.5px;
+}
+
+.machines-state-col {
+	padding-left: 20px;
+}
+
+.machines-state {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 13px;
+	color: oklch(0.35 0.02 260);
+}
+
+.machines-state.is-down {
+	color: var(--danger-ink);
+}
+
+.status-dot.ok {
+	background: var(--success);
+}

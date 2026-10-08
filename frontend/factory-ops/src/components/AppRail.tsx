@@ -3,6 +3,7 @@ import { usePlan } from '../data/PlanContext';
 import { isOngoing, lineOfMachine, resourceName } from '../domain/calendar';
 import { Breakdown } from '../domain/types';
 import { PlanNavigationState } from './planNavigation';
+import { breakdownImpact, ordersLabel } from './planSelectors';
 
 const HOUR = 3600_000;
 
@@ -41,6 +42,10 @@ const AppRail = ({ onReset }: AppRailProps) => {
 	const { state, now } = usePlan();
 	const navigate = useNavigate();
 	const ongoing = state.breakdowns.filter(isOngoing).sort((a, b) => a.start - b.start);
+	const impact = (breakdown: Breakdown) => {
+		const count = breakdownImpact(state, breakdown, now).length;
+		return count > 0 ? `wydłuża ${ordersLabel(count)}` : '';
+	};
 
 	return (
 		<aside className="app-rail">
@@ -82,6 +87,7 @@ const AppRail = ({ onReset }: AppRailProps) => {
 										<span className="rail-breakdown-where">{line ? line.name : 'maszyna'}</span>
 									</span>
 									<span className="rail-breakdown-since">{since(breakdown, now)}</span>
+									{impact(breakdown) && <span className="rail-breakdown-since">{impact(breakdown)}</span>}
 								</button>
 							);
 						})}

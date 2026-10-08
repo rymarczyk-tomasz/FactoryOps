@@ -363,32 +363,3 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
-
-/* obciążenie */
-.stat-tile {
-	min-width: 200px;
-	padding: 12px 16px;
-	border-radius: 8px;
-	background: #f8fafc;
-	border: 1px solid #e2e8f0;
-}
-
-.stat-label {
-	font-size: 0.8rem;
-	color: #64748b;
-}
-
-.stat-value {
-	font-size: 1.75rem;
-	font-weight: 600;
-	line-height: 1.2;
-}
-
-.load-table .load-cell {
-	min-width: 72px;
-	font-variant-numeric: tabular-nums;
-}
-
-.table-group-row th {
-	background: #f1f5f9 !important;
-}
