@@ -98,9 +98,9 @@ const BlockDetailsPanel = ({ block, onSelect, onEdit, onDelete, onShow, onClose 
 						{parentLine && <span className="text-secondary"> · z {parentLine.name}</span>}
 					</dd>
 					<dt>Czas pracy</dt>
-					<dd>
+					<dd title={line ? `${formatHours(block.hours)} pracy jednej maszyny; linia dzieli zlecenie między ${line.machineIds.length} maszyny` : undefined}>
 						{formatHours(block.hours)}
-						{line && <span className="text-secondary"> jednej maszyny · na planie {Math.round((block.end - block.start) / HOUR)} h</span>}
+						{line && <span className="text-secondary"> · na planie {Math.round((block.end - block.start) / HOUR)} h</span>}
 					</dd>
 					<dt>Start</dt>
 					<dd className="mono details-time">{formatDateTime(block.start)}</dd>
@@ -114,6 +114,24 @@ const BlockDetailsPanel = ({ block, onSelect, onEdit, onDelete, onShow, onClose 
 							</dd>
 						</>
 					)}
+					<dt>
+						<label htmlFor="panelProgrammer">Programista</label>
+					</dt>
+					<dd>
+						<Form.Select
+							id="panelProgrammer"
+							size="sm"
+							className={`details-select ${block.programmerId ? '' : 'is-unassigned'}`}
+							value={block.programmerId ?? ''}
+							onChange={(e) => updateBlock(block.id, { programmerId: e.target.value || undefined })}>
+							<option value="">Nie przypisano</option>
+							{state.programmers.map((p) => (
+								<option key={p.id} value={p.id}>
+									{programmerName(p)}
+								</option>
+							))}
+						</Form.Select>
+					</dd>
 					{block.note && (
 						<>
 							<dt>Uwagi</dt>
@@ -121,22 +139,6 @@ const BlockDetailsPanel = ({ block, onSelect, onEdit, onDelete, onShow, onClose 
 						</>
 					)}
 				</dl>
-
-				<Form.Group controlId="panelProgrammer">
-					<Form.Label>Programista</Form.Label>
-					<Form.Select
-						size="sm"
-						className={block.programmerId ? '' : 'is-unassigned'}
-						value={block.programmerId ?? ''}
-						onChange={(e) => updateBlock(block.id, { programmerId: e.target.value || undefined })}>
-						<option value="">Nie przypisano</option>
-						{state.programmers.map((p) => (
-							<option key={p.id} value={p.id}>
-								{programmerName(p)}
-							</option>
-						))}
-					</Form.Select>
-				</Form.Group>
 
 				<section className="details-queue" aria-label={`Kolejka ${resource}`}>
 					<span className="details-queue-label">

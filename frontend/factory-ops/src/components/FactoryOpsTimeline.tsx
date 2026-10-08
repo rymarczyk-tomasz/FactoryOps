@@ -63,8 +63,6 @@ const AUTO_SCROLL_INTERVAL = 50;
 const AUTO_SCROLL_STEP = 0.02;
 /** Obciążenie w wierszu planu: tyle dób od bieżącej. */
 const LOAD_DAYS = 7;
-/** Obciążenie powyżej tego progu wyróżniamy kolorem. */
-const LOAD_WARN = 90;
 /** Jak długo podświetla się wiersz po kliknięciu awarii w menu bocznym (z wygaszaniem). */
 const ROW_FLASH_MS = 1800;
 
@@ -118,9 +116,13 @@ function blockLabels(block: Block): string[] {
  * Opis nigdy nie wychodzi poza kafelek - inaczej przy krótkich zleceniach obok siebie napis
  * zasłaniał sąsiada i kliknięcie trafiało w złe zlecenie. Za wąski kafelek zostaje bez napisu (dane w podpowiedzi).
  */
-function renderItem({ item, itemContext, getItemProps }: ItemRendererProps) {
+function renderItem({ item, itemContext, timelineContext, getItemProps }: ItemRendererProps) {
 	const { key, ref, ...props } = getItemProps(item.itemProps ?? {});
-	const width = itemContext.dimensions.width;
+	// część elementu przed lewą krawędzią widoku [px] - etykieta zaczyna się za nią, żeby nie gubiła początku
+	const visibleLeft = timelineContext.getLeftOffsetFromDate(timelineContext.getTimelineState().visibleTimeStart);
+	const hidden = Math.max(0, Math.min(itemContext.dimensions.width, visibleLeft - itemContext.dimensions.left));
+	const width = itemContext.dimensions.width - hidden;
+	const labelStyle = hidden > 0 ? { marginLeft: hidden } : undefined;
 	const fitting = (labels: string[], charWidth: number) => labels.find((l) => l.length * charWidth + LABEL_PADDING <= width) ?? '';
 	switch (item.kind) {
 		case 'off':
@@ -132,7 +134,11 @@ function renderItem({ item, itemContext, getItemProps }: ItemRendererProps) {
 			return (
 				<div {...props} ref={ref} key={key}>
 					<div className="row-fill line-down-fill" style={{ height: `${(down / units) * 100}%` }} />
-					{label && <span className="breakdown-label">{label}</span>}
+					{label && (
+						<span className="breakdown-label" style={labelStyle}>
+							{label}
+						</span>
+					)}
 				</div>
 			);
 		}
@@ -140,7 +146,13 @@ function renderItem({ item, itemContext, getItemProps }: ItemRendererProps) {
 			const label = item.labels ? fitting(item.labels, SMALL_CHAR_WIDTH) : '';
 			return (
 				<div {...props} ref={ref} key={key}>
-					<div className="row-fill breakdown-fill">{label && <span className="breakdown-label">{label}</span>}</div>
+					<div className="row-fill breakdown-fill">
+						{label && (
+							<span className="breakdown-label" style={labelStyle}>
+								{label}
+							</span>
+						)}
+					</div>
 				</div>
 			);
 		}
@@ -155,7 +167,13 @@ function renderItem({ item, itemContext, getItemProps }: ItemRendererProps) {
 					className={itemContext.selected ? `${props.className} is-selected` : props.className}
 					// TODO(etap 6): karta podpowiedzi z #3g zamiast natywnego dymka
 					title={item.itemProps?.title ?? props.title}>
-					<div className="plan-block-body">{label && <span className="plan-block-label">{label}</span>}</div>
+					<div className="plan-block-body">
+						{label && (
+							<span className="plan-block-label" style={labelStyle}>
+								{label}
+							</span>
+						)}
+					</div>
 				</div>
 			);
 		}
@@ -203,6 +221,9 @@ const DAY_HEADER_HEIGHT = 48;
 const HOUR_HEADER_HEIGHT = 24;
 /** Szerokość podpisu „dziś · od 6:00” z odstępem [px] - gdy kreska „teraz” jest dalej, podpis mieści się przed nią. */
 const TODAY_LABEL_WIDTH = 110;
+const DAY_CELL_PADDING = 8;
+/** Doba widoczna węziej niż tyle [px] nie ma podpisu - zostałby z niego skrawek. */
+const DAY_CELL_MIN_VISIBLE = 56;
 
 /** Odstęp między bloczkiem a krawędzią wiersza - tło (czas wolny, awaria) rozciągamy o niego na całą wysokość. */
 const rowGapStyle = (rowHeight: number): CSSProperties => ({ '--row-gap': `${(rowHeight * (1 - ITEM_HEIGHT_RATIO)) / 2}px` }) as CSSProperties;
@@ -686,7 +707,7 @@ const FactoryOpsTimeline = () => {
 	const machineExceptionDays = useMemo(() => new Set(state.machines.flatMap((m) => Object.keys(m.overrides ?? {}))), [state.machines]);
 
 	/** Komórka doby w nagłówku: kliknięcie otwiera kalendarz dnia; podpis pokazuje dziś, dzień wolny lub wyjątek zakładu. */
-	const renderDayCell = (day: number, left: number, width: number, nowX?: number) => {
+	const renderDayCell = (day: number, left: number, width: number, visibleLeft: number, nowX?: number) => {
 		const date = new Date(day);
 		const key = dayKey(date);
 		const plant = state.calendar.overrides[key];
@@ -706,24 +727,31 @@ const FactoryOpsTimeline = () => {
 		const label = `${weekday(day)} ${date.getDate()}.${date.getMonth() + 1}`;
 		// podpis dzisiejszej doby nie może wchodzić pod godzinę na kresce „teraz” - stoi za nią, chyba że mieści się przed
 		const nowOffset = today && nowX !== undefined ? nowX - left : undefined;
-		const todayPadding = nowOffset !== undefined && nowOffset < TODAY_LABEL_WIDTH ? Math.max(36, nowOffset + 30) : undefined;
+		const todayPadding = nowOffset !== undefined && nowOffset < TODAY_LABEL_WIDTH ? Math.max(36, nowOffset + 30) : 0;
+		// doba zaczęta przed lewą krawędzią widoku: podpis od krawędzi, a gdy widać tylko skrawek - bez podpisu
+		const hiddenPart = Math.max(0, visibleLeft - left);
+		const paddingLeft = Math.max(DAY_CELL_PADDING, todayPadding, hiddenPart + DAY_CELL_PADDING);
+		const room = width - paddingLeft;
+		const showLabel = width - hiddenPart >= DAY_CELL_MIN_VISIBLE;
+		const subText = today && room < TODAY_LABEL_WIDTH - 20 ? 'dziś' : sub;
 		const classes = ['day-cell', today && 'is-today', off && 'is-off', plant !== undefined && plant !== false && plant !== true && 'is-hours', plant === true && 'is-working'];
 		return (
 			<button
 				type="button"
 				key={day}
 				className={classes.filter(Boolean).join(' ')}
-				style={{ left, width, paddingLeft: todayPadding }}
+				style={{ left, width, paddingLeft }}
 				onClick={() => setDayForm({ show: true, day })}
 				title={[label, sub, machineExceptionDays.has(key) && 'są wyjątki maszyn', 'Kliknij: dzień pracujący / wolny'].filter(Boolean).join(' · ')}>
-				{width >= 64 ? (
-					<>
-						{sub && <span className="day-cell-sub">{sub}</span>}
-						<span className="day-cell-date">{label}</span>
-					</>
-				) : (
-					width >= 22 && <span className="day-cell-date">{date.getDate()}</span>
-				)}
+				{showLabel &&
+					(room >= 56 ? (
+						<>
+							{subText && <span className="day-cell-sub">{subText}</span>}
+							<span className="day-cell-date">{label}</span>
+						</>
+					) : (
+						room >= 14 && <span className="day-cell-date">{date.getDate()}</span>
+					))}
 				{machineExceptionDays.has(key) && <span className="day-exception-dot" />}
 			</button>
 		);
@@ -891,7 +919,7 @@ const FactoryOpsTimeline = () => {
 								const loadBar = (
 									<span className="row-load" title={load === undefined ? 'Brak czasu pracy w najbliższych dobach' : `Obciążenie ${LOAD_DAYS} dni od dziś 6:00`}>
 										<span className="row-load-bar">
-											<span className={load !== undefined && load > LOAD_WARN ? 'is-high' : ''} style={{ width: `${load ?? 0}%` }} />
+											<span style={{ width: `${load ?? 0}%` }} />
 										</span>
 										<span className="row-load-value mono">{load === undefined ? '—' : `${load}%`}</span>
 									</span>
@@ -962,12 +990,13 @@ const FactoryOpsTimeline = () => {
 											return interval.left + ((time - from) / (interval.endTime.valueOf() - from)) * interval.labelWidth;
 										};
 										const nowX = x(clock);
+										const visibleLeft = x(range.start) ?? 0;
 										return (
 											<div {...getRootProps()} className="plan-day-header">
 												{dayStarts.map((day) => {
 													const left = x(day);
 													const right = x(addHours(day, 24));
-													return left === undefined || right === undefined ? null : renderDayCell(day, left, right - left, nowX);
+													return left === undefined || right === undefined ? null : renderDayCell(day, left, right - left, visibleLeft, nowX);
 												})}
 												{nowX !== undefined && (
 													<>

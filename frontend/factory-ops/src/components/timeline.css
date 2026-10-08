@@ -427,10 +427,6 @@
 	background: #64748b;
 }
 
-.row-load-bar > span.is-high {
-	background: #d97706;
-}
-
 .row-load-value {
 	width: 30px;
 	font-size: 11px;
@@ -511,6 +507,7 @@
 }
 
 .plan-block-label {
+	min-width: 0;
 	overflow: hidden;
 	white-space: nowrap;
 	text-overflow: ellipsis;
@@ -576,7 +573,13 @@
 	right: 0;
 }
 
-/* awaria maszyny: czerwony pasek nad zleceniem, które przerywa - 2px od krawędzi wiersza */
+/* awaria maszyny: czerwony pasek nad zleceniem, które przerywa - 2px od krawędzi wiersza;
+   krótka awaria ma co najmniej 6px, żeby była widoczna także w zakresie Tydzień/Miesiąc */
+.plan-timeline .react-calendar-timeline .rct-item.breakdown-item,
+.plan-timeline .react-calendar-timeline .rct-item.line-breakdown-item {
+	min-width: 6px;
+}
+
 .plan-timeline .react-calendar-timeline .rct-item.breakdown-item {
 	z-index: 95 !important;
 	pointer-events: auto;
@@ -664,6 +667,7 @@
 }
 
 .legend-item {
+	flex: none;
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
@@ -689,10 +693,16 @@
 	background: var(--danger);
 }
 
+/* podpowiedzi w jednym wierszu - gdy brakuje miejsca, ostatnie przechodzą do ukrytego drugiego wiersza */
 .legend-hints {
+	flex: 1;
+	min-width: 0;
 	display: flex;
-	gap: 18px;
-	margin-left: auto;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	column-gap: 18px;
+	height: 16px;
+	line-height: 16px;
 	overflow: hidden;
 	font-size: 11.5px;
 	color: var(--ink-3);
@@ -796,8 +806,8 @@
 	min-height: 0;
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
-	padding: 16px 20px;
+	gap: 12px;
+	padding: 14px 20px;
 	overflow-y: auto;
 }
 
@@ -813,7 +823,8 @@
 .details-list {
 	display: grid;
 	grid-template-columns: max-content minmax(0, 1fr);
-	gap: 7px 16px;
+	align-items: baseline;
+	gap: 6px 16px;
 	margin: 0;
 	font-size: 13.5px;
 }
@@ -831,8 +842,24 @@
 	font-size: 12.5px;
 }
 
-.details-panel .form-label {
-	font-size: 12px;
+.details-list dt label {
+	margin: 0;
+}
+
+/* programista w liście definicji: kompaktowy select 32px */
+.details-select.form-select {
+	height: 32px;
+	padding-top: 0;
+	padding-bottom: 0;
+	font-size: 13px;
+}
+
+.details-list dd:has(.details-select) {
+	align-self: center;
+}
+
+.details-list dt:has(label) {
+	align-self: center;
 }
 
 .form-select.is-unassigned {
@@ -842,7 +869,7 @@
 .details-queue {
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
+	gap: 2px;
 }
 
 .details-queue-label {
@@ -854,7 +881,7 @@
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	padding: 6px 8px;
+	padding: 5px 8px;
 	border: none;
 	border-radius: var(--radius);
 	background: transparent;
