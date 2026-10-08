@@ -295,34 +295,6 @@
 	min-width: 300px;
 }
 
-/* kalendarz dnia */
-.hours-select,
-.day-choice-select {
-	width: auto;
-}
-
-.day-filter {
-	max-width: 200px;
-}
-
-.day-result {
-	font-size: 0.85rem;
-	font-weight: 500;
-}
-
-.day-result.on {
-	color: #15803d;
-}
-
-.day-result.off {
-	color: #b91c1c;
-}
-
-.line-member-row {
-	padding: 4px 0;
-	border-bottom: 1px solid #f1f5f9;
-}
-
 .text-pre-wrap {
 	white-space: pre-wrap;
 }

@@ -1,10 +1,11 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { Badge, Button, CloseButton, Form, InputGroup, Modal } from 'react-bootstrap';
+import { Button, Form, Modal } from 'react-bootstrap';
 import { usePlan } from '../data/PlanContext';
 import { lineOfMachine, workMode, WORK_MODE_LABELS } from '../domain/calendar';
 import { MIN_LINE_MACHINES } from '../domain/machines';
 import { Id, Line, WorkMode } from '../domain/types';
 import { nameTaken } from './MachineFormModal';
+import './modals.css';
 
 /** Maszyna na liście linii: istniejąca (`machineId`) albo nowa, tworzona przy zapisie linii. */
 type Row = { key: number; machineId?: Id; name: string };
@@ -79,12 +80,20 @@ const LineFormModal = ({ show, line, onHide }: LineFormModalProps) => {
 	};
 
 	return (
-		<Modal show={show} onHide={onHide} centered>
+		<Modal show={show} onHide={onHide} centered dialogClassName="line-dialog">
 			<Form noValidate onSubmit={onSubmit}>
 				<Modal.Header closeButton>
-					<Modal.Title>{isEdit ? `Edytuj: ${line.name}` : 'Nowa linia produkcyjna'}</Modal.Title>
+					<Modal.Title>
+						{isEdit ? (
+							<>
+								Edytuj:<span className="modal-title-name">{line.name}</span>
+							</>
+						) : (
+							'Nowa linia produkcyjna'
+						)}
+					</Modal.Title>
 				</Modal.Header>
-				<Modal.Body className="d-flex flex-column gap-3">
+				<Modal.Body className="modal-stack">
 					<Form.Group controlId="lineName">
 						<Form.Label>Nazwa linii</Form.Label>
 						<Form.Control
@@ -98,74 +107,75 @@ const LineFormModal = ({ show, line, onHide }: LineFormModalProps) => {
 					</Form.Group>
 
 					<div>
-						<Form.Label className="mb-1">Maszyny w linii</Form.Label>
-						<Form.Text as="div" muted className="mb-2">
-							Pracują równolegle - zlecenie linii dzieli się między nie. Awaria jednej maszyny nie zatrzymuje linii, tylko ją spowalnia.
-						</Form.Text>
-						<div className="d-flex flex-column gap-1">
+						<Form.Label as="div">Maszyny w linii · pracują równolegle</Form.Label>
+						<div className="member-list">
 							{rows.map((r, index) => {
 								const otherLine = r.machineId ? lineOfMachine(state.lines, r.machineId) : undefined;
 								const machine = state.machines.find((m) => m.id === r.machineId);
+								const wasMember = r.machineId !== undefined && line?.machineIds.includes(r.machineId);
+								const moves = otherLine && otherLine.id !== line?.id;
+								const joins = machine && !otherLine && !wasMember;
+								const note = moves ? `przejdzie z ${otherLine.name}` : joins ? 'samodzielna → przejdzie do linii' : '';
 								return (
-									<div key={r.key} className="d-flex align-items-center gap-2 line-member-row">
-										<span className="text-secondary small" style={{ width: '1.5rem' }}>
-											{index + 1}.
-										</span>
-										<span className="flex-grow-1">
-											{r.name}
-											{!r.machineId && (
-												<Badge bg="success" className="ms-2">
-													nowa
-												</Badge>
-											)}
-											{otherLine && otherLine.id !== line?.id && <span className="small text-warning-emphasis ms-2">przejdzie z {otherLine.name}</span>}
-										</span>
-										{machine && <span className="small text-secondary">{WORK_MODE_LABELS[workMode(machine)]}</span>}
-										<CloseButton
+									<div key={r.key} className="member-row">
+										<span className="member-no">{index + 1}.</span>
+										<span className="member-name">{r.name}</span>
+										{!r.machineId && <span className="member-new">nowa</span>}
+										{note && <span className="member-note">{note}</span>}
+										<span className="member-mode">{machine ? WORK_MODE_LABELS[workMode(machine)] : ''}</span>
+										<button
+											type="button"
+											className="member-remove"
 											aria-label={`Usuń ${r.name} z linii`}
 											title="Usuń z linii (maszyna zostanie jako samodzielna)"
-											onClick={() => setRows(rows.filter((x) => x.key !== r.key))}
-										/>
+											onClick={() => setRows(rows.filter((x) => x.key !== r.key))}>
+											×
+										</button>
 									</div>
 								);
 							})}
-							{rows.length === 0 && <div className="small text-secondary">Brak maszyn.</div>}
-						</div>
-						{submitted && rows.length < MIN_LINE_MACHINES && <div className="small text-danger mt-1">Linia musi mieć co najmniej {MIN_LINE_MACHINES} maszyny.</div>}
-
-						<div className="d-flex flex-column gap-2 mt-3">
-							<Form.Select size="sm" aria-label="Dodaj istniejącą maszynę" value="" onChange={(e) => addExisting(e.target.value)}>
-								<option value="">+ Dodaj istniejącą maszynę…</option>
-								{available.map((m) => {
-									const otherLine = lineOfMachine(state.lines, m.id);
-									return (
-										<option key={m.id} value={m.id}>
-											{m.name}
-											{otherLine && otherLine.id !== line?.id ? ` (teraz w ${otherLine.name})` : ''}
-										</option>
-									);
-								})}
-							</Form.Select>
-							<InputGroup size="sm" hasValidation>
-								<Form.Control
-									placeholder="Nazwa nowej maszyny, np. L10-M1"
-									aria-label="Nazwa nowej maszyny"
-									value={newName}
-									onChange={(e) => setNewName(e.target.value)}
-									onKeyDown={(e) => {
-										if (e.key === 'Enter') {
-											e.preventDefault();
-											addNew();
-										}
-									}}
-									isInvalid={!!newNameError}
-								/>
-								<Button variant="outline-secondary" disabled={!trimmedNew || !!newNameError} onClick={addNew}>
-									+ Nowa maszyna
+							{rows.length === 0 && <div className="member-empty">Brak maszyn - dodaj co najmniej {MIN_LINE_MACHINES}.</div>}
+							<div className="member-add">
+								<Form.Select size="sm" aria-label="Dodaj istniejącą maszynę" value="" onChange={(e) => addExisting(e.target.value)}>
+									<option value="">Dodaj istniejącą…</option>
+									{available.map((m) => {
+										const otherLine = lineOfMachine(state.lines, m.id);
+										return (
+											<option key={m.id} value={m.id}>
+												{m.name}
+												{otherLine && otherLine.id !== line?.id ? ` (teraz w ${otherLine.name})` : ''}
+											</option>
+										);
+									})}
+								</Form.Select>
+								<div>
+									<Form.Control
+										size="sm"
+										className="mono"
+										placeholder="Nowa, np. L10-M4"
+										aria-label="Nazwa nowej maszyny"
+										value={newName}
+										onChange={(e) => setNewName(e.target.value)}
+										onKeyDown={(e) => {
+											if (e.key === 'Enter') {
+												e.preventDefault();
+												addNew();
+											}
+										}}
+										isInvalid={!!newNameError}
+									/>
+									<Form.Control.Feedback type="invalid">{newNameError}</Form.Control.Feedback>
+								</div>
+								<Button size="sm" variant="outline-secondary" disabled={!trimmedNew || !!newNameError} onClick={addNew}>
+									Dodaj
 								</Button>
-								<Form.Control.Feedback type="invalid">{newNameError}</Form.Control.Feedback>
-							</InputGroup>
+							</div>
 						</div>
+						{submitted && rows.length < MIN_LINE_MACHINES ? (
+							<div className="invalid-feedback d-block">Linia musi mieć co najmniej {MIN_LINE_MACHINES} maszyny.</div>
+						) : (
+							<Form.Text as="div">Zlecenie linii dzieli się między maszyny. Awaria jednej maszyny spowalnia linię, ale jej nie zatrzymuje.</Form.Text>
+						)}
 					</div>
 
 					<Form.Group controlId="lineWorkMode">
@@ -178,7 +188,7 @@ const LineFormModal = ({ show, line, onHide }: LineFormModalProps) => {
 								</option>
 							))}
 						</Form.Select>
-						<Form.Text muted>System pracy pojedynczej maszyny można potem zmienić w jej edycji.</Form.Text>
+						<Form.Text as="div">System pracy pojedynczej maszyny można potem zmienić w jej edycji.</Form.Text>
 					</Form.Group>
 				</Modal.Body>
 				<Modal.Footer>
@@ -186,7 +196,7 @@ const LineFormModal = ({ show, line, onHide }: LineFormModalProps) => {
 						Anuluj
 					</Button>
 					<Button type="submit" variant="primary">
-						{isEdit ? 'Zapisz' : 'Dodaj'}
+						{isEdit ? 'Zapisz' : 'Dodaj linię'}
 					</Button>
 				</Modal.Footer>
 			</Form>

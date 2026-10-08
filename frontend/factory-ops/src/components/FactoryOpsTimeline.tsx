@@ -37,7 +37,7 @@ import BreakdownModal, { BreakdownModalTarget } from './BreakdownModal';
 import ConfirmModal from './ConfirmModal';
 import DayCalendarModal from './DayCalendarModal';
 import PageHeader from './PageHeader';
-import { loadByDay, totalPercent } from './planSelectors';
+import { loadByDay, removalImpact, totalPercent } from './planSelectors';
 import { PlanNavigationState } from './planNavigation';
 import { projectColor } from './projectColor';
 import RowContextMenu, { RowMenuTarget } from './RowContextMenu';
@@ -296,6 +296,8 @@ const FactoryOpsTimeline = () => {
 	const [breakdownForm, setBreakdownForm] = useState<BreakdownFormState>({ show: false });
 	const [dayForm, setDayForm] = useState<DayFormState>({ show: false });
 	const [toDelete, setToDelete] = useState<Block>();
+	// liczone raz przy otwarciu potwierdzenia - przeliczenie planu bez zlecenia
+	const deleteImpact = useMemo(() => (toDelete ? removalImpact(state, toDelete.id, now) : []), [toDelete]); // eslint-disable-line react-hooks/exhaustive-deps
 	const [rowMenu, setRowMenu] = useState<RowMenuTarget>();
 	const closeRowMenu = useCallback(() => setRowMenu(undefined), []);
 	const [drag, setDrag] = useState<DragState>();
@@ -1121,6 +1123,11 @@ const FactoryOpsTimeline = () => {
 			<ConfirmModal
 				show={toDelete !== undefined}
 				title="Usunąć zlecenie?"
+				undoable
+				impact={
+					toDelete &&
+					(deleteImpact.length ? deleteImpact.map((line) => <div key={line}>{line}</div>) : 'Kolejne zlecenia nie przesuną się - nie ma ich albo mają terminy')
+				}
 				onConfirm={() => {
 					if (!toDelete) return;
 					deleteBlock(toDelete.id);
@@ -1129,7 +1136,8 @@ const FactoryOpsTimeline = () => {
 				onHide={() => setToDelete(undefined)}>
 				{toDelete && (
 					<>
-						Zlecenie <strong>{toDelete.orderNo}</strong> ({toDelete.operation}) zostanie usunięte z planu. Następne zlecenia na maszynie cofną się na jego miejsce.
+						Zlecenie <strong className="mono fw-medium">{toDelete.orderNo}</strong> ({toDelete.operation}) zostanie usunięte z planu. Następne zlecenia na
+						maszynie cofną się na jego miejsce.
 					</>
 				)}
 			</ConfirmModal>

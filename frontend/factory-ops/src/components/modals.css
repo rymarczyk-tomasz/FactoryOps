@@ -1,0 +1,633 @@
+/* Okna (#3a–#3f): wspólne elementy formularzy w modalach */
+
+.modal-stack {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.modal-title-dot {
+	display: inline-block;
+	width: 9px;
+	height: 9px;
+	margin-right: 10px;
+	border-radius: 50%;
+	background: var(--danger);
+	vertical-align: 2px;
+}
+
+.modal-title-sub {
+	margin-left: 12px;
+	font-family: var(--font-mono);
+	font-size: 12px;
+	font-weight: 400;
+	color: oklch(0.5 0.02 260);
+}
+
+.modal-title-name {
+	margin-left: 8px;
+	font-family: var(--font-mono);
+	font-size: 16px;
+	font-weight: 500;
+}
+
+/* podpowiedź w stopce, po lewej */
+.modal-footer-hint {
+	margin-right: auto !important;
+	font-size: 12.5px;
+	color: oklch(0.5 0.02 260);
+}
+
+.modal-footer-hint.mono {
+	font-size: 11.5px;
+}
+
+.modal-note {
+	font-size: 12.5px;
+	color: oklch(0.5 0.02 260);
+}
+
+/* pole z czymś po prawej stronie w środku (sufiks „h”, „uzupełniono z …”) */
+.field-addon {
+	position: relative;
+}
+
+.field-addon > .form-control {
+	padding-right: 34px;
+}
+
+.field-addon.is-filled > .form-control {
+	padding-right: 180px;
+}
+
+.field-addon-text {
+	position: absolute;
+	top: 0;
+	right: 11px;
+	display: flex;
+	align-items: center;
+	height: 36px;
+	font-size: 13px;
+	color: oklch(0.55 0.02 260);
+	pointer-events: none;
+}
+
+.field-addon-text.is-filled {
+	font-size: 11.5px;
+	color: #15803d;
+}
+
+/* select z wartością w dwóch stylach (nazwa mono + opis): natywna lista, własny napis na wierzchu */
+.select-display {
+	position: relative;
+}
+
+.select-display > .form-select {
+	color: transparent;
+}
+
+.select-display > .form-select option,
+.select-display > .form-select optgroup {
+	color: var(--ink);
+}
+
+.select-display-value {
+	position: absolute;
+	top: 0;
+	left: 12px;
+	right: 36px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	height: 36px;
+	overflow: hidden;
+	white-space: nowrap;
+	pointer-events: none;
+}
+
+.select-display-name {
+	font-family: var(--font-mono);
+	font-size: 13px;
+	font-weight: 500;
+}
+
+.select-display-desc {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	color: oklch(0.5 0.02 260);
+}
+
+.select-display-placeholder {
+	color: var(--ink-3);
+}
+
+.form-select.is-unassigned {
+	color: var(--warn-ink);
+}
+
+.form-select.is-unassigned option {
+	color: var(--ink);
+}
+
+/* ---- #3a formularz zlecenia ---- */
+
+.form-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	gap: 16px 18px;
+}
+
+.form-grid .span-2 {
+	grid-column: 1 / -1;
+}
+
+.form-grid .form-text b {
+	font-weight: 600;
+	color: var(--ink-2);
+}
+
+.quick-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 6px;
+}
+
+.quick-chip {
+	padding: 1px 8px;
+	border: none;
+	border-radius: 999px;
+	background: oklch(0.96 0.006 255);
+	font-size: 11.5px;
+	color: oklch(0.4 0.02 260);
+	transition: background var(--transition-fast);
+}
+
+.quick-chip:hover {
+	background: oklch(0.92 0.01 255);
+	color: var(--ink);
+}
+
+.quick-chip:focus-visible {
+	outline: none;
+	box-shadow: var(--focus-ring);
+}
+
+.form-preview {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 10px 14px;
+	border-radius: var(--radius-md);
+	background: oklch(0.97 0.012 255);
+	font-size: 13px;
+}
+
+.form-preview .section-label {
+	flex: none;
+}
+
+.form-preview.is-empty {
+	color: var(--ink-3);
+}
+
+/* ---- #3b awaria ---- */
+
+.since-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-bottom: 8px;
+}
+
+.since-chip {
+	padding: 4px 11px;
+	border: 1px solid var(--input-border);
+	border-radius: 999px;
+	background: var(--surface);
+	font-family: var(--font-mono);
+	font-size: 12.5px;
+	color: oklch(0.35 0.02 260);
+	transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.since-chip:hover {
+	background: var(--hover);
+}
+
+.since-chip.active {
+	border-color: var(--primary);
+	background: var(--primary);
+	color: #fff;
+}
+
+.since-chip:focus-visible {
+	outline: none;
+	box-shadow: var(--focus-ring);
+}
+
+.consequence-box {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 12px 14px;
+	border: 1px solid oklch(0.9 0.04 25);
+	border-radius: var(--radius-md);
+	background: oklch(0.98 0.012 25);
+	font-size: 13px;
+}
+
+.consequence-title {
+	font-weight: 600;
+	color: oklch(0.42 0.13 25);
+}
+
+.consequence-text {
+	line-height: 1.45;
+	color: oklch(0.35 0.04 25);
+}
+
+.consequence-orders {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	color: oklch(0.42 0.1 25);
+}
+
+/* ---- #3e karty-radio ---- */
+
+.choice-cards {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 8px;
+}
+
+.choice-card {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 10px 12px;
+	border: 1.5px solid oklch(0.9 0.008 255);
+	border-radius: var(--radius-md);
+	background: var(--surface);
+	text-align: left;
+	color: var(--ink);
+	transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.choice-card:hover {
+	border-color: oklch(0.8 0.01 255);
+}
+
+.choice-card.active {
+	border-color: var(--primary);
+	background: oklch(0.975 0.006 255);
+}
+
+.choice-card:focus-visible {
+	outline: none;
+	box-shadow: var(--focus-ring);
+}
+
+.choice-card-label {
+	font-weight: 500;
+}
+
+.choice-card-sub {
+	font-size: 12px;
+	color: oklch(0.5 0.02 260);
+}
+
+.warn-text {
+	margin-top: 5px;
+	font-size: 12px;
+	color: var(--warn-ink);
+}
+
+/* ---- #3d maszyny linii ---- */
+
+.member-list {
+	border: 1px solid oklch(0.92 0.006 255);
+	border-radius: var(--radius-md);
+	overflow: hidden;
+}
+
+.member-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	height: 40px;
+	padding: 0 6px 0 12px;
+	border-bottom: 1px solid oklch(0.95 0.004 255);
+}
+
+.member-no {
+	width: 16px;
+	font-family: var(--font-mono);
+	font-size: 11.5px;
+	color: oklch(0.55 0.02 260);
+}
+
+.line-dialog {
+	max-width: 580px;
+}
+
+.member-row > * {
+	flex: none;
+	white-space: nowrap;
+}
+
+.member-name {
+	font-family: var(--font-mono);
+	font-size: 13px;
+	font-weight: 500;
+}
+
+.member-new {
+	padding: 1px 7px;
+	border-radius: 999px;
+	background: var(--success-tint);
+	font-size: 11px;
+	font-weight: 500;
+	color: var(--success-ink);
+}
+
+.member-row > .member-note {
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.member-note {
+	font-size: 12px;
+	color: #a16207;
+}
+
+.member-mode {
+	margin-left: auto;
+	font-size: 11.5px;
+	color: oklch(0.55 0.02 260);
+}
+
+.member-remove {
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: none;
+	border-radius: var(--radius);
+	background: transparent;
+	font-size: 16px;
+	line-height: 1;
+	color: oklch(0.55 0.02 260);
+}
+
+.member-remove:hover {
+	background: var(--hover);
+	color: var(--ink);
+}
+
+.member-empty {
+	padding: 10px 12px;
+	border-bottom: 1px solid oklch(0.95 0.004 255);
+	font-size: 13px;
+	color: var(--ink-3);
+}
+
+.member-add {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	padding: 10px 12px;
+	background: oklch(0.985 0.003 255);
+}
+
+.member-add > * {
+	flex: 1;
+	min-width: 0;
+}
+
+.member-add > .btn {
+	flex: none;
+}
+
+/* ---- #3c kalendarz dnia ---- */
+
+.day-modal .modal-stack {
+	gap: 18px;
+}
+
+.day-section {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.day-section-head {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.day-section-title {
+	font-weight: 600;
+}
+
+.day-kind-text {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	font-size: 13px;
+	color: var(--ink-2);
+}
+
+.day-hours {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.day-hours .form-select {
+	width: auto;
+	height: 28px;
+	padding: 0 24px 0 8px;
+	background-position: right 6px center;
+	background-size: 12px 10px;
+	font-family: var(--font-mono);
+	font-size: 12.5px;
+}
+
+.day-working {
+	font-size: 12.5px;
+	color: oklch(0.5 0.02 260);
+}
+
+.day-working b {
+	font-family: var(--font-mono);
+	font-weight: 500;
+	color: var(--ink);
+}
+
+.day-search {
+	width: 200px;
+	margin-left: auto;
+}
+
+.day-table {
+	max-height: min(52vh, 460px);
+	border: 1px solid oklch(0.92 0.006 255);
+	border-radius: var(--radius-md);
+	overflow: auto;
+}
+
+.day-row {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 280px 110px;
+	align-items: center;
+	gap: 12px;
+	height: 40px;
+	padding: 0 14px;
+	border-bottom: 1px solid oklch(0.95 0.004 255);
+}
+
+.day-row:last-child {
+	border-bottom: none;
+}
+
+.day-row.is-group {
+	height: 36px;
+	background: var(--subtle);
+}
+
+.day-row.is-member {
+	padding-left: 30px;
+}
+
+.day-row-name {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	white-space: nowrap;
+}
+
+.day-row-label {
+	overflow: hidden;
+	font-family: var(--font-mono);
+	font-size: 13px;
+	text-overflow: ellipsis;
+}
+
+.day-row.is-group .day-row-label {
+	font-family: var(--font-sans);
+	font-weight: 600;
+}
+
+.day-row-mode {
+	font-size: 11.5px;
+	color: oklch(0.55 0.02 260);
+}
+
+.day-row-toggle {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	color: inherit;
+	text-align: left;
+}
+
+.day-row-chevron {
+	display: inline-block;
+	width: 10px;
+	font-size: 11px;
+	color: oklch(0.55 0.02 260);
+	transition: transform var(--transition-fast);
+}
+
+.day-row-chevron.is-open {
+	transform: rotate(90deg);
+}
+
+.day-row-dot {
+	flex: none;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--warn);
+}
+
+.day-row-control {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+}
+
+.day-row-control > .form-select {
+	flex: 1;
+	min-width: 0;
+}
+
+.day-row-control .form-select {
+	height: 30px;
+	padding-top: 0;
+	padding-bottom: 0;
+	font-size: 13px;
+}
+
+.day-row-control .form-select.is-exception {
+	border-color: var(--warn);
+}
+
+.day-row-control .day-hours .form-select {
+	width: 72px;
+}
+
+.day-result {
+	font-size: 12.5px;
+	font-weight: 500;
+	text-align: right;
+	white-space: nowrap;
+}
+
+.day-result.is-on {
+	color: #15803d;
+}
+
+.day-result.is-off {
+	color: #b91c1c;
+}
+
+.day-result.is-hours {
+	color: #a16207;
+}
+
+.day-result.is-muted {
+	font-weight: 400;
+	color: oklch(0.5 0.02 260);
+}
+
+/* ---- #3f potwierdzenie ---- */
+
+.confirm-header {
+	padding: 22px 24px 8px;
+}
+
+.confirm-body {
+	gap: 12px;
+	line-height: 1.5;
+}
+
+.impact-box {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+	padding: 10px 12px;
+	border-radius: var(--radius-md);
+	background: oklch(0.97 0.006 255);
+	font-size: 13px;
+}

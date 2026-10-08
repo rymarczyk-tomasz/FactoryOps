@@ -180,6 +180,7 @@
 	height: 28px;
 	border-radius: 5px;
 	font-size: 12px;
+	color: oklch(0.3 0.03 260);
 	white-space: nowrap;
 	overflow: hidden;
 }
@@ -206,6 +207,7 @@
 }
 
 .heat-free {
+	padding-left: 12px;
 	font-size: 12px;
 	color: oklch(0.4 0.02 260);
 	white-space: nowrap;
@@ -333,6 +335,16 @@
 .heat-scale-row {
 	display: flex;
 	gap: 3px;
+}
+
+.heat-scale-row > span.is-full {
+	flex: 1.3;
+	color: #fff;
+}
+
+.heat-scale-note {
+	font-size: 12px;
+	color: var(--ink-3);
 }
 
 .heat-scale-row > span {

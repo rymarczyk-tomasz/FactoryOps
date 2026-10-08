@@ -1,9 +1,11 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { Button, ButtonGroup, Form, Modal, Table, ToggleButton } from 'react-bootstrap';
+import { Button, Form, Modal } from 'react-bootstrap';
 import { DayChange, usePlan } from '../data/PlanContext';
 import { effectiveDay, formatWorkingHours, isValidWorkingHours, lineMachines, standaloneMachines, workMode, WORK_MODE_LABELS } from '../domain/calendar';
-import { dayKey, SHIFT_START_HOURS } from '../domain/shifts';
+import { addHours, dayKey, SHIFT_START_HOURS } from '../domain/shifts';
 import { DayOverride, Id, Machine, WorkingHours } from '../domain/types';
+import { machinesLabel } from './planSelectors';
+import './modals.css';
 
 /** Ustawienie dnia w formularzu: `inherit` = bez wyjątku (zakład: wg systemu pracy, maszyna: jak zakład). */
 type Kind = 'inherit' | 'on' | 'off' | 'hours';
@@ -16,7 +18,22 @@ const DEFAULT_HOURS: WorkingHours = { from: 6, to: 18 };
 /** Pełne godziny w kolejności doby zakładu: 6, 7, ..., 23, 0, ..., 5. */
 const DAY_HOURS = Array.from({ length: 24 }, (_, i) => (SHIFT_START_HOURS[0] + i) % 24);
 const dayFormat = new Intl.DateTimeFormat('pl-PL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+const weekdayFormat = new Intl.DateTimeFormat('pl-PL', { weekday: 'short' });
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+const PLANT_KINDS: [Kind, string, string][] = [
+	['inherit', 'Normalnie', 'Każda maszyna pracuje wg swojego systemu: pon–pt w dni robocze, 4-brygadowe codziennie.'],
+	['on', 'Pracujemy', 'Wszystkie maszyny pracują cały dzień (np. pracująca sobota), chyba że niżej ustawisz inaczej.'],
+	['off', 'Wolne (np. święto)', 'Żadna maszyna nie pracuje, chyba że niżej ustawisz wyjątek.'],
+	['hours', 'Tylko w godzinach', 'Wszystkie maszyny pracują w godzinach']
+];
+
+/** „1 wyjątek maszyny”, „2 wyjątki maszyn”, „5 wyjątków maszyn”. */
+function exceptionsLabel(n: number): string {
+	if (n === 1) return '1 wyjątek maszyny';
+	const few = n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14);
+	return `${n} ${few ? 'wyjątki' : 'wyjątków'} maszyn`;
+}
 
 function toChoice(value: DayOverride | undefined): Choice {
 	if (value === undefined) return { kind: 'inherit', hours: DEFAULT_HOURS };
@@ -34,10 +51,8 @@ const same = (a: DayOverride | undefined, b: DayOverride | undefined) => JSON.st
 
 /** Wybór „od - do” w pełnych godzinach doby zakładu (6:00-6:00). */
 const HoursRange = ({ value, onChange, id }: { value: WorkingHours; onChange: (hours: WorkingHours) => void; id: string }) => (
-	<span className="d-inline-flex align-items-center gap-1">
+	<span className="day-hours">
 		<Form.Select
-			size="sm"
-			className="hours-select"
 			aria-label="Od godziny"
 			id={`${id}-from`}
 			value={value.from}
@@ -53,7 +68,7 @@ const HoursRange = ({ value, onChange, id }: { value: WorkingHours; onChange: (h
 			))}
 		</Form.Select>
 		–
-		<Form.Select size="sm" className="hours-select" aria-label="Do godziny" value={value.to} onChange={(e) => onChange({ ...value, to: Number(e.target.value) })}>
+		<Form.Select aria-label="Do godziny" value={value.to} onChange={(e) => onChange({ ...value, to: Number(e.target.value) })}>
 			{[...DAY_HOURS.slice(1), SHIFT_START_HOURS[0]]
 				.filter((to) => isValidWorkingHours({ from: value.from, to }))
 				.map((h) => (
@@ -67,7 +82,13 @@ const HoursRange = ({ value, onChange, id }: { value: WorkingHours; onChange: (h
 
 /** Krótki opis, jak faktycznie pracuje maszyna w tym dniu. */
 const DayResult = ({ day }: { day: DayOverride }) =>
-	day === false ? <span className="day-result off">wolne</span> : <span className="day-result on">{day === true ? 'pracuje' : formatWorkingHours(day)}</span>;
+	day === false ? (
+		<span className="day-result is-off">wolne</span>
+	) : day === true ? (
+		<span className="day-result is-on">pracuje</span>
+	) : (
+		<span className="day-result is-hours mono">{formatWorkingHours(day)}</span>
+	);
 
 interface DayCalendarModalProps {
 	show: boolean;
@@ -85,13 +106,18 @@ const DayCalendarModal = ({ show, day, onHide }: DayCalendarModalProps) => {
 	const [plant, setPlant] = useState<Choice>(toChoice(undefined));
 	const [machines, setMachines] = useState<Record<Id, Choice>>({});
 	const [filter, setFilter] = useState('');
+	/** Rozwinięte linie - na starcie te z wyjątkami maszyn (albo pierwsza). */
+	const [open, setOpen] = useState<Set<Id>>(new Set());
 	const key = day !== undefined ? dayKey(new Date(day)) : '';
 
 	useEffect(() => {
 		if (!show || day === undefined) return;
+		const initial = Object.fromEntries(state.machines.map((m) => [m.id, toChoice(m.overrides?.[key])]));
 		setPlant(toChoice(state.calendar.overrides[key]));
-		setMachines(Object.fromEntries(state.machines.map((m) => [m.id, toChoice(m.overrides?.[key])])));
+		setMachines(initial);
 		setFilter('');
+		const withExceptions = state.lines.filter((l) => l.machineIds.some((id) => initial[id] && initial[id].kind !== 'inherit')).map((l) => l.id);
+		setOpen(new Set(withExceptions.length ? withExceptions : state.lines.slice(0, 1).map((l) => l.id)));
 		// formularz ustawiamy tylko przy otwarciu
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [show, day]);
@@ -116,9 +142,16 @@ const DayCalendarModal = ({ show, day, onHide }: DayCalendarModalProps) => {
 	);
 	const standalone = standaloneMachines(state).filter((m) => matches(m.name));
 	const working = state.machines.filter((m) => effective(m) !== false).length;
+	const exceptions = state.machines.filter((m) => (machines[m.id]?.kind ?? 'inherit') !== 'inherit').length;
 
 	const setChoice = (ids: Id[], choice: Partial<Choice>) =>
 		setMachines((current) => ({ ...current, ...Object.fromEntries(ids.map((id) => [id, { ...(current[id] ?? toChoice(undefined)), ...choice }])) }));
+	const toggleLine = (id: Id) =>
+		setOpen((current) => {
+			const next = new Set(current);
+			if (!next.delete(id)) next.add(id);
+			return next;
+		});
 
 	const save = () => {
 		const changes: DayChange[] = [];
@@ -132,10 +165,9 @@ const DayCalendarModal = ({ show, day, onHide }: DayCalendarModalProps) => {
 	};
 
 	const choiceSelect = (ids: Id[], choice: Choice | undefined, label: string) => (
-		<span className="d-inline-flex align-items-center gap-2 flex-wrap">
+		<span className="day-row-control">
 			<Form.Select
-				size="sm"
-				className="day-choice-select"
+				className={choice && choice.kind !== 'inherit' ? 'is-exception' : ''}
 				aria-label={`Ustawienie dnia: ${label}`}
 				value={choice?.kind ?? ''}
 				onChange={(e) => e.target.value && setChoice(ids, { kind: e.target.value as Kind })}>
@@ -155,97 +187,95 @@ const DayCalendarModal = ({ show, day, onHide }: DayCalendarModalProps) => {
 		return choices.every((c) => same(toOverride(c), toOverride(choices[0]))) ? choices[0] : undefined;
 	};
 
-	const machineRow = (machine: Machine, inLine: boolean) => (
-		<tr key={machine.id}>
-			<td className={inLine ? 'ps-4' : ''}>
-				{machine.name}
-				<div className="small text-secondary">{WORK_MODE_LABELS[workMode(machine)]}</div>
-			</td>
-			<td>{choiceSelect([machine.id], machines[machine.id], machine.name)}</td>
-			<td className="text-end">
+	const machineRow = (machine: Machine, inLine: boolean) => {
+		const own = machines[machine.id];
+		return (
+			<div key={machine.id} className={`day-row ${inLine ? 'is-member' : ''}`}>
+				<span className="day-row-name">
+					{own && own.kind !== 'inherit' && <span className="day-row-dot" title="Własny wyjątek tej maszyny" />}
+					<span className="day-row-label">{machine.name}</span>
+					<span className="day-row-mode">{WORK_MODE_LABELS[workMode(machine)].replace('Pon–pt', 'pon–pt')}</span>
+				</span>
+				{choiceSelect([machine.id], own, machine.name)}
 				<DayResult day={effective(machine)} />
-			</td>
-		</tr>
-	);
+			</div>
+		);
+	};
+
+	const nextDay = day !== undefined ? weekdayFormat.format(addHours(day, 24)).replace('.', '') : '';
 
 	return (
-		<Modal show={show} onHide={onHide} centered scrollable size="lg">
+		<Modal show={show} onHide={onHide} centered size="lg" dialogClassName="day-modal">
 			<Modal.Header closeButton>
-				<Modal.Title>{day !== undefined && capitalize(dayFormat.format(day))}</Modal.Title>
+				<Modal.Title>
+					{day !== undefined && capitalize(dayFormat.format(day))}
+					<span className="modal-title-sub">doba 6:00 → {nextDay} 6:00</span>
+				</Modal.Title>
 			</Modal.Header>
-			<Modal.Body className="d-flex flex-column gap-3">
-				<div>
-					<div className="fw-semibold mb-2">Cały zakład</div>
-					<ButtonGroup className="d-flex flex-wrap">
-						{(
-							[
-								['inherit', 'Normalnie'],
-								['on', 'Pracujemy'],
-								['off', 'Wolne (np. święto)'],
-								['hours', 'Tylko w godzinach']
-							] as [Kind, string][]
-						).map(([kind, label]) => (
-							<ToggleButton
-								key={kind}
-								id={`plant-${kind}`}
-								type="radio"
-								name="plantDay"
-								value={kind}
-								variant="outline-primary"
-								checked={plant.kind === kind}
-								onChange={() => setPlant({ ...plant, kind })}>
+			<Modal.Body className="modal-stack">
+				<div className="day-section">
+					<span className="day-section-title">Cały zakład</span>
+					<div className="segmented block" role="group" aria-label="Cały zakład">
+						{PLANT_KINDS.map(([kind, label]) => (
+							<button key={kind} type="button" className={`segmented-item ${plant.kind === kind ? 'active' : ''}`} onClick={() => setPlant({ ...plant, kind })}>
 								{label}
-							</ToggleButton>
+							</button>
 						))}
-					</ButtonGroup>
-					<div className="small text-secondary mt-2">
-						{plant.kind === 'inherit' && 'Każda maszyna pracuje wg swojego systemu: pon–pt w dni robocze, 4-brygadowe codziennie.'}
-						{plant.kind === 'on' && 'Wszystkie maszyny pracują cały dzień (np. pracująca sobota), chyba że niżej ustawisz inaczej.'}
-						{plant.kind === 'off' && 'Żadna maszyna nie pracuje, chyba że niżej ustawisz wyjątek.'}
-						{plant.kind === 'hours' && (
-							<span className="d-inline-flex align-items-center gap-2">
-								Wszystkie maszyny pracują w godzinach <HoursRange id="plant" value={plant.hours} onChange={(hours) => setPlant({ ...plant, hours })} />
-							</span>
-						)}
+					</div>
+					<div className="day-kind-text">
+						<span>{PLANT_KINDS.find(([kind]) => kind === plant.kind)?.[2]}</span>
+						{plant.kind === 'hours' && <HoursRange id="plant" value={plant.hours} onChange={(hours) => setPlant({ ...plant, hours })} />}
 					</div>
 				</div>
 
-				<div>
-					<div className="d-flex align-items-center justify-content-between gap-3 mb-2">
-						<div>
-							<span className="fw-semibold">Wyjątki dla linii i maszyn</span>
-							<span className="small text-secondary ms-2">
-								pracuje {working} z {state.machines.length} maszyn
-							</span>
+				<div className="day-section">
+					<div className="day-section-head">
+						<span className="day-section-title">Wyjątki dla linii i maszyn</span>
+						<span className="day-working">
+							pracuje <b>{working}</b> z {state.machines.length} maszyn
+						</span>
+						<div className="search-field day-search">
+							<input type="search" placeholder="Szukaj maszyny" aria-label="Szukaj maszyny" value={filter} onChange={(e) => setFilter(e.target.value)} />
 						</div>
-						<Form.Control size="sm" type="search" className="day-filter" placeholder="Szukaj maszyny" value={filter} onChange={(e) => setFilter(e.target.value)} />
 					</div>
-					<Table size="sm" className="align-middle mb-0 day-table">
-						<tbody>
-							{lineGroups.map(({ line, members }) => {
-								const ids = members.map((m) => m.id);
-								return (
-									<Fragment key={line.id}>
-										<tr className="table-group-row">
-											<th>{line.name}</th>
-											<td>{choiceSelect(ids, commonChoice(ids), line.name)}</td>
-											<td className="text-end small text-secondary">cała linia</td>
-										</tr>
-										{members.map((m) => machineRow(m, true))}
-									</Fragment>
-								);
-							})}
-							{standalone.length > 0 && (
-								<tr className="table-group-row">
-									<th colSpan={3}>Maszyny</th>
-								</tr>
-							)}
-							{standalone.map((m) => machineRow(m, false))}
-						</tbody>
-					</Table>
+					<div className="day-table">
+						{lineGroups.map(({ line, members }) => {
+							const ids = members.map((m) => m.id);
+							// przy wyszukiwaniu linie z trafieniami są zawsze rozwinięte
+							const expanded = q !== '' || open.has(line.id);
+							const shown = q && !matches(line.name) ? members.filter((m) => matches(m.name)) : members;
+							return (
+								<Fragment key={line.id}>
+									<div className="day-row is-group">
+										<button
+											type="button"
+											className="day-row-toggle"
+											aria-expanded={expanded}
+											title={expanded ? 'Zwiń maszyny linii' : 'Pokaż maszyny linii'}
+											onClick={() => toggleLine(line.id)}>
+											<span className={`day-row-chevron ${expanded ? 'is-open' : ''}`}>▸</span>
+											<span className="day-row-label">{line.name}</span>
+											<span className="day-row-mode">{machinesLabel(members.length)}</span>
+										</button>
+										{choiceSelect(ids, commonChoice(ids), line.name)}
+										<span className="day-result is-muted">cała linia</span>
+									</div>
+									{expanded && shown.map((m) => machineRow(m, true))}
+								</Fragment>
+							);
+						})}
+						{standalone.length > 0 && (
+							<div className="day-row is-group">
+								<span className="day-row-label">Maszyny</span>
+							</div>
+						)}
+						{standalone.map((m) => machineRow(m, false))}
+						{lineGroups.length === 0 && standalone.length === 0 && <div className="member-empty">Brak maszyn pasujących do wyszukiwania.</div>}
+					</div>
 				</div>
 			</Modal.Body>
 			<Modal.Footer>
+				<span className="modal-footer-hint">{exceptions > 0 ? `${exceptionsLabel(exceptions)} · ` : ''}zmiany przesuną zlecenia po zapisie</span>
 				<Button variant="light" onClick={onHide}>
 					Anuluj
 				</Button>

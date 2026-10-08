@@ -136,7 +136,7 @@ const MachinesPage = () => {
 												key={m.id}
 												type="button"
 												className={`machine-chip mono ${downSince.has(m.id) ? 'is-down' : ''}`}
-												title={`${m.name}${downSince.has(m.id) ? ' · awaria' : ''} - edytuj maszynę`}
+												title={`Edytuj ${m.name}${downSince.has(m.id) ? ' · awaria' : ''}`}
 												onClick={() => setMachineForm({ show: true, machine: m })}>
 												{m.name}
 											</button>
@@ -203,14 +203,17 @@ const MachinesPage = () => {
 			<ConfirmModal
 				show={machineToDelete !== undefined}
 				title="Usunąć maszynę?"
+				undoable
 				onConfirm={() => machineToDelete && deleteMachine(machineToDelete.id)}
 				onHide={() => setMachineToDelete(undefined)}>
-				Maszyna <strong>{machineToDelete?.name}</strong> zostanie usunięta razem z jej zleceniami ({machineToDelete ? blockCount(machineToDelete.id) : 0}) i awariami.
+				Maszyna <strong className="mono fw-medium">{machineToDelete?.name}</strong> zostanie usunięta razem z jej zleceniami (
+				{machineToDelete ? blockCount(machineToDelete.id) : 0}) i awariami.
 				{machineToDelete && lineOfMachine(state.lines, machineToDelete.id) && ` Zniknie też z ${lineOfMachine(state.lines, machineToDelete.id)!.name}.`}
 			</ConfirmModal>
 			<ConfirmModal
 				show={lineToDelete !== undefined}
 				title="Usunąć linię?"
+				undoable
 				onConfirm={() => lineToDelete && deleteLine(lineToDelete.id)}
 				onHide={() => setLineToDelete(undefined)}>
 				Linia <strong>{lineToDelete?.name}</strong> zostanie usunięta razem ze zleceniami linii ({lineToDelete ? blockCount(lineToDelete.id) : 0}). Jej maszyny zostaną

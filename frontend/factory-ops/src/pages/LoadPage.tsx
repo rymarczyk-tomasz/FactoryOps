@@ -20,17 +20,20 @@ const HEATMAP_HINT = 'Procent dostępnych maszyno-godzin zajętych przez zleceni
 /** Przy dłuższym zakresie komórki są za wąskie na procent - zostaje kolor i podpowiedź. */
 const DENSE_FROM_DAYS = 30;
 
+/** Od tylu procent doba jest „pełna”: jednolity kolor bez napisu, żeby wolne moce było widać od razu. */
+const FULL_FROM = 98;
+
 const weekdayFormat = new Intl.DateTimeFormat('pl-PL', { weekday: 'short' });
+const monthFormat = new Intl.DateTimeFormat('pl-PL', { month: 'short' });
 const pad = (n: number) => String(n).padStart(2, '0');
 const shortDate = (ms: number) => {
 	const d = new Date(ms);
 	return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}`;
 };
 
-/** Kolor komórki: od tła (wolna) do akcentu (pełna). */
+/** Kolor komórki: od tła (wolna) do jasnego akcentu; pełne doby (≥ 98%) mają jeden, wyraźnie ciemniejszy kolor. */
 const heat = (percent: number): CSSProperties => ({
-	background: `color-mix(in oklch, #2563eb ${Math.round(8 + percent * 0.82)}%, oklch(0.975 0.004 255))`,
-	color: percent > 55 ? '#fff' : 'oklch(0.3 0.02 260)'
+	background: `color-mix(in oklch, #2563eb ${percent >= FULL_FROM ? 55 : Math.round(4 + percent * 0.34)}%, oklch(0.975 0.004 255))`
 });
 
 interface ResourceRow {
@@ -122,10 +125,10 @@ const LoadPage = () => {
 							) : (
 								<span
 									key={load.dayStart}
-									className={`heat-cell mono ${ring}`}
+									className={`heat-cell mono ${ring} ${percent >= FULL_FROM ? 'is-full' : ''}`}
 									style={heat(percent)}
 									title={`${shortDate(load.dayStart)} · ${percent}% · ${load.busy} z ${load.available} maszyno-godzin zajęte`}>
-									{!dense && `${percent}%`}
+									{!dense && percent < FULL_FROM && `${percent}%`}
 								</span>
 							);
 						})}
@@ -175,13 +178,18 @@ const LoadPage = () => {
 					<div className={`heatmap ${dense ? 'is-dense' : ''}`} title={HEATMAP_HINT}>
 						<div className="heat-grid heat-head" style={gridStyle}>
 							<span className="section-label">Zasób</span>
-							{dayStarts.map((day, index) => (
-								<span key={day} className={`heat-day ${index === 0 ? 'is-today' : ''}`}>
-									{!dense && <span className="heat-day-sub">{index === 0 ? 'dziś' : weekdayFormat.format(day).replace('.', '')}</span>}
-									<span className="heat-day-date mono">{dense ? new Date(day).getDate() : shortDate(day)}</span>
-								</span>
-							))}
-							<span className="section-label">Wolna od</span>
+							{dayStarts.map((day, index) => {
+								const date = new Date(day).getDate();
+								// w gęstym widoku same numery dni - na przełomie miesiąca skrót miesiąca nad „1”
+								const sub = dense ? (date === 1 && index > 0 ? monthFormat.format(day) : '') : index === 0 ? 'dziś' : weekdayFormat.format(day).replace('.', '');
+								return (
+									<span key={day} className={`heat-day ${index === 0 ? 'is-today' : ''}`}>
+										<span className="heat-day-sub">{sub || ' '}</span>
+										<span className="heat-day-date mono">{dense ? date : shortDate(day)}</span>
+									</span>
+								);
+							})}
+							<span className="section-label heat-free">Wolna od</span>
 							<span className="section-label text-end">Kolejka</span>
 						</div>
 						{renderGroup('Linie produkcyjne', rows.lines)}
@@ -252,12 +260,16 @@ const LoadPage = () => {
 					<div className="heat-scale">
 						<span className="section-label">Skala</span>
 						<span className="heat-scale-row">
-							{[0, 20, 40, 60, 80, 100].map((p) => (
+							{[0, 25, 50, 75, 95].map((p) => (
 								<span key={p} className="mono" style={heat(p)}>
 									{p}%
 								</span>
 							))}
+							<span className="mono is-full" style={heat(100)} title="Pełna doba - w komórkach bez napisu, procent w podpowiedzi">
+								≥{FULL_FROM}%
+							</span>
 						</span>
+						<span className="heat-scale-note">Napis tylko w dobach poniżej {FULL_FROM}% - tam są wolne moce.</span>
 					</div>
 				</aside>
 			</div>

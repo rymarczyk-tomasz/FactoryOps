@@ -2,9 +2,12 @@ import { roundUpHours } from './shifts';
 import { BlockStatus, Programmer } from './types';
 
 const dateTimeFormat = new Intl.DateTimeFormat('pl-PL', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+const dateTimeYearFormat = new Intl.DateTimeFormat('pl-PL', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
+/** „sob., 01.01, 22:00”; rok tylko, gdy inny niż bieżący - „sob., 01.01.2028, 22:00”. */
 export function formatDateTime(ms: number): string {
-	return dateTimeFormat.format(ms);
+	const sameYear = new Date(ms).getFullYear() === new Date().getFullYear();
+	return (sameYear ? dateTimeFormat : dateTimeYearFormat).format(ms);
 }
 
 export function formatHours(hours: number): string {
