@@ -48,7 +48,6 @@
 
 .row-menu-item:hover,
 .row-menu-item:focus-visible {
-	outline: none;
 	background: var(--hover);
 }
 

@@ -13,6 +13,7 @@
 /* ---- układ strony planu: plan + panel zlecenia obok ---- */
 
 .plan-layout {
+	position: relative;
 	flex: 1;
 	min-height: 0;
 	display: flex;
@@ -21,6 +22,8 @@
 .plan-main {
 	flex: 1;
 	min-width: 0;
+	/* własny kontekst warstw - z-indeksy osi czasu (do 200) nie wychodzą ponad panel zlecenia */
+	isolation: isolate;
 	display: flex;
 	flex-direction: column;
 	background: var(--surface);
@@ -56,8 +59,8 @@
 }
 
 .icon-button:focus-visible {
-	outline: none;
-	box-shadow: var(--focus-ring);
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
 }
 
 .search-field {
@@ -215,8 +218,8 @@
 }
 
 .day-cell:focus-visible {
-	outline: none;
-	box-shadow: inset var(--focus-ring);
+	outline: 2px solid var(--accent);
+	outline-offset: -2px;
 }
 
 .day-cell-sub {
@@ -229,6 +232,10 @@
 	font-size: 13px;
 	font-weight: 500;
 	color: #334155;
+}
+
+.day-cell-date.is-small {
+	font-size: 12px;
 }
 
 .day-cell.is-off .day-cell-date {
@@ -753,6 +760,18 @@
 	flex-direction: column;
 	border-left: 1px solid var(--line);
 	background: var(--surface);
+}
+
+/* węższy ekran: panel nachodzi na plan z cieniem zamiast go zwężać - przy 1280 px na oś czasu zostałoby ok. 500 px */
+@media (max-width: 1359.98px) {
+	.details-panel {
+		position: absolute;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 100;
+		box-shadow: -12px 0 32px rgba(15, 23, 42, 0.14);
+	}
 }
 
 .details-header {

@@ -168,9 +168,14 @@
 	color: var(--ink);
 }
 
+.quick-chip.active {
+	background: var(--primary);
+	color: #fff;
+}
+
 .quick-chip:focus-visible {
-	outline: none;
-	box-shadow: var(--focus-ring);
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
 }
 
 .form-preview {
@@ -181,6 +186,13 @@
 	border-radius: var(--radius-md);
 	background: oklch(0.97 0.012 255);
 	font-size: 13px;
+}
+
+.form-preview-warn {
+	display: block;
+	margin-top: 2px;
+	font-size: 12.5px;
+	color: var(--warn-ink);
 }
 
 .form-preview .section-label {
@@ -222,8 +234,8 @@
 }
 
 .since-chip:focus-visible {
-	outline: none;
-	box-shadow: var(--focus-ring);
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
 }
 
 .consequence-box {
@@ -284,8 +296,8 @@
 }
 
 .choice-card:focus-visible {
-	outline: none;
-	box-shadow: var(--focus-ring);
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
 }
 
 .choice-card-label {
@@ -567,9 +579,16 @@
 	min-width: 0;
 }
 
-.day-row-control > .form-select {
+.day-row-control > .select-display {
 	flex: 1;
 	min-width: 0;
+}
+
+.select-display.is-compact .select-display-value {
+	left: 11px;
+	right: 30px;
+	height: 30px;
+	font-size: 13px;
 }
 
 .day-row-control .form-select {

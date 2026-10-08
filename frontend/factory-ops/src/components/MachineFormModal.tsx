@@ -3,6 +3,7 @@ import { Button, Form, Modal } from 'react-bootstrap';
 import { usePlan } from '../data/PlanContext';
 import { lineOfMachine, workMode, WORK_MODE_LABELS } from '../domain/calendar';
 import { Id, Machine, WorkMode } from '../domain/types';
+import { radioKeyDown } from './radioKeys';
 import './modals.css';
 
 /** Opis systemu pracy pod nazwą na karcie wyboru. */
@@ -11,11 +12,20 @@ const WORK_MODE_NOTES: Record<WorkMode, string> = {
 	continuous: 'pracuje codziennie'
 };
 
-/** System pracy jako dwie karty-radio. */
+const WORK_MODES = Object.keys(WORK_MODE_LABELS) as WorkMode[];
+
+/** System pracy jako dwie karty-radio (strzałki zmieniają wybór). */
 export const WorkModeCards = ({ value, onChange }: { value: WorkMode; onChange: (mode: WorkMode) => void }) => (
-	<div className="choice-cards" role="radiogroup" aria-label="System pracy">
-		{(Object.keys(WORK_MODE_LABELS) as WorkMode[]).map((mode) => (
-			<button key={mode} type="button" role="radio" aria-checked={value === mode} className={`choice-card ${value === mode ? 'active' : ''}`} onClick={() => onChange(mode)}>
+	<div className="choice-cards" role="radiogroup" aria-label="System pracy" onKeyDown={radioKeyDown(WORK_MODES, value, onChange)}>
+		{WORK_MODES.map((mode) => (
+			<button
+				key={mode}
+				type="button"
+				role="radio"
+				aria-checked={value === mode}
+				tabIndex={value === mode ? 0 : -1}
+				className={`choice-card ${value === mode ? 'active' : ''}`}
+				onClick={() => onChange(mode)}>
 				<span className="choice-card-label">{WORK_MODE_LABELS[mode]}</span>
 				<span className="choice-card-sub">{WORK_MODE_NOTES[mode]}</span>
 			</button>
@@ -71,7 +81,7 @@ const MachineFormModal = ({ show, machine, onHide }: MachineFormModalProps) => {
 	return (
 		<Modal show={show} onHide={onHide} centered>
 			<Form noValidate onSubmit={onSubmit}>
-				<Modal.Header closeButton>
+				<Modal.Header closeButton closeLabel="Zamknij">
 					<Modal.Title>
 						{isEdit ? (
 							<>

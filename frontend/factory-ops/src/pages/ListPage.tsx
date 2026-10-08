@@ -14,6 +14,7 @@ import { formatDateTime, formatHours, programmerName, STATUS_LABELS, toLocalInpu
 import { blockStatus } from '../domain/schedule';
 import { ArchivedBlock, Block, BlockStatus, Id, Programmer } from '../domain/types';
 import './ListPage.css';
+import Segmented from '../components/Segmented';
 
 type SortKey = 'start' | 'orderNo' | 'projectNo' | 'operation' | 'machine' | 'hours' | 'status';
 type Sort = { key: SortKey; direction: 1 | -1 };
@@ -264,14 +265,20 @@ const ListPage = () => {
 				{archived ? (
 					<span className="list-archive-note">Archiwum · zlecenia zakończone ponad {ARCHIVE_AFTER_DAYS} dni temu, tylko do wglądu</span>
 				) : (
-					<div className="segmented" role="group" aria-label="Status">
-						{STATUS_TABS.map((tab) => (
-							<button key={tab.key} type="button" className={`segmented-item ${statusTab === tab.key ? 'active' : ''}`} onClick={() => setStatusTab(tab.key)}>
-								{tab.label}
-								<span className="segmented-count mono">{tabCounts[tab.key]}</span>
-							</button>
-						))}
-					</div>
+					<Segmented
+						label="Status"
+						value={statusTab}
+						onChange={setStatusTab}
+						options={STATUS_TABS.map((tab) => ({
+							value: tab.key,
+							label: (
+								<>
+									{tab.label}
+									<span className="segmented-count mono">{tabCounts[tab.key]}</span>
+								</>
+							)
+						}))}
+					/>
 				)}
 				<MultiSelect id="filterMachine" label="Maszyna" allLabel="wszystkie" options={machineOptions} selected={machineIds} onChange={setMachineIds} />
 				<MultiSelect id="filterProject" label="Projekt" allLabel="wszystkie" options={projectOptions} selected={projectNos} onChange={setProjectNos} />

@@ -82,7 +82,7 @@ const LineFormModal = ({ show, line, onHide }: LineFormModalProps) => {
 	return (
 		<Modal show={show} onHide={onHide} centered dialogClassName="line-dialog">
 			<Form noValidate onSubmit={onSubmit}>
-				<Modal.Header closeButton>
+				<Modal.Header closeButton closeLabel="Zamknij">
 					<Modal.Title>
 						{isEdit ? (
 							<>

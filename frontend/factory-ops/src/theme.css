@@ -39,7 +39,7 @@
 	--info-ink: #1d4ed8;
 	--warn: #f59e0b;
 	--warn-tint: oklch(0.96 0.04 75);
-	--warn-ink: oklch(0.45 0.1 60);
+	--warn-ink: oklch(0.5 0.12 60);
 	--neutral-tint: #f1f5f9;
 	--neutral-ink: #475569;
 
@@ -147,6 +147,22 @@ h6,
 	background: var(--surface);
 }
 
+/* fokus z klawiatury: wyraźna ramka w kolorze akcentu na wszystkim, co klikalne (pola mają własny fokus) */
+:where(button, a, summary, [role='radio'], [role='menuitem'], [tabindex]):focus-visible,
+.btn:focus-visible,
+.btn-close:focus-visible,
+.dropdown-item:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+/* w menu i listach ramka do środka - na zewnątrz ucinałby ją kontener */
+.dropdown-item:focus-visible,
+.multi-select-option:focus-visible,
+.row-menu-item:focus-visible {
+	outline-offset: -2px;
+}
+
 /* segmented control: tor z przyciskami, aktywny biały */
 .segmented {
 	display: inline-flex;
@@ -184,8 +200,8 @@ h6,
 }
 
 .segmented-item:focus-visible {
-	outline: none;
-	box-shadow: var(--focus-ring);
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
 }
 
 .segmented.block {

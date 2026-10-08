@@ -12,6 +12,7 @@ import { DayLoad, loadPercent } from '../domain/load';
 import { addHours, shiftDayStart } from '../domain/shifts';
 import { Breakdown, Id, PlanState } from '../domain/types';
 import './LoadPage.css';
+import Segmented from '../components/Segmented';
 
 const HOUR = 3600_000;
 /** Zakresy mapy cieplnej w dobach. */
@@ -142,13 +143,7 @@ const LoadPage = () => {
 	return (
 		<>
 			<PageHeader title="Obciążenie" context={`${shortDate(dayStarts[0])}–${shortDate(dayStarts[dayStarts.length - 1])} · doby 6:00–6:00`}>
-				<div className="segmented" role="group" aria-label="Zakres">
-					{RANGES.map((n) => (
-						<button key={n} type="button" className={`segmented-item ${days === n ? 'active' : ''}`} onClick={() => setDays(n)}>
-							{n} dni
-						</button>
-					))}
-				</div>
+				<Segmented label="Zakres" value={days} onChange={setDays} options={RANGES.map((n) => ({ value: n, label: `${n} dni` }))} />
 			</PageHeader>
 
 			<div className="page-body load-layout">
@@ -218,45 +213,47 @@ const LoadPage = () => {
 							onChange={(e) => setShowDone(e.target.checked)}
 						/>
 					)}
-					{breakdowns.length === 0 && <p className="load-side-empty">Wszystkie maszyny pracują - brak trwających awarii.</p>}
-					{breakdowns.map((breakdown) => {
-						const active = isOngoing(breakdown);
-						const end = active ? now : breakdownEnd(breakdown, now);
-						const hours = Math.max(0, Math.round((end - breakdown.start) / HOUR));
-						const line = lineOfMachine(state.lines, breakdown.machineId);
-						return (
-							<div key={breakdown.id} className={`breakdown-card ${active ? 'is-active' : 'is-done'}`}>
-								<div className="breakdown-card-head">
-									<span className={`status-dot ${active ? 'danger' : ''}`} />
-									<span className="mono breakdown-card-name">{resourceName(state, breakdown.machineId)}</span>
-									<span className="breakdown-card-where">{line ? line.name : 'maszyna'}</span>
-									<span className={`pill ms-auto ${active ? 'pill-danger' : 'pill-neutral'}`}>{active ? 'Trwa' : 'Zakończona'}</span>
-								</div>
-								<dl className="breakdown-card-list">
-									<dt>Od</dt>
-									<dd className="mono">{formatDateTime(breakdown.start)}</dd>
-									<dt>Do</dt>
-									<dd className={`mono ${active ? 'text-danger' : ''}`}>{active ? 'trwa' : formatDateTime(end)}</dd>
-									<dt>Czas</dt>
-									<dd>{active ? `${hours} h · rośnie` : `${hours} h`}</dd>
-									<dt>Wpływ</dt>
-									<dd>{impactText(state, breakdown, now)}</dd>
-								</dl>
-								{active && (
-									<div className="breakdown-card-actions">
-										<Button variant="danger" className="flex-grow-1" onClick={() => endBreakdown(breakdown.id)}>
+					<div className="load-side-cards">
+						{breakdowns.length === 0 && <p className="load-side-empty">Wszystkie maszyny pracują - brak trwających awarii.</p>}
+						{breakdowns.map((breakdown) => {
+							const active = isOngoing(breakdown);
+							const end = active ? now : breakdownEnd(breakdown, now);
+							const hours = Math.max(0, Math.round((end - breakdown.start) / HOUR));
+							const line = lineOfMachine(state.lines, breakdown.machineId);
+							return (
+								<div key={breakdown.id} className={`breakdown-card ${active ? 'is-active' : 'is-done'}`}>
+									<div className="breakdown-card-head">
+										<span className={`status-dot ${active ? 'danger' : ''}`} />
+										<span className="mono breakdown-card-name">{resourceName(state, breakdown.machineId)}</span>
+										<span className="breakdown-card-where">{line ? line.name : 'maszyna'}</span>
+										<span className={`pill ms-auto ${active ? 'pill-danger' : 'pill-neutral'}`}>{active ? 'Trwa' : 'Zakończona'}</span>
+									</div>
+									<dl className="breakdown-card-list">
+										<dt>Od</dt>
+										<dd className="mono">{formatDateTime(breakdown.start)}</dd>
+										<dt>Do</dt>
+										<dd className={`mono ${active ? 'text-danger' : ''}`}>{active ? 'trwa' : formatDateTime(end)}</dd>
+										<dt>Czas</dt>
+										<dd>{active ? `${hours} h · rośnie` : `${hours} h`}</dd>
+										<dt>Wpływ</dt>
+										<dd>{impactText(state, breakdown, now)}</dd>
+									</dl>
+									{active && (
+										<div className="breakdown-card-actions">
+											<Button variant="danger" className="flex-grow-1" onClick={() => endBreakdown(breakdown.id)}>
 											Zakończ teraz
-										</Button>
-										<Button
+											</Button>
+											<Button
 											variant="outline-secondary"
 											onClick={() => navigate('/', { state: { revealBreakdown: breakdown.id } satisfies PlanNavigationState })}>
 											Pokaż na planie
-										</Button>
-									</div>
-								)}
-							</div>
-						);
-					})}
+											</Button>
+										</div>
+									)}
+								</div>
+							);
+						})}
+					</div>
 					<div className="heat-scale">
 						<span className="section-label">Skala</span>
 						<span className="heat-scale-row">

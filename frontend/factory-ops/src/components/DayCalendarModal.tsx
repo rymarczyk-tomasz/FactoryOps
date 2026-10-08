@@ -6,6 +6,7 @@ import { addHours, dayKey, SHIFT_START_HOURS } from '../domain/shifts';
 import { DayOverride, Id, Machine, WorkingHours } from '../domain/types';
 import { machinesLabel } from './planSelectors';
 import './modals.css';
+import Segmented from './Segmented';
 
 /** Ustawienie dnia w formularzu: `inherit` = bez wyjątku (zakład: wg systemu pracy, maszyna: jak zakład). */
 type Kind = 'inherit' | 'on' | 'off' | 'hours';
@@ -27,6 +28,9 @@ const PLANT_KINDS: [Kind, string, string][] = [
 	['off', 'Wolne (np. święto)', 'Żadna maszyna nie pracuje, chyba że niżej ustawisz wyjątek.'],
 	['hours', 'Tylko w godzinach', 'Wszystkie maszyny pracują w godzinach']
 ];
+
+/** Wybrane ustawienie w polu (w trybie godzin obok są jeszcze dwa pola godzin). */
+const CHOICE_SHORT: Record<Kind, string> = { inherit: 'Jak cały zakład', on: 'Pracuje', off: 'Wolne', hours: 'Godziny' };
 
 /** „1 wyjątek maszyny”, „2 wyjątki maszyn”, „5 wyjątków maszyn”. */
 function exceptionsLabel(n: number): string {
@@ -166,17 +170,21 @@ const DayCalendarModal = ({ show, day, onHide }: DayCalendarModalProps) => {
 
 	const choiceSelect = (ids: Id[], choice: Choice | undefined, label: string) => (
 		<span className="day-row-control">
-			<Form.Select
-				className={choice && choice.kind !== 'inherit' ? 'is-exception' : ''}
-				aria-label={`Ustawienie dnia: ${label}`}
-				value={choice?.kind ?? ''}
-				onChange={(e) => e.target.value && setChoice(ids, { kind: e.target.value as Kind })}>
-				{choice === undefined && <option value="">— różne —</option>}
-				<option value="inherit">Jak cały zakład</option>
-				<option value="on">Pracuje</option>
-				<option value="off">Wolne</option>
-				<option value="hours">Tylko w godzinach…</option>
-			</Form.Select>
+			{/* w trybie godzin pole jest wąskie - pokazuje krótką etykietę, pełne nazwy zostają na liście */}
+			<span className="select-display is-compact">
+				<Form.Select
+					className={choice && choice.kind !== 'inherit' ? 'is-exception' : ''}
+					aria-label={`Ustawienie dnia: ${label}`}
+					value={choice?.kind ?? ''}
+					onChange={(e) => e.target.value && setChoice(ids, { kind: e.target.value as Kind })}>
+					{choice === undefined && <option value="">— różne —</option>}
+					<option value="inherit">Jak cały zakład</option>
+					<option value="on">Pracuje</option>
+					<option value="off">Wolne</option>
+					<option value="hours">Tylko w godzinach…</option>
+				</Form.Select>
+				<span className="select-display-value">{choice ? CHOICE_SHORT[choice.kind] : '— różne —'}</span>
+			</span>
 			{choice?.kind === 'hours' && <HoursRange id={`hours-${ids[0]}`} value={choice.hours} onChange={(hours) => setChoice(ids, { hours })} />}
 		</span>
 	);
@@ -206,7 +214,7 @@ const DayCalendarModal = ({ show, day, onHide }: DayCalendarModalProps) => {
 
 	return (
 		<Modal show={show} onHide={onHide} centered size="lg" dialogClassName="day-modal">
-			<Modal.Header closeButton>
+			<Modal.Header closeButton closeLabel="Zamknij">
 				<Modal.Title>
 					{day !== undefined && capitalize(dayFormat.format(day))}
 					<span className="modal-title-sub">doba 6:00 → {nextDay} 6:00</span>
@@ -215,13 +223,13 @@ const DayCalendarModal = ({ show, day, onHide }: DayCalendarModalProps) => {
 			<Modal.Body className="modal-stack">
 				<div className="day-section">
 					<span className="day-section-title">Cały zakład</span>
-					<div className="segmented block" role="group" aria-label="Cały zakład">
-						{PLANT_KINDS.map(([kind, label]) => (
-							<button key={kind} type="button" className={`segmented-item ${plant.kind === kind ? 'active' : ''}`} onClick={() => setPlant({ ...plant, kind })}>
-								{label}
-							</button>
-						))}
-					</div>
+					<Segmented
+						block
+						label="Cały zakład"
+						value={plant.kind}
+						onChange={(kind) => setPlant({ ...plant, kind })}
+						options={PLANT_KINDS.map(([kind, label]) => ({ value: kind, label }))}
+					/>
 					<div className="day-kind-text">
 						<span>{PLANT_KINDS.find(([kind]) => kind === plant.kind)?.[2]}</span>
 						{plant.kind === 'hours' && <HoursRange id="plant" value={plant.hours} onChange={(hours) => setPlant({ ...plant, hours })} />}

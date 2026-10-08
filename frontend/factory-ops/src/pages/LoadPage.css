@@ -228,6 +228,34 @@
 	gap: 12px;
 }
 
+.load-side-cards {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+/* węższy ekran: awarie nad mapą (karty w rzędzie), żeby mapa miała całą szerokość */
+@media (max-width: 1439.98px) {
+	.load-layout {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.load-side {
+		order: -1;
+		width: auto;
+	}
+
+	.load-side-cards {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+	}
+
+	.heat-scale {
+		max-width: 480px;
+	}
+}
+
 .load-side-head {
 	display: flex;
 	align-items: center;

@@ -21,8 +21,8 @@
 }
 
 .multi-select-toggle:focus-visible {
-	outline: none;
-	box-shadow: var(--focus-ring);
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
 }
 
 .multi-select-toggle.has-selection {
@@ -101,7 +101,6 @@
 
 .multi-select-option:hover,
 .multi-select-option:focus-visible {
-	outline: none;
 	background: var(--hover);
 }
 

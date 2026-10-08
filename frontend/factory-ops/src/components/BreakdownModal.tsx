@@ -67,6 +67,8 @@ const BreakdownModal = ({ show, target, onHide }: BreakdownModalProps) => {
 	const running = affected.filter((b) => b.start <= hourNow);
 	const extended = (running.length ? running : affected.slice(0, 1)).slice(0, LISTED_ORDERS);
 	const shifted = affected.length - extended.length;
+	/** „Linii 1” / „maszyny DMU 65” - czyja kolejka się przesuwa. */
+	const queueOwner = line ? line.name.replace(/^Linia /, 'Linii ') : `maszyny ${name}`;
 	const consequence = () => {
 		if (!machineId) return 'Wybierz maszynę, żeby zobaczyć, które zlecenia się wydłużą.';
 		const text = `${name} stoi do odwołania, czas awarii rośnie co godzinę.`;
@@ -89,7 +91,7 @@ const BreakdownModal = ({ show, target, onHide }: BreakdownModalProps) => {
 	return (
 		<Modal show={show} onHide={onHide} centered>
 			<Form noValidate onSubmit={onSubmit}>
-				<Modal.Header closeButton>
+				<Modal.Header closeButton closeLabel="Zamknij">
 					<Modal.Title>
 						<span className="modal-title-dot" />
 						Zgłoś awarię
@@ -169,7 +171,7 @@ const BreakdownModal = ({ show, target, onHide }: BreakdownModalProps) => {
 								{affected.length === 0
 									? 'Wydłuży: nic - brak zleceń w kolejce'
 									: `Wydłuży: ${extended.map((b) => `${b.operation} · ${b.projectNo}${blockStatus(b, now) === 'in_progress' ? ' (w toku)' : ''}`).join(', ')}${
-										shifted > 0 ? ` · przesunie ${shifted} kolejnych` : ''
+										shifted > 0 ? ` · przesunie wszystkie kolejne zlecenia ${queueOwner} (${shifted})` : ''
 									}`}
 							</span>
 						)}

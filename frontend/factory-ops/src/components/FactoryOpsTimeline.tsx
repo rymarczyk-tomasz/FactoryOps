@@ -42,6 +42,7 @@ import { loadByDay, removalImpact, totalPercent } from './planSelectors';
 import { PlanNavigationState } from './planNavigation';
 import { projectColor } from './projectColor';
 import RowContextMenu, { RowMenuTarget } from './RowContextMenu';
+import Segmented from './Segmented';
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -229,6 +230,10 @@ const TODAY_LABEL_WIDTH = 110;
 const DAY_CELL_PADDING = 8;
 /** Doba widoczna węziej niż tyle [px] nie ma podpisu - zostałby z niego skrawek. */
 const DAY_CELL_MIN_VISIBLE = 56;
+/** Przybliżone szerokości znaku daty (mono 13px i 12px) i podpisu nad nią (11px) - do dopasowania podpisu doby. */
+const DATE_CHAR_WIDTH = 7.9;
+const DATE_CHAR_WIDTH_SMALL = 7.3;
+const SUB_CHAR_WIDTH = 6;
 
 /** Odstęp między bloczkiem a krawędzią wiersza - tło (czas wolny, awaria) rozciągamy o niego na całą wysokość. */
 /** Miejsce na nazwę i opis w wierszu sidebaru [px] (bez kropki i obciążenia) i przybliżone szerokości znaków. */
@@ -400,7 +405,9 @@ const FactoryOpsTimeline = () => {
 	const preview = useMemo(() => drag && previewMove(state.blocks, drag.id, drag.start, drag.machineId, state, Date.now()), [drag, state]);
 
 	const selected = state.blocks.find((b) => b.id === selectedId);
-	const select = (id: Id) => !isHelperItem(id) && setSelectedId(String(id));
+	// prawy przycisk otwiera tylko menu - bez zmiany zaznaczenia (otwarty panel zwęziłby plan i przesunął wiersz pod menu)
+	const rightPress = useRef(false);
+	const select = (id: Id) => !rightPress.current && !isHelperItem(id) && setSelectedId(String(id));
 
 	// panel zlecenia zwęża plan - biblioteka przelicza szerokość tylko przy zmianie rozmiaru okna
 	const panelOpen = selected !== undefined;
@@ -498,11 +505,15 @@ const FactoryOpsTimeline = () => {
 		showBlock(matches[wrapped]);
 	};
 
-	// skróty: „/” - wyszukiwarka, Esc - zamyka panel zlecenia (gdy nie ma otwartego okna)
+	// skróty: „/” - wyszukiwarka, Esc - zamyka kartę podpowiedzi, a bez niej panel zlecenia (gdy nie ma otwartego okna)
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
 			// okno lub menu prawego kliku obsługują klawisze same
-			if (isTyping(e.target) || document.querySelector('.modal.show, .day-menu')) return;
+			if (isTyping(e.target) || document.querySelector('.modal.show, .row-menu')) return;
+			if (e.key === 'Escape' && document.querySelector('.hover-card')) {
+				hideHover();
+				return;
+			}
 			if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
 				e.preventDefault();
 				// wyróżnienie zleceń z listy ustępuje wyszukiwaniu - pole pojawia się po przerysowaniu
@@ -515,7 +526,7 @@ const FactoryOpsTimeline = () => {
 		};
 		document.addEventListener('keydown', onKey);
 		return () => document.removeEventListener('keydown', onKey);
-	}, []);
+	}, [hideHover]);
 
 	// bloczki na maszynie nigdy na siebie nie nachodzą (pilnuje tego harmonogram), więc bez układania w stos -
 	// dzięki temu tło z dniami wolnymi leży pod zleceniami
@@ -780,7 +791,21 @@ const FactoryOpsTimeline = () => {
 		const paddingLeft = Math.max(DAY_CELL_PADDING, todayPadding, hiddenPart + DAY_CELL_PADDING);
 		const room = width - paddingLeft;
 		const showLabel = width - hiddenPart >= DAY_CELL_MIN_VISIBLE;
-		const subText = today && room < TODAY_LABEL_WIDTH - 20 ? 'dziś' : sub;
+		// za mało miejsca: najpierw znika podpis nad datą, potem data maleje do 12px, na końcu zostaje „8.10”
+		const shortLabel = `${date.getDate()}.${date.getMonth() + 1}`;
+		const dateMode =
+			label.length * DATE_CHAR_WIDTH <= room
+				? 'full'
+				: label.length * DATE_CHAR_WIDTH_SMALL <= room
+					? 'compact'
+					: shortLabel.length * DATE_CHAR_WIDTH_SMALL <= room
+						? 'short'
+						: room >= 14
+							? 'day'
+							: 'none';
+		const subFits = (text: string) => text.length * SUB_CHAR_WIDTH <= room;
+		const subText = dateMode !== 'full' || !sub ? '' : subFits(sub) ? sub : today && subFits('dziś') ? 'dziś' : '';
+		const dateText = dateMode === 'short' ? shortLabel : dateMode === 'day' ? String(date.getDate()) : label;
 		const classes = ['day-cell', today && 'is-today', off && 'is-off', plant !== undefined && plant !== false && plant !== true && 'is-hours', plant === true && 'is-working'];
 		return (
 			<button
@@ -790,15 +815,12 @@ const FactoryOpsTimeline = () => {
 				style={{ left, width, paddingLeft }}
 				onClick={() => setDayForm({ show: true, day })}
 				title={[label, sub, machineExceptionDays.has(key) && 'są wyjątki maszyn', 'Kliknij: dzień pracujący / wolny'].filter(Boolean).join(' · ')}>
-				{showLabel &&
-					(room >= 56 ? (
-						<>
-							{subText && <span className="day-cell-sub">{subText}</span>}
-							<span className="day-cell-date">{label}</span>
-						</>
-					) : (
-						room >= 14 && <span className="day-cell-date">{date.getDate()}</span>
-					))}
+				{showLabel && dateMode !== 'none' && (
+					<>
+						{subText && <span className="day-cell-sub">{subText}</span>}
+						<span className={`day-cell-date ${dateMode === 'full' ? '' : 'is-small'}`}>{dateText}</span>
+					</>
+				)}
 				{machineExceptionDays.has(key) && <span className="day-exception-dot" />}
 			</button>
 		);
@@ -813,13 +835,13 @@ const FactoryOpsTimeline = () => {
 				context={rangeLabel(range)}
 				tools={
 					<>
-						<div className="segmented ms-2" role="group" aria-label="Zakres planu">
-							{ZOOMS.map((zoom) => (
-								<button key={zoom.label} type="button" className={`segmented-item ${activeZoom === zoom ? 'active' : ''}`} onClick={() => zoomTo(zoom)}>
-									{zoom.label}
-								</button>
-							))}
-						</div>
+						<Segmented
+							className="ms-2"
+							label="Zakres planu"
+							value={activeZoom}
+							onChange={(zoom) => zoom && zoomTo(zoom)}
+							options={ZOOMS.map((zoom) => ({ value: zoom, label: zoom.label }))}
+						/>
 						<div className="d-flex gap-1" role="group" aria-label="Przewijanie planu">
 							<button type="button" className="icon-button" onClick={() => shift(-1)} aria-label="Wcześniej" title="Wcześniej (Shift + kółko myszy)">
 								‹
@@ -892,6 +914,7 @@ const FactoryOpsTimeline = () => {
 						ref={timelineRef}
 						className={`plan-timeline ${span > HOUR_HEADER_MAX_SPAN ? 'zoom-wide' : 'zoom-hours'}`}
 						onPointerDownCapture={(e) => {
+							rightPress.current = e.button === 2;
 							panBlocked.current = e.pointerType === 'mouse' && !(e.target as HTMLElement).closest('.rct-item');
 						}}
 						onPointerMoveCapture={(e) => {
@@ -918,7 +941,7 @@ const FactoryOpsTimeline = () => {
 							selected={selectedId ? [selectedId] : []}
 							onItemSelect={select}
 							onItemClick={select}
-							onItemDeselect={() => setSelectedId(undefined)}
+							onItemDeselect={() => !rightPress.current && setSelectedId(undefined)}
 							onCanvasDoubleClick={(groupId, time) =>
 								visibleIds.has(String(groupId)) && setForm({ show: true, defaults: { machineId: String(groupId), start: nearestHourStart(time) } })
 							}

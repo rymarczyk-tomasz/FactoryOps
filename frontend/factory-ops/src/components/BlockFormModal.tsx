@@ -4,9 +4,11 @@ import { useForm } from 'react-hook-form';
 import { usePlan } from '../data/PlanContext';
 import { findLine, lineMachines, lineOfMachine, resourceName, standaloneMachines } from '../domain/calendar';
 import { formatDateTime, formatHours, fromLocalInputValue, programmerName, toLocalInputValue } from '../domain/format';
+import { nearestHourStart } from '../domain/shifts';
 import { Block, BlockDraft, Id } from '../domain/types';
 import { machinesLabel, previewPlacement } from './planSelectors';
 import './modals.css';
+import Segmented from './Segmented';
 
 export interface BlockFormDefaults {
 	machineId?: Id;
@@ -39,6 +41,7 @@ interface BlockForm {
 let lastMachineId: Id | undefined;
 /** Ile operacji podpowiadać chipami pod polem. */
 const RECENT_OPERATIONS = 5;
+const timeFormat = new Intl.DateTimeFormat('pl-PL', { hour: '2-digit', minute: '2-digit' });
 
 const uniqueSorted = (values: string[]) => [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pl'));
 
@@ -99,6 +102,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 	const machineId = watch('machineId');
 	const start = watch('start');
 	const programmerId = watch('programmerId');
+	const operation = watch('operation');
 	const line = findLine(state.lines, machineId);
 
 	/** Podpowiedź pod polem godzin: na linii czas dzieli się między maszyny (bez awarii, z dokładnością do godziny). */
@@ -152,6 +156,11 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 		if (!placed) return name;
 		const { after, before } = placed;
 		if (manual || isEdit) {
+			// wpisana godzina zajęta albo poza czasem pracy - bez wyjaśnienia inny start wyglądałby jak błąd
+			const requested = nearestHourStart(draft.start ?? block!.start);
+			const sameDay = new Date(requested).toDateString() === new Date(placed.start).toDateString();
+			const at = (ms: number) => (sameDay ? timeFormat.format(ms) : formatDateTime(ms));
+			const busyBy = after && after.end > requested ? after : undefined;
 			return (
 				<>
 					{name} · {formatDateTime(placed.start)} → {formatDateTime(placed.end)}
@@ -167,6 +176,18 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 							{' '}
 							· przed <span className="mono">{before.orderNo}</span>
 						</>
+					)}
+					{placed.start !== requested && (
+						<span className="form-preview-warn">
+							start przesunięty z {at(requested)} na {at(placed.start)} –{' '}
+							{busyBy ? (
+								<>
+									wcześniej zajęte przez <span className="mono">{busyBy.orderNo}</span>
+								</>
+							) : (
+								'wcześniej maszyna nie pracuje'
+							)}
+						</span>
 					)}
 				</>
 			);
@@ -237,7 +258,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 						submit(true)();
 					}
 				}}>
-				<Modal.Header closeButton>
+				<Modal.Header closeButton closeLabel="Zamknij">
 					<Modal.Title>{isEdit ? 'Edytuj zlecenie' : 'Nowe zlecenie'}</Modal.Title>
 				</Modal.Header>
 				<Modal.Body className="form-grid">
@@ -290,7 +311,12 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 						{recentOperations.length > 0 && (
 							<div className="quick-chips" aria-label="Ostatnio używane operacje">
 								{recentOperations.map((o) => (
-									<button key={o} type="button" className="quick-chip" title={`Wpisz „${o}”`} onClick={() => setValue('operation', o, { shouldValidate: true })}>
+									<button
+										key={o}
+										type="button"
+										className={`quick-chip ${o === operation?.trim() ? 'active' : ''}`}
+										aria-pressed={o === operation?.trim()}
+										title={`Wpisz „${o}”`} onClick={() => setValue('operation', o, { shouldValidate: true })}>
 										{o}
 									</button>
 								))}
@@ -368,14 +394,16 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 						<Form.Label as="div">Start</Form.Label>
 						<input type="hidden" {...register('startMode')} />
 						{!isEdit && (
-							<div className="segmented block" role="group" aria-label="Start">
-								<button type="button" className={`segmented-item ${startMode === 'queue' ? 'active' : ''}`} onClick={() => setStartMode('queue')}>
-									Na koniec kolejki
-								</button>
-								<button type="button" className={`segmented-item ${startMode === 'manual' ? 'active' : ''}`} onClick={() => setStartMode('manual')}>
-									Od wybranej godziny
-								</button>
-							</div>
+							<Segmented
+								block
+								label="Start"
+								value={startMode}
+								onChange={setStartMode}
+								options={[
+									{ value: 'queue', label: 'Na koniec kolejki' },
+									{ value: 'manual', label: 'Od wybranej godziny' }
+								]}
+							/>
 						)}
 						{startMode === 'manual' && (
 							<>
