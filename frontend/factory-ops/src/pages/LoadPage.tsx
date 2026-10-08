@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Badge, Button, Form, Table } from 'react-bootstrap';
 import BreakdownModal from '../components/BreakdownModal';
+import PageHeader from '../components/PageHeader';
 import { usePlan } from '../data/PlanContext';
 import { breakdownEnd, isOngoing, lineOfMachine, resourceName, standaloneMachines } from '../domain/calendar';
 import { formatDateTime } from '../domain/format';
@@ -106,105 +107,108 @@ const LoadPage = () => {
 		);
 
 	return (
-		<div className="d-flex flex-column gap-4">
-			<div className="d-flex flex-wrap gap-3">
-				<div className="stat-tile">
-					<div className="stat-label">Linie · zajętość {DAYS} dni</div>
-					<div className="stat-value">{average(lines) ?? 0}%</div>
-				</div>
-				<div className="stat-tile">
-					<div className="stat-label">Maszyny · zajętość {DAYS} dni</div>
-					<div className="stat-value">{average(machines) ?? 0}%</div>
-				</div>
-				<div className="stat-tile">
-					<div className="stat-label">Awarie trwające teraz</div>
-					<div className={`stat-value ${activeCount ? 'text-danger' : ''}`}>{activeCount}</div>
-				</div>
-			</div>
-
-			<div>
-				<h2 className="h5 mb-2">Obciążenie</h2>
-				<p className="text-secondary small mb-2">
-					Procent dostępnych maszyno-godzin zajętych przez zlecenia w danej dobie (6:00–6:00). Dostępny czas uwzględnia dni wolne, godziny pracy i awarie.
-				</p>
-				<Table bordered responsive size="sm" className="align-middle load-table mb-0">
-					<thead>
-						<tr>
-							<th>Maszyna / linia</th>
-							{days.map((day) => (
-								<th key={day} className="text-center text-nowrap">
-									{dayFormat.format(day)}
-								</th>
-							))}
-							<th>Wolna od</th>
-							<th className="text-center">W kolejce</th>
-						</tr>
-					</thead>
-					<tbody>
-						{renderRows('Linie produkcyjne', lines)}
-						{renderRows('Maszyny', machines)}
-					</tbody>
-				</Table>
-			</div>
-
-			<div>
-				<div className="d-flex align-items-center justify-content-between gap-3 mb-2">
-					<h2 className="h5 mb-0">Awarie</h2>
-					<div className="d-flex align-items-center gap-3">
-						<Form.Check type="switch" id="showDoneBreakdowns" label="Pokaż zakończone" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} />
-						<Button size="sm" variant="outline-danger" onClick={() => setReporting(true)}>
-							Zgłoś awarię
-						</Button>
+		<>
+			<PageHeader title="Obciążenie" />
+			<div className="page-body d-flex flex-column gap-4">
+				<div className="d-flex flex-wrap gap-3">
+					<div className="stat-tile">
+						<div className="stat-label">Linie · zajętość {DAYS} dni</div>
+						<div className="stat-value">{average(lines) ?? 0}%</div>
+					</div>
+					<div className="stat-tile">
+						<div className="stat-label">Maszyny · zajętość {DAYS} dni</div>
+						<div className="stat-value">{average(machines) ?? 0}%</div>
+					</div>
+					<div className="stat-tile">
+						<div className="stat-label">Awarie trwające teraz</div>
+						<div className={`stat-value ${activeCount ? 'text-danger' : ''}`}>{activeCount}</div>
 					</div>
 				</div>
-				{breakdowns.length === 0 ? (
-					<p className="text-secondary mb-0">Brak trwających awarii.</p>
-				) : (
-					<Table hover size="sm" className="align-middle mb-0">
+
+				<div>
+					<h2 className="h5 mb-2">Obciążenie</h2>
+					<p className="text-secondary small mb-2">
+						Procent dostępnych maszyno-godzin zajętych przez zlecenia w danej dobie (6:00–6:00). Dostępny czas uwzględnia dni wolne, godziny pracy i awarie.
+					</p>
+					<Table bordered responsive size="sm" className="align-middle load-table mb-0">
 						<thead>
 							<tr>
-								<th>Maszyna</th>
-								<th>Linia</th>
-								<th>Od</th>
-								<th>Do</th>
-								<th>Czas</th>
-								<th>Status</th>
-								<th />
+								<th>Maszyna / linia</th>
+								{days.map((day) => (
+									<th key={day} className="text-center text-nowrap">
+										{dayFormat.format(day)}
+									</th>
+								))}
+								<th>Wolna od</th>
+								<th className="text-center">W kolejce</th>
 							</tr>
 						</thead>
 						<tbody>
-							{breakdowns.map((breakdown) => {
-								const ongoing = isOngoing(breakdown);
-								const end = ongoing ? now : breakdownEnd(breakdown, now);
-								return (
-									<tr key={breakdown.id}>
-										<td className="fw-medium">{resourceName(state, breakdown.machineId)}</td>
-										<td>{lineOfMachine(state.lines, breakdown.machineId)?.name ?? <span className="text-secondary">—</span>}</td>
-										<td className="text-nowrap">{formatDateTime(breakdown.start)}</td>
-										<td className="text-nowrap">{ongoing ? <span className="text-danger">trwa</span> : formatDateTime(end)}</td>
-										<td>{Math.max(0, Math.round((end - breakdown.start) / HOUR))} h</td>
-										<td>
-											<Badge bg={ongoing ? 'danger' : 'secondary'}>{ongoing ? 'Trwa' : 'Zakończona'}</Badge>
-										</td>
-										<td className="text-end text-nowrap">
-											{ongoing && (
-												<Button size="sm" variant="danger" className="me-2" onClick={() => endBreakdown(breakdown.id)}>
-													Zakończ teraz
-												</Button>
-											)}
-											<Button size="sm" variant="outline-secondary" onClick={() => removeBreakdown(breakdown.id)}>
-												Usuń
-											</Button>
-										</td>
-									</tr>
-								);
-							})}
+							{renderRows('Linie produkcyjne', lines)}
+							{renderRows('Maszyny', machines)}
 						</tbody>
 					</Table>
-				)}
+				</div>
+
+				<div>
+					<div className="d-flex align-items-center justify-content-between gap-3 mb-2">
+						<h2 className="h5 mb-0">Awarie</h2>
+						<div className="d-flex align-items-center gap-3">
+							<Form.Check type="switch" id="showDoneBreakdowns" label="Pokaż zakończone" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} />
+							<Button size="sm" variant="outline-danger" onClick={() => setReporting(true)}>
+								Zgłoś awarię
+							</Button>
+						</div>
+					</div>
+					{breakdowns.length === 0 ? (
+						<p className="text-secondary mb-0">Brak trwających awarii.</p>
+					) : (
+						<Table hover size="sm" className="align-middle mb-0">
+							<thead>
+								<tr>
+									<th>Maszyna</th>
+									<th>Linia</th>
+									<th>Od</th>
+									<th>Do</th>
+									<th>Czas</th>
+									<th>Status</th>
+									<th />
+								</tr>
+							</thead>
+							<tbody>
+								{breakdowns.map((breakdown) => {
+									const ongoing = isOngoing(breakdown);
+									const end = ongoing ? now : breakdownEnd(breakdown, now);
+									return (
+										<tr key={breakdown.id}>
+											<td className="fw-medium">{resourceName(state, breakdown.machineId)}</td>
+											<td>{lineOfMachine(state.lines, breakdown.machineId)?.name ?? <span className="text-secondary">—</span>}</td>
+											<td className="text-nowrap">{formatDateTime(breakdown.start)}</td>
+											<td className="text-nowrap">{ongoing ? <span className="text-danger">trwa</span> : formatDateTime(end)}</td>
+											<td>{Math.max(0, Math.round((end - breakdown.start) / HOUR))} h</td>
+											<td>
+												<Badge bg={ongoing ? 'danger' : 'secondary'}>{ongoing ? 'Trwa' : 'Zakończona'}</Badge>
+											</td>
+											<td className="text-end text-nowrap">
+												{ongoing && (
+													<Button size="sm" variant="danger" className="me-2" onClick={() => endBreakdown(breakdown.id)}>
+														Zakończ teraz
+													</Button>
+												)}
+												<Button size="sm" variant="outline-secondary" onClick={() => removeBreakdown(breakdown.id)}>
+													Usuń
+												</Button>
+											</td>
+										</tr>
+									);
+								})}
+							</tbody>
+						</Table>
+					)}
+				</div>
+				<BreakdownModal show={reporting} onHide={() => setReporting(false)} />
 			</div>
-			<BreakdownModal show={reporting} onHide={() => setReporting(false)} />
-		</div>
+		</>
 	);
 };
 

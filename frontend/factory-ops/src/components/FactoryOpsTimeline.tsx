@@ -10,6 +10,7 @@ import Timeline, {
 	TodayMarker
 } from 'react-calendar-timeline';
 import 'react-calendar-timeline/style.css';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { usePlan } from '../data/PlanContext';
 import {
 	breakdownEnd,
@@ -28,6 +29,7 @@ import { formatDateTime, formatHours, programmerName, timelineLabel } from '../d
 import { blockStatus, previewMove } from '../domain/schedule';
 import { dayKey, nearestHourStart, shiftDayStart } from '../domain/shifts';
 import { Block, Breakdown, Id, Line, Machine } from '../domain/types';
+import { RevealBreakdownState } from './AppRail';
 import BlockDetailsPanel from './BlockDetailsPanel';
 import BlockFormModal, { BlockFormDefaults } from './BlockFormModal';
 import BreakdownModal, { BreakdownModalTarget } from './BreakdownModal';
@@ -211,6 +213,8 @@ const FactoryOpsTimeline = () => {
 		() => new Set(state.lines.filter((l) => state.blocks.some((b) => l.machineIds.includes(b.machineId))).map((l) => l.id))
 	);
 	const [query, setQuery] = useState('');
+	/** Wiersz, do którego przewinąć plan w pionie, gdy już będzie widoczny (po rozwinięciu grupy lub linii). */
+	const [scrollToRow, setScrollToRow] = useState<Id>();
 	const [matchIndex, setMatchIndex] = useState(0);
 	// przeciąganie pustego planu nie przesuwa widoku - myliło się z przeciąganiem zleceń
 	const panBlocked = useRef(false);
@@ -304,6 +308,24 @@ const FactoryOpsTimeline = () => {
 		setRange(rangeAround(block.start, Math.max(span, (block.end - block.start) * 1.5), 0.15));
 	};
 
+	// klik w kartę awarii w menu bocznym: odsłonięcie maszyny i przewinięcie do początku awarii.
+	// Stan nawigacji czyścimy od razu - inaczej cofnięcie i odświeżenie strony przewijałyby plan jeszcze raz.
+	const location = useLocation();
+	const navigate = useNavigate();
+	const revealBreakdownId = (location.state as RevealBreakdownState | null)?.revealBreakdown;
+	useEffect(() => {
+		if (!revealBreakdownId) return;
+		const breakdown = state.breakdowns.find((b) => b.id === revealBreakdownId);
+		if (breakdown) {
+			reveal(breakdown.machineId);
+			setRange(rangeAround(breakdown.start, span, 0.15));
+			setScrollToRow(breakdown.machineId);
+		}
+		navigate(location.pathname, { replace: true, state: null });
+		// reagujemy tylko na nowe polecenie z nawigacji
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [revealBreakdownId, location.key]);
+
 	// --- wyszukiwanie ---
 	const matches = useMemo(() => (query.trim() ? [...state.blocks].filter((b) => matchesQuery(b, query)).sort((a, b) => a.start - b.start) : []), [state.blocks, query]);
 	const matchIds = useMemo(() => new Set(matches.map((b) => b.id)), [matches]);
@@ -344,6 +366,13 @@ const FactoryOpsTimeline = () => {
 		return [header('lines', state.lines.length), ...(collapsed.lines ? [] : lineRows), header('machines', standalone.length), ...(collapsed.machines ? [] : machineRows)];
 	}, [state.lines, state.machines, standalone, collapsed, expandedLines]);
 	const visibleIds = useMemo(() => new Set(groups.filter((g) => g.machine || g.line).map((g) => g.id)), [groups]);
+	useEffect(() => {
+		if (!scrollToRow) return;
+		const index = groups.findIndex((g) => g.id === scrollToRow);
+		if (index < 0) return;
+		timelineRef.current?.querySelectorAll('.rct-sidebar-row')[index]?.scrollIntoView({ block: 'center' });
+		setScrollToRow(undefined);
+	}, [groups, scrollToRow]);
 	/** Maszyna lub linia wiersza o danym numerze; na nagłówku grupy - `undefined`. */
 	const resourceAtRow = (groupOrder: number) => {
 		const group = groups[groupOrder];

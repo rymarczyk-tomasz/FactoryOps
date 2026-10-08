@@ -3,6 +3,7 @@ import { Badge, Button, Table } from 'react-bootstrap';
 import ConfirmModal from '../components/ConfirmModal';
 import LineFormModal from '../components/LineFormModal';
 import MachineFormModal from '../components/MachineFormModal';
+import PageHeader from '../components/PageHeader';
 import { usePlan } from '../data/PlanContext';
 import { isOngoing, lineMachines, lineOfMachine, workMode, WORK_MODE_LABELS } from '../domain/calendar';
 import { Id, Line, Machine } from '../domain/types';
@@ -48,134 +49,137 @@ const MachinesPage = () => {
 	);
 
 	return (
-		<div className="d-flex flex-column gap-4">
-			<div>
-				<div className="d-flex align-items-center justify-content-between mb-2">
-					<div>
-						<h2 className="h5 mb-0">Linie produkcyjne</h2>
-						<span className="small text-secondary">Linia to grupa maszyn pracujących równolegle. Zlecenie można dać na całą linię albo na jedną jej maszynę.</span>
+		<>
+			<PageHeader title="Maszyny" />
+			<div className="page-body d-flex flex-column gap-4">
+				<div>
+					<div className="d-flex align-items-center justify-content-between mb-2">
+						<div>
+							<h2 className="h5 mb-0">Linie produkcyjne</h2>
+							<span className="small text-secondary">Linia to grupa maszyn pracujących równolegle. Zlecenie można dać na całą linię albo na jedną jej maszynę.</span>
+						</div>
+						<Button onClick={() => setLineForm({ show: true })}>+ Dodaj linię</Button>
 					</div>
-					<Button onClick={() => setLineForm({ show: true })}>+ Dodaj linię</Button>
+					<Table hover className="align-middle mb-0">
+						<thead>
+							<tr>
+								<th>Nazwa</th>
+								<th>Maszyny</th>
+								<th>System pracy</th>
+								<th>Zlecenia linii</th>
+								<th />
+							</tr>
+						</thead>
+						<tbody>
+							{state.lines.map((line) => {
+								const members = lineMachines(line, state.machines);
+								const onMachines = members.reduce((sum, m) => sum + blockCount(m.id), 0);
+								return (
+									<tr key={line.id}>
+										<td className="fw-medium">{line.name}</td>
+										<td>
+											<span className="d-flex flex-wrap gap-1">
+												{members.map((m) => (
+													<Badge
+														key={m.id}
+														bg={down.has(m.id) ? 'danger' : 'light'}
+														text={down.has(m.id) ? undefined : 'dark'}
+														className="border"
+														title={down.has(m.id) ? 'Trwa awaria' : undefined}>
+														{m.name}
+													</Badge>
+												))}
+											</span>
+										</td>
+										<td>{lineWorkMode(members)}</td>
+										<td>
+											{blockCount(line.id)}
+											{onMachines > 0 && <span className="small text-secondary"> + {onMachines} na maszynach</span>}
+										</td>
+										{actions(
+											line.id,
+											() => setLineForm({ show: true, line }),
+											() => setLineToDelete(line)
+										)}
+									</tr>
+								);
+							})}
+							{state.lines.length === 0 && (
+								<tr>
+									<td colSpan={5} className="text-center text-secondary py-3">
+										Brak linii.
+									</td>
+								</tr>
+							)}
+						</tbody>
+					</Table>
 				</div>
-				<Table hover className="align-middle mb-0">
-					<thead>
-						<tr>
-							<th>Nazwa</th>
-							<th>Maszyny</th>
-							<th>System pracy</th>
-							<th>Zlecenia linii</th>
-							<th />
-						</tr>
-					</thead>
-					<tbody>
-						{state.lines.map((line) => {
-							const members = lineMachines(line, state.machines);
-							const onMachines = members.reduce((sum, m) => sum + blockCount(m.id), 0);
-							return (
-								<tr key={line.id}>
-									<td className="fw-medium">{line.name}</td>
-									<td>
-										<span className="d-flex flex-wrap gap-1">
-											{members.map((m) => (
-												<Badge
-													key={m.id}
-													bg={down.has(m.id) ? 'danger' : 'light'}
-													text={down.has(m.id) ? undefined : 'dark'}
-													className="border"
-													title={down.has(m.id) ? 'Trwa awaria' : undefined}>
-													{m.name}
-												</Badge>
-											))}
-										</span>
+
+				<div>
+					<div className="d-flex align-items-center justify-content-between mb-2">
+						<div>
+							<h2 className="h5 mb-0">Maszyny</h2>
+							<span className="small text-secondary">
+								{state.machines.length} maszyn, w tym {state.machines.filter((m) => lineOfMachine(state.lines, m.id)).length} w liniach
+							</span>
+						</div>
+						<Button onClick={() => setMachineForm({ show: true })}>+ Dodaj maszynę</Button>
+					</div>
+					<Table hover className="align-middle mb-0">
+						<thead>
+							<tr>
+								<th>Nazwa</th>
+								<th>Linia</th>
+								<th>System pracy</th>
+								<th>Zlecenia</th>
+								<th />
+							</tr>
+						</thead>
+						<tbody>
+							{state.machines.map((machine) => (
+								<tr key={machine.id}>
+									<td className="fw-medium">
+										{machine.name}
+										{down.has(machine.id) && (
+											<Badge bg="danger" pill className="ms-2">
+												awaria
+											</Badge>
+										)}
 									</td>
-									<td>{lineWorkMode(members)}</td>
-									<td>
-										{blockCount(line.id)}
-										{onMachines > 0 && <span className="small text-secondary"> + {onMachines} na maszynach</span>}
-									</td>
+									<td>{lineOfMachine(state.lines, machine.id)?.name ?? <span className="text-secondary">—</span>}</td>
+									<td>{WORK_MODE_LABELS[workMode(machine)]}</td>
+									<td>{blockCount(machine.id)}</td>
 									{actions(
-										line.id,
-										() => setLineForm({ show: true, line }),
-										() => setLineToDelete(line)
+										machine.id,
+										() => setMachineForm({ show: true, machine }),
+										() => setMachineToDelete(machine)
 									)}
 								</tr>
-							);
-						})}
-						{state.lines.length === 0 && (
-							<tr>
-								<td colSpan={5} className="text-center text-secondary py-3">
-									Brak linii.
-								</td>
-							</tr>
-						)}
-					</tbody>
-				</Table>
-			</div>
-
-			<div>
-				<div className="d-flex align-items-center justify-content-between mb-2">
-					<div>
-						<h2 className="h5 mb-0">Maszyny</h2>
-						<span className="small text-secondary">
-							{state.machines.length} maszyn, w tym {state.machines.filter((m) => lineOfMachine(state.lines, m.id)).length} w liniach
-						</span>
-					</div>
-					<Button onClick={() => setMachineForm({ show: true })}>+ Dodaj maszynę</Button>
+							))}
+						</tbody>
+					</Table>
 				</div>
-				<Table hover className="align-middle mb-0">
-					<thead>
-						<tr>
-							<th>Nazwa</th>
-							<th>Linia</th>
-							<th>System pracy</th>
-							<th>Zlecenia</th>
-							<th />
-						</tr>
-					</thead>
-					<tbody>
-						{state.machines.map((machine) => (
-							<tr key={machine.id}>
-								<td className="fw-medium">
-									{machine.name}
-									{down.has(machine.id) && (
-										<Badge bg="danger" pill className="ms-2">
-											awaria
-										</Badge>
-									)}
-								</td>
-								<td>{lineOfMachine(state.lines, machine.id)?.name ?? <span className="text-secondary">—</span>}</td>
-								<td>{WORK_MODE_LABELS[workMode(machine)]}</td>
-								<td>{blockCount(machine.id)}</td>
-								{actions(
-									machine.id,
-									() => setMachineForm({ show: true, machine }),
-									() => setMachineToDelete(machine)
-								)}
-							</tr>
-						))}
-					</tbody>
-				</Table>
-			</div>
 
-			<MachineFormModal show={machineForm.show} machine={machineForm.machine} onHide={() => setMachineForm((f) => ({ ...f, show: false }))} />
-			<LineFormModal show={lineForm.show} line={lineForm.line} onHide={() => setLineForm((f) => ({ ...f, show: false }))} />
-			<ConfirmModal
-				show={machineToDelete !== undefined}
-				title="Usunąć maszynę?"
-				onConfirm={() => machineToDelete && deleteMachine(machineToDelete.id)}
-				onHide={() => setMachineToDelete(undefined)}>
-				Maszyna <strong>{machineToDelete?.name}</strong> zostanie usunięta razem z jej zleceniami ({machineToDelete ? blockCount(machineToDelete.id) : 0}) i awariami.
-				{machineToDelete && lineOfMachine(state.lines, machineToDelete.id) && ` Zniknie też z ${lineOfMachine(state.lines, machineToDelete.id)!.name}.`}
-			</ConfirmModal>
-			<ConfirmModal
-				show={lineToDelete !== undefined}
-				title="Usunąć linię?"
-				onConfirm={() => lineToDelete && deleteLine(lineToDelete.id)}
-				onHide={() => setLineToDelete(undefined)}>
-				Linia <strong>{lineToDelete?.name}</strong> zostanie usunięta razem ze zleceniami linii ({lineToDelete ? blockCount(lineToDelete.id) : 0}). Jej maszyny zostaną jako
-				samodzielne, z własnymi zleceniami.
-			</ConfirmModal>
-		</div>
+				<MachineFormModal show={machineForm.show} machine={machineForm.machine} onHide={() => setMachineForm((f) => ({ ...f, show: false }))} />
+				<LineFormModal show={lineForm.show} line={lineForm.line} onHide={() => setLineForm((f) => ({ ...f, show: false }))} />
+				<ConfirmModal
+					show={machineToDelete !== undefined}
+					title="Usunąć maszynę?"
+					onConfirm={() => machineToDelete && deleteMachine(machineToDelete.id)}
+					onHide={() => setMachineToDelete(undefined)}>
+					Maszyna <strong>{machineToDelete?.name}</strong> zostanie usunięta razem z jej zleceniami ({machineToDelete ? blockCount(machineToDelete.id) : 0}) i awariami.
+					{machineToDelete && lineOfMachine(state.lines, machineToDelete.id) && ` Zniknie też z ${lineOfMachine(state.lines, machineToDelete.id)!.name}.`}
+				</ConfirmModal>
+				<ConfirmModal
+					show={lineToDelete !== undefined}
+					title="Usunąć linię?"
+					onConfirm={() => lineToDelete && deleteLine(lineToDelete.id)}
+					onHide={() => setLineToDelete(undefined)}>
+					Linia <strong>{lineToDelete?.name}</strong> zostanie usunięta razem ze zleceniami linii ({lineToDelete ? blockCount(lineToDelete.id) : 0}). Jej maszyny
+					zostaną jako samodzielne, z własnymi zleceniami.
+				</ConfirmModal>
+			</div>
+		</>
 	);
 };
 

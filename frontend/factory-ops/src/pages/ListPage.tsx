@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Badge, Button, Col, Form, Row, Table } from 'react-bootstrap';
 import { STATUS_VARIANTS } from '../components/BlockDetailsPanel';
 import MultiSelect, { MultiSelectOption } from '../components/MultiSelect';
+import PageHeader from '../components/PageHeader';
 import { usePlan } from '../data/PlanContext';
 import { lineMachines, resourceName, standaloneMachines } from '../domain/calendar';
 import { formatDateTime, formatHours, programmerName, STATUS_LABELS, toLocalInputValue } from '../domain/format';
@@ -132,121 +133,124 @@ const ListPage = () => {
 
 	return (
 		<>
-			<Row className="g-2 align-items-end mb-3">
-				<Col md={2}>
-					<Form.Control type="search" placeholder="Szukaj: nr, projekt, operacja" aria-label="Szukaj" value={query} onChange={(e) => setQuery(e.target.value)} />
-				</Col>
-				<Col md={2}>
-					<MultiSelect id="filterStatus" label="Status" allLabel="Wszystkie statusy" options={statusOptions} selected={statuses} onChange={setStatuses} />
-				</Col>
-				<Col md={2}>
-					<MultiSelect id="filterMachine" label="Maszyny" allLabel="Wszystkie maszyny" options={machineOptions} selected={machineIds} onChange={setMachineIds} />
-				</Col>
-				<Col md={2}>
-					<MultiSelect id="filterProject" label="Projekty" allLabel="Wszystkie projekty" options={projectOptions} selected={projectNos} onChange={setProjectNos} />
-				</Col>
-				<Col md={2}>
-					<MultiSelect
-						id="filterProgrammer"
-						label="Programiści"
-						allLabel="Wszyscy programiści"
-						options={programmerOptions}
-						selected={programmerIds}
-						onChange={setProgrammerIds}
-					/>
-				</Col>
-				<Col md={2} className="d-flex gap-2 justify-content-end">
-					{filtersActive && (
-						<Button variant="link" className="text-nowrap px-1" onClick={clearFilters}>
-							Wyczyść
+			<PageHeader title="Lista zleceń" />
+			<div className="page-body">
+				<Row className="g-2 align-items-end mb-3">
+					<Col md={2}>
+						<Form.Control type="search" placeholder="Szukaj: nr, projekt, operacja" aria-label="Szukaj" value={query} onChange={(e) => setQuery(e.target.value)} />
+					</Col>
+					<Col md={2}>
+						<MultiSelect id="filterStatus" label="Status" allLabel="Wszystkie statusy" options={statusOptions} selected={statuses} onChange={setStatuses} />
+					</Col>
+					<Col md={2}>
+						<MultiSelect id="filterMachine" label="Maszyny" allLabel="Wszystkie maszyny" options={machineOptions} selected={machineIds} onChange={setMachineIds} />
+					</Col>
+					<Col md={2}>
+						<MultiSelect id="filterProject" label="Projekty" allLabel="Wszystkie projekty" options={projectOptions} selected={projectNos} onChange={setProjectNos} />
+					</Col>
+					<Col md={2}>
+						<MultiSelect
+							id="filterProgrammer"
+							label="Programiści"
+							allLabel="Wszyscy programiści"
+							options={programmerOptions}
+							selected={programmerIds}
+							onChange={setProgrammerIds}
+						/>
+					</Col>
+					<Col md={2} className="d-flex gap-2 justify-content-end">
+						{filtersActive && (
+							<Button variant="link" className="text-nowrap px-1" onClick={clearFilters}>
+								Wyczyść
+							</Button>
+						)}
+						<Button variant="outline-success" className="text-nowrap" disabled={rows.length === 0} onClick={exportCsv}>
+							Eksport do Excela
 						</Button>
-					)}
-					<Button variant="outline-success" className="text-nowrap" disabled={rows.length === 0} onClick={exportCsv}>
-						Eksport do Excela
-					</Button>
-				</Col>
-			</Row>
-			<div className="d-flex align-items-center justify-content-between mb-2">
-				<span className="small text-secondary">
-					{archived ? 'Archiwum: ' : ''}
-					{rows.length} z {source.length} zleceń{rows.length > shown.length ? ` · na ekranie pierwsze ${shown.length}` : ''}
-				</span>
-				<Form.Check
-					type="switch"
-					id="showArchive"
-					label={`Archiwum (${state.archive.length}) · zakończone ponad ${ARCHIVE_AFTER_DAYS} dni temu`}
-					checked={archived}
-					onChange={(e) => setArchived(e.target.checked)}
-				/>
-			</div>
-			<Table hover responsive className="align-middle mb-0 list-table">
-				<thead>
-					<tr>
-						{COLUMNS.map((column) => (
-							<th key={column.key} className="sortable" aria-sort={sort.key === column.key ? (sort.direction === 1 ? 'ascending' : 'descending') : 'none'}>
-								<button type="button" onClick={() => toggleSort(column.key)}>
-									{column.label}
-									<span className="sort-arrow">{sort.key === column.key ? (sort.direction === 1 ? '▲' : '▼') : ''}</span>
-								</button>
-							</th>
-						))}
-						<th>Status</th>
-						<th>Programista</th>
-					</tr>
-				</thead>
-				<tbody>
-					{shown.map((block) => {
-						const blockState = statusOf(block);
-						return (
-							<tr key={block.id}>
-								<td className="text-nowrap">{formatDateTime(block.start)}</td>
-								<td className="text-nowrap">{formatDateTime(block.end)}</td>
-								<td>{block.operation}</td>
-								<td className="text-nowrap">{block.projectNo}</td>
-								<td>{block.project}</td>
-								<td className="text-nowrap">{block.orderNo}</td>
-								<td>{nameOf(block)}</td>
-								<td className="text-nowrap">{formatHours(block.hours)}</td>
-								<td>
-									<Badge bg={STATUS_VARIANTS[blockState]}>{STATUS_LABELS[blockState]}</Badge>
-								</td>
-								<td>
-									{archived ? (
-										programmerName(state.programmers.find((p) => p.id === block.programmerId))
-									) : (
-										<Form.Select
-										size="sm"
-										aria-label="Programista"
-										value={block.programmerId ?? ''}
-										onChange={(e) => updateBlock(block.id, { programmerId: e.target.value || undefined })}>
-											<option value="">— nie przypisano —</option>
-											{state.programmers.map((p) => (
-												<option key={p.id} value={p.id}>
-													{programmerName(p)}
-												</option>
-											))}
-										</Form.Select>
-									)}
+					</Col>
+				</Row>
+				<div className="d-flex align-items-center justify-content-between mb-2">
+					<span className="small text-secondary">
+						{archived ? 'Archiwum: ' : ''}
+						{rows.length} z {source.length} zleceń{rows.length > shown.length ? ` · na ekranie pierwsze ${shown.length}` : ''}
+					</span>
+					<Form.Check
+						type="switch"
+						id="showArchive"
+						label={`Archiwum (${state.archive.length}) · zakończone ponad ${ARCHIVE_AFTER_DAYS} dni temu`}
+						checked={archived}
+						onChange={(e) => setArchived(e.target.checked)}
+					/>
+				</div>
+				<Table hover responsive className="align-middle mb-0 list-table">
+					<thead>
+						<tr>
+							{COLUMNS.map((column) => (
+								<th key={column.key} className="sortable" aria-sort={sort.key === column.key ? (sort.direction === 1 ? 'ascending' : 'descending') : 'none'}>
+									<button type="button" onClick={() => toggleSort(column.key)}>
+										{column.label}
+										<span className="sort-arrow">{sort.key === column.key ? (sort.direction === 1 ? '▲' : '▼') : ''}</span>
+									</button>
+								</th>
+							))}
+							<th>Status</th>
+							<th>Programista</th>
+						</tr>
+					</thead>
+					<tbody>
+						{shown.map((block) => {
+							const blockState = statusOf(block);
+							return (
+								<tr key={block.id}>
+									<td className="text-nowrap">{formatDateTime(block.start)}</td>
+									<td className="text-nowrap">{formatDateTime(block.end)}</td>
+									<td>{block.operation}</td>
+									<td className="text-nowrap">{block.projectNo}</td>
+									<td>{block.project}</td>
+									<td className="text-nowrap">{block.orderNo}</td>
+									<td>{nameOf(block)}</td>
+									<td className="text-nowrap">{formatHours(block.hours)}</td>
+									<td>
+										<Badge bg={STATUS_VARIANTS[blockState]}>{STATUS_LABELS[blockState]}</Badge>
+									</td>
+									<td>
+										{archived ? (
+											programmerName(state.programmers.find((p) => p.id === block.programmerId))
+										) : (
+											<Form.Select
+											size="sm"
+											aria-label="Programista"
+											value={block.programmerId ?? ''}
+											onChange={(e) => updateBlock(block.id, { programmerId: e.target.value || undefined })}>
+												<option value="">— nie przypisano —</option>
+												{state.programmers.map((p) => (
+													<option key={p.id} value={p.id}>
+														{programmerName(p)}
+													</option>
+												))}
+											</Form.Select>
+										)}
+									</td>
+								</tr>
+							);
+						})}
+						{rows.length === 0 && (
+							<tr>
+								<td colSpan={COLUMNS.length + 2} className="text-center text-secondary py-4">
+									Brak zleceń dla wybranych filtrów.
 								</td>
 							</tr>
-						);
-					})}
-					{rows.length === 0 && (
-						<tr>
-							<td colSpan={COLUMNS.length + 2} className="text-center text-secondary py-4">
-								Brak zleceń dla wybranych filtrów.
-							</td>
-						</tr>
-					)}
-				</tbody>
-			</Table>
-			{rows.length > shown.length && (
-				<div className="text-center mt-3">
-					<Button variant="outline-secondary" onClick={() => setPage({ key: pageKey, limit: limit + PAGE_SIZE })}>
-						Pokaż kolejne {Math.min(PAGE_SIZE, rows.length - shown.length)} (zostało {rows.length - shown.length})
-					</Button>
-				</div>
-			)}
+						)}
+					</tbody>
+				</Table>
+				{rows.length > shown.length && (
+					<div className="text-center mt-3">
+						<Button variant="outline-secondary" onClick={() => setPage({ key: pageKey, limit: limit + PAGE_SIZE })}>
+							Pokaż kolejne {Math.min(PAGE_SIZE, rows.length - shown.length)} (zostało {rows.length - shown.length})
+						</Button>
+					</div>
+				)}
+			</div>
 		</>
 	);
 };
