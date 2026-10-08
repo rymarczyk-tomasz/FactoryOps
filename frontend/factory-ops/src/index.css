@@ -1,10 +1,3 @@
-body {
-	margin: 0;
-	background: #f3f4f6;
-	-webkit-font-smoothing: antialiased;
-	-moz-osx-font-smoothing: grayscale;
-}
-
 /* Timeline */
 
 /* weekendy biblioteki są wspólne dla wszystkich maszyn - dni wolne rysujemy osobno dla każdej maszyny */
@@ -379,7 +372,6 @@ body {
 }
 
 .notice-container .toast-body {
-	padding: 6px 12px;
 	white-space: nowrap;
 }
 
