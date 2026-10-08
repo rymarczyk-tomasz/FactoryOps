@@ -75,7 +75,7 @@
 
 .list-grid {
 	display: grid;
-	grid-template-columns: 44px 120px minmax(0, 1.5fr) minmax(0, 1fr) 110px 200px 70px minmax(0, 1fr);
+	grid-template-columns: 44px 110px minmax(0, 1.2fr) minmax(0, 1fr) 150px 190px 64px minmax(0, 1fr);
 	align-items: center;
 }
 
@@ -137,8 +137,11 @@
 	background: oklch(0.985 0.004 255);
 }
 
-.list-row.is-selected {
+/* zaznaczony wyraźniej niż najechany: tło i pasek z lewej */
+.list-row.is-selected,
+.list-row.is-selected:hover {
 	background: oklch(0.97 0.015 255);
+	box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .list-check {
@@ -228,6 +231,8 @@ button.list-order-no:hover {
 }
 
 .list-resource {
+	min-width: 0;
+	padding-right: 12px;
 	font-size: 12.5px;
 	overflow: hidden;
 	white-space: nowrap;

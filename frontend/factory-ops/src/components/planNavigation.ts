@@ -7,4 +7,6 @@ export interface PlanNavigationState {
 	revealBreakdown?: string;
 	/** Zaznaczyć zlecenie i przewinąć do niego plan. */
 	showBlock?: string;
+	/** Kilka zleceń z listy: wyróżnić jak wyniki wyszukiwania i przejść do pierwszego. */
+	showBlocks?: string[];
 }

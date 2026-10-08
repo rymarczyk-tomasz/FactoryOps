@@ -132,7 +132,8 @@
 }
 
 [aria-checked='true'] > .check-box,
-.check-box.is-checked {
+.check-box.is-checked,
+.check-box.is-mixed {
 	border-color: var(--primary);
 	background: var(--primary);
 }

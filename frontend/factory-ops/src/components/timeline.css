@@ -99,6 +99,18 @@
 	width: 260px;
 }
 
+/* zlecenia przekazane z listy zamiast wpisanego zapytania */
+.pick-label {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--accent-ink);
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
 .search-count {
 	font-size: 11.5px;
 	color: var(--ink-3);
@@ -360,7 +372,7 @@
 	background: oklch(0.99 0.002 255);
 }
 
-/* przy braku miejsca najpierw zwęża się opis, potem nazwa - procent obciążenia zostaje zawsze */
+/* długa nazwa zwęża się z wielokropkiem - procent obciążenia zostaje zawsze; opis pokazujemy tylko, gdy się mieści */
 .row-name {
 	flex: 0 1 auto;
 	min-width: 0;
@@ -378,8 +390,7 @@
 }
 
 .row-meta {
-	flex: 0 4 auto;
-	min-width: 0;
+	flex: none;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	font-size: 11px;

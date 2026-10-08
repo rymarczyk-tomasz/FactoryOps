@@ -77,6 +77,8 @@ const ListPage = () => {
 	const [selectedIds, setSelectedIds] = useState<Set<Id>>(() => new Set());
 	const [creating, setCreating] = useState(false);
 	const searchRef = useRef<HTMLInputElement>(null);
+	/** Ostatnio kliknięty wiersz (indeks na liście) - Shift+klik zaznacza zakres od niego. */
+	const anchorRef = useRef<number>();
 
 	// „/” przenosi do wyszukiwarki
 	useEffect(() => {
@@ -160,14 +162,23 @@ const ListPage = () => {
 	const sourceIds = useMemo(() => new Set(source.map((b) => b.id)), [source]);
 	const selected = [...selectedIds].filter((id) => sourceIds.has(id));
 	const selectedBlocks = source.filter((b) => selectedIds.has(b.id));
-	const allShownSelected = shown.length > 0 && shown.every((b) => selectedIds.has(b.id));
-	const toggleRow = (id: Id) =>
+	const shownSelected = shown.filter((b) => selectedIds.has(b.id)).length;
+	const allShownSelected = shown.length > 0 && shownSelected === shown.length;
+	const someShownSelected = shownSelected > 0 && !allShownSelected;
+	/** Klik przełącza wiersz; z Shiftem ustawia cały zakres od ostatnio klikniętego na stan klikniętego po zmianie. */
+	const toggleRow = (index: number, shift: boolean) => {
+		const id = shown[index].id;
+		const checked = !selectedIds.has(id);
+		const anchor = anchorRef.current;
+		const [from, to] = shift && anchor !== undefined && anchor < shown.length ? [Math.min(anchor, index), Math.max(anchor, index)] : [index, index];
 		setSelectedIds((current) => {
 			const next = new Set(current);
-			if (next.has(id)) next.delete(id);
-			else next.add(id);
+			shown.slice(from, to + 1).forEach((b) => (checked ? next.add(b.id) : next.delete(b.id)));
 			return next;
 		});
+		anchorRef.current = index;
+	};
+	// tylko wiersze na ekranie (pierwsze 200), nie wszystkie pasujące do filtrów
 	const toggleAllShown = () =>
 		setSelectedIds((current) => {
 			const next = new Set(current);
@@ -190,6 +201,8 @@ const ListPage = () => {
 
 	const unassignedOnly = programmerIds.length === 1 && programmerIds[0] === UNASSIGNED;
 	const showOnPlan = (id: Id) => navigate('/', { state: { showBlock: id } satisfies PlanNavigationState });
+	// kilka zleceń: plan wyróżnia je jak wyniki wyszukiwania i przeskakuje między nimi strzałkami
+	const showManyOnPlan = (ids: Id[]) => navigate('/', { state: (ids.length === 1 ? { showBlock: ids[0] } : { showBlocks: ids }) satisfies PlanNavigationState });
 
 	/** Eksport wierszy do CSV ze średnikami i BOM, który polski Excel otwiera bez importu. */
 	const exportCsv = (blocks: ListBlock[], suffix = '') => {
@@ -289,8 +302,16 @@ const ListPage = () => {
 			<div className="list-panel">
 				<div className="list-grid list-head" role="row">
 					<span className="list-check">
-						<button type="button" className="check-button" aria-label="Zaznacz widoczne" aria-pressed={allShownSelected} onClick={toggleAllShown}>
-							<span className={`check-box ${allShownSelected ? 'is-checked' : ''}`}>{allShownSelected ? '✓' : ''}</span>
+						<button
+							type="button"
+							className="check-button"
+							aria-label={`Zaznacz widoczne wiersze (${shown.length})`}
+							title={`${allShownSelected ? 'Odznacz' : 'Zaznacz'} widoczne wiersze (${shown.length}) - nie wszystkie ${rows.length} pasujące do filtrów`}
+							aria-pressed={someShownSelected ? 'mixed' : allShownSelected}
+							onClick={toggleAllShown}>
+							<span className={`check-box ${allShownSelected ? 'is-checked' : someShownSelected ? 'is-mixed' : ''}`}>
+								{allShownSelected ? '✓' : someShownSelected ? '–' : ''}
+							</span>
 						</button>
 					</span>
 					{sortHeader('status', 'Status')}
@@ -302,7 +323,7 @@ const ListPage = () => {
 					<span>Programista</span>
 				</div>
 				<div className="list-rows">
-					{shown.map((block) => {
+					{shown.map((block, index) => {
 						const status = statuses.get(block.id)!;
 						const programmer = programmers.get(block.programmerId ?? '');
 						const checked = selectedIds.has(block.id);
@@ -312,14 +333,15 @@ const ListPage = () => {
 								role="row"
 								aria-selected={checked}
 								className={`list-grid list-row ${checked ? 'is-selected' : ''}`}
-								onClick={(e) => !fromControl(e) && toggleRow(block.id)}>
+								onMouseDown={(e) => e.shiftKey && e.preventDefault()}
+								onClick={(e) => !fromControl(e) && toggleRow(index, e.shiftKey)}>
 								<span className="list-check">
 									<button
 										type="button"
 										className="check-button"
 										aria-label={`Zaznacz ${block.orderNo}`}
 										aria-pressed={checked}
-										onClick={() => toggleRow(block.id)}>
+										onClick={(e) => toggleRow(index, e.shiftKey)}>
 										<span className={`check-box ${checked ? 'is-checked' : ''}`}>{checked ? '✓' : ''}</span>
 									</button>
 								</span>
@@ -345,7 +367,9 @@ const ListPage = () => {
 									</span>
 									<span className="list-ellipsis">{block.project}</span>
 								</span>
-								<span className="list-resource mono">{nameOf(block)}</span>
+								<span className="list-resource mono" title={nameOf(block)}>
+									{nameOf(block)}
+								</span>
 								<span className="list-dates mono">
 									<span>{formatDateTime(block.start)}</span>
 									<span className="list-dates-end">→ {formatDateTime(block.end)}</span>
@@ -399,8 +423,7 @@ const ListPage = () => {
 							</Dropdown>
 						)}
 						{!archived && (
-							// TODO: przy kilku zaznaczonych plan pokazuje najwcześniejsze - wyróżnienie wszystkich wymaga wyboru wielu zleceń na planie
-							<button type="button" className="list-bar-button" onClick={() => showOnPlan(selectedBlocks.sort((a, b) => a.start - b.start)[0].id)}>
+							<button type="button" className="list-bar-button" onClick={() => showManyOnPlan(selected)}>
 								Pokaż na planie
 							</button>
 						)}

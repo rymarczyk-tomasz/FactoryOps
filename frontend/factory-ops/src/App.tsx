@@ -40,8 +40,8 @@ function App() {
 					<Route path="/load" element={<LoadPage />} />
 					<Route path="/machines" element={<MachinesPage />} />
 				</Routes>
-				{/* komunikat na górze obszaru treści - nie przewija się razem ze stroną */}
-				<ToastContainer position="top-center" containerPosition="absolute" className="notice-container">
+				{/* komunikat w prawym dolnym rogu obszaru treści - nad stopką planu i paskiem listy, nie przewija się ze stroną */}
+				<ToastContainer position="bottom-end" containerPosition="absolute" className="notice-container">
 					{notice && (
 						<Toast key={notice.id} onClose={dismissNotice} delay={NOTICE_DELAY_MS} autohide>
 							<Toast.Body className="d-flex align-items-center gap-3">

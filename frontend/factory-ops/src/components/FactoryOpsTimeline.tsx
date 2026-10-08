@@ -226,6 +226,13 @@ const DAY_CELL_PADDING = 8;
 const DAY_CELL_MIN_VISIBLE = 56;
 
 /** Odstęp między bloczkiem a krawędzią wiersza - tło (czas wolny, awaria) rozciągamy o niego na całą wysokość. */
+/** Miejsce na nazwę i opis w wierszu sidebaru [px] (bez kropki i obciążenia) i przybliżone szerokości znaków. */
+const ROW_TEXT_WIDTH = 112;
+const NAME_CHAR_WIDTH = 7.9;
+const META_CHAR_WIDTH = 5.6;
+/** Opis (np. „pon–pt”) tylko obok pełnej nazwy - inaczej zostałby z niego ucięty skrawek, a nazwa skróciłaby się bez potrzeby. */
+const metaFits = (name: string, meta: string) => name.length * NAME_CHAR_WIDTH + 8 + meta.length * META_CHAR_WIDTH <= ROW_TEXT_WIDTH;
+
 const rowGapStyle = (rowHeight: number): CSSProperties => ({ '--row-gap': `${(rowHeight * (1 - ITEM_HEIGHT_RATIO)) / 2}px` }) as CSSProperties;
 
 // treść zostaje po zamknięciu, żeby modal nie zmieniał się w trakcie animacji zamykania
@@ -302,6 +309,8 @@ const FactoryOpsTimeline = () => {
 	);
 	const [query, setQuery] = useState('');
 	const [matchIndex, setMatchIndex] = useState(0);
+	/** Zlecenia przekazane z listy („Pokaż na planie” przy kilku zaznaczonych) - wyróżnione jak wyniki wyszukiwania. */
+	const [listPick, setListPick] = useState<Id[]>([]);
 	/** Wiersz, do którego przewinąć plan w pionie, gdy już będzie widoczny (po rozwinięciu grupy lub linii). */
 	const [scrollToRow, setScrollToRow] = useState<Id>();
 	/** Wiersz chwilowo podświetlony - żeby było widać, gdzie przeniosło kliknięcie awarii. */
@@ -412,9 +421,15 @@ const FactoryOpsTimeline = () => {
 	const navigate = useNavigate();
 	const command = location.state as PlanNavigationState | null;
 	useEffect(() => {
-		if (!command?.revealBreakdown && !command?.showBlock) return;
+		if (!command?.revealBreakdown && !command?.showBlock && !command?.showBlocks) return;
 		const breakdown = command.revealBreakdown && state.breakdowns.find((b) => b.id === command.revealBreakdown);
-		const block = command.showBlock && state.blocks.find((b) => b.id === command.showBlock);
+		const picked = command.showBlocks ? state.blocks.filter((b) => command.showBlocks!.includes(b.id)).sort((a, b) => a.start - b.start) : [];
+		if (picked.length > 0) {
+			setQuery('');
+			setListPick(picked.map((b) => b.id));
+			setMatchIndex(0);
+		}
+		const block = (command.showBlock && state.blocks.find((b) => b.id === command.showBlock)) || picked[0];
 		const rowId = breakdown ? breakdown.machineId : block ? block.machineId : undefined;
 		if (breakdown) {
 			reveal(breakdown.machineId);
@@ -429,7 +444,7 @@ const FactoryOpsTimeline = () => {
 		navigate(location.pathname, { replace: true, state: null });
 		// reagujemy tylko na nowe polecenie z nawigacji
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [command?.revealBreakdown, command?.showBlock, location.key]);
+	}, [command?.revealBreakdown, command?.showBlock, command?.showBlocks, location.key]);
 
 	useEffect(() => {
 		if (!flashRow) return;
@@ -438,7 +453,12 @@ const FactoryOpsTimeline = () => {
 	}, [flashRow]);
 
 	// --- wyszukiwanie ---
-	const matches = useMemo(() => (query.trim() ? [...state.blocks].filter((b) => matchesQuery(b, query)).sort((a, b) => a.start - b.start) : []), [state.blocks, query]);
+	const picking = !query.trim() && listPick.length > 0;
+	const matches = useMemo(() => {
+		if (query.trim()) return state.blocks.filter((b) => matchesQuery(b, query)).sort((a, b) => a.start - b.start);
+		const picked = new Set(listPick);
+		return state.blocks.filter((b) => picked.has(b.id)).sort((a, b) => a.start - b.start);
+	}, [state.blocks, query, listPick]);
 	const matchIds = useMemo(() => new Set(matches.map((b) => b.id)), [matches]);
 	const jumpToMatch = (index: number) => {
 		if (matches.length === 0) return;
@@ -455,8 +475,12 @@ const FactoryOpsTimeline = () => {
 			if (isTyping(e.target) || document.querySelector('.modal.show, .day-menu')) return;
 			if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
 				e.preventDefault();
-				searchRef.current?.focus();
-				searchRef.current?.select();
+				// wyróżnienie zleceń z listy ustępuje wyszukiwaniu - pole pojawia się po przerysowaniu
+				setListPick([]);
+				requestAnimationFrame(() => {
+					searchRef.current?.focus();
+					searchRef.current?.select();
+				});
 			} else if (e.key === 'Escape') setSelectedId(undefined);
 		};
 		document.addEventListener('keydown', onKey);
@@ -600,7 +624,7 @@ const FactoryOpsTimeline = () => {
 	}, [state.breakdowns, state.machines, state.lines, rowHeights, now]);
 
 	const draggedId = drag?.id;
-	const searching = query.trim() !== '';
+	const searching = query.trim() !== '' || listPick.length > 0;
 	// tło (z zakreskowanym czasem wolnym) i podpowiedź liczymy raz na zlecenie - przy przewijaniu tysięcy zleceń
 	// liczyłyby się od nowa; nowa pamięć po zmianie kalendarzy, linii lub programistów
 	// eslint-disable-next-line react-hooks/exhaustive-deps
@@ -793,24 +817,31 @@ const FactoryOpsTimeline = () => {
 					</>
 				}>
 				<div className="search-field plan-search">
-					<input
-						ref={searchRef}
-						type="search"
-						placeholder="Szukaj zlecenia, projektu…"
-						aria-label="Szukaj zleceń"
-						value={query}
-						onChange={(e) => {
-							setQuery(e.target.value);
-							setMatchIndex(0);
-						}}
-						onKeyDown={(e) => {
-							if (e.key === 'Enter') jumpToMatch(e.shiftKey ? matchIndex - 1 : searching && selectedId === matches[matchIndex]?.id ? matchIndex + 1 : matchIndex);
-							if (e.key === 'Escape') {
-								setQuery('');
-								e.currentTarget.blur();
-							}
-						}}
-					/>
+					{picking ? (
+						<span className="pick-label" title="Zlecenia zaznaczone na liście - strzałki przechodzą między nimi">
+							{listPick.length} wybranych z listy
+						</span>
+					) : (
+						<input
+							ref={searchRef}
+							type="search"
+							placeholder="Szukaj zlecenia, projektu…"
+							aria-label="Szukaj zleceń"
+							value={query}
+							onChange={(e) => {
+								setQuery(e.target.value);
+								setListPick([]);
+								setMatchIndex(0);
+							}}
+							onKeyDown={(e) => {
+								if (e.key === 'Enter') jumpToMatch(e.shiftKey ? matchIndex - 1 : searching && selectedId === matches[matchIndex]?.id ? matchIndex + 1 : matchIndex);
+								if (e.key === 'Escape') {
+									setQuery('');
+									e.currentTarget.blur();
+								}
+							}}
+						/>
+					)}
 					{searching ? (
 						<>
 							<span className="search-count mono">{matches.length ? `${matchIndex + 1}/${matches.length}` : 'brak'}</span>
@@ -820,6 +851,11 @@ const FactoryOpsTimeline = () => {
 							<button type="button" className="search-step" disabled={!matches.length} onClick={() => jumpToMatch(matchIndex + 1)} aria-label="Następne">
 								›
 							</button>
+							{picking && (
+								<button type="button" className="search-step" onClick={() => setListPick([])} aria-label="Zakończ wyróżnianie zleceń z listy" title="Zakończ">
+									×
+								</button>
+							)}
 						</>
 					) : (
 						<span className="kbd-hint" aria-hidden="true">
@@ -955,14 +991,14 @@ const FactoryOpsTimeline = () => {
 										</div>
 									);
 								}
-								const machine = group.machine;
+								const meta = workMode(group.machine) === 'continuous' ? '24/7' : 'pon–pt';
 								return (
 									<div
 										className={`row-label${group.inLine ? ' in-line' : ''}${flash}`}
-										title={group.inLine ? `${group.title} · ${lineOfMachine(state.lines, group.id)?.name ?? ''}` : group.title}>
+										title={group.inLine ? `${group.title} · ${lineOfMachine(state.lines, group.id)?.name ?? ''}` : `${group.title} · ${meta}`}>
 										<span className={`status-dot ${ongoingByMachine.has(group.id) ? 'danger' : ''}`} />
 										<span className="row-name mono">{group.title}</span>
-										{!group.inLine && <span className="row-meta">{workMode(machine) === 'continuous' ? '24/7' : 'pon–pt'}</span>}
+										{!group.inLine && metaFits(group.title, meta) && <span className="row-meta">{meta}</span>}
 										{loadBar}
 									</div>
 								);

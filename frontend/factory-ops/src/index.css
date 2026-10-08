@@ -327,15 +327,27 @@
 	white-space: pre-wrap;
 }
 
-/* komunikaty po zmianach planu - na górze obszaru treści, tuż pod paskiem strony (nie zasłaniają jego kontrolek) */
+/* komunikaty po zmianach: prawy dolny róg obszaru treści, 16px od krawędzi (!important - klasy pozycji Bootstrapa) */
 .notice-container {
 	z-index: 1090;
-	margin-top: calc(var(--page-header-height) + 8px);
+	--notice-bottom: 16px;
+	--notice-right: 16px;
+	bottom: var(--notice-bottom) !important;
+	right: var(--notice-right) !important;
 }
 
-/* przy otwartym panelu zlecenia komunikat jest wyśrodkowany nad planem, żeby nie przykrywał nagłówka panelu */
+/* plan: nad stopką z legendą; przy otwartym panelu zlecenia - obok niego */
+.app-main:has(.plan-footer) .notice-container {
+	--notice-bottom: calc(32px + 16px);
+}
+
 .app-main:has(.details-panel) .notice-container {
-	left: calc(50% - var(--details-panel-width) / 2) !important;
+	--notice-right: calc(var(--details-panel-width) + 16px);
+}
+
+/* lista: nad paskiem na dole (56px + 16px marginesu) */
+.app-main:has(.list-bar) .notice-container {
+	--notice-bottom: calc(72px + 16px);
 }
 
 .notice-container .toast {
