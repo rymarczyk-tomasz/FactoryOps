@@ -52,8 +52,15 @@
 	color: var(--ink-2);
 }
 
+/* „Bez programisty” i „Archiwum” razem - gdy nie mieszczą się w pierwszym wierszu, przechodzą do drugiego obok siebie */
+.list-filters-extra {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+
 .list-archive-switch {
-	margin: 0 0 0 auto;
+	margin: 0;
 	font-size: 13px;
 	color: var(--ink-2);
 }

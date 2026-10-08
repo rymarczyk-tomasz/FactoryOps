@@ -234,26 +234,97 @@
 	gap: 12px;
 }
 
-/* węższy ekran: awarie nad mapą (karty w rzędzie), żeby mapa miała całą szerokość */
-@media (max-width: 1439.98px) {
-	.load-layout {
-		flex-direction: column;
-		align-items: stretch;
-	}
+/* ---- węższy ekran (< 1440 px): awarie jako zwarte wiersze między kafelkami a mapą ---- */
 
-	.load-side {
-		order: -1;
-		width: auto;
-	}
+.breakdown-strip {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
 
-	.load-side-cards {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-	}
+.breakdown-strip-head {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
 
-	.heat-scale {
-		max-width: 480px;
-	}
+.breakdown-strip-head .load-side-head {
+	flex: 1;
+}
+
+.breakdown-rows {
+	border: 1px solid var(--line);
+	border-radius: var(--radius-md);
+	background: var(--surface);
+	overflow: hidden;
+}
+
+.breakdown-row {
+	display: grid;
+	grid-template-columns: 8px minmax(150px, 0.9fr) 190px 110px minmax(0, 1.6fr) auto;
+	align-items: center;
+	gap: 14px;
+	height: 44px;
+	padding: 0 12px 0 16px;
+	border-bottom: 1px solid var(--line-2);
+	font-size: 13px;
+	white-space: nowrap;
+}
+
+.breakdown-row:last-child {
+	border-bottom: none;
+}
+
+.breakdown-row.is-done {
+	color: var(--ink-3);
+}
+
+.breakdown-row .status-dot {
+	width: 8px;
+	height: 8px;
+}
+
+.breakdown-row-name {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	min-width: 0;
+	overflow: hidden;
+}
+
+.breakdown-row-since {
+	font-size: 12.5px;
+}
+
+.breakdown-row-impact {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.breakdown-row-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 6px;
+}
+
+/* nagłówek mapy ze skalą po prawej */
+.heat-caption {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 14px 0;
+}
+
+.heat-scale.is-compact {
+	flex-direction: row;
+	align-items: center;
+	gap: 8px;
+	width: 380px;
+	margin: 0 0 0 auto;
+}
+
+.heat-scale.is-compact .heat-scale-row {
+	flex: 1;
 }
 
 .load-side-head {

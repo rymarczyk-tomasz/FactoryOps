@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import BlockFormModal from '../components/BlockFormModal';
 import MultiSelect, { MultiSelectOption } from '../components/MultiSelect';
 import PageHeader from '../components/PageHeader';
+import { NARROW_SCREEN, useMediaQuery } from '../components/useMediaQuery';
 import { PlanNavigationState } from '../components/planNavigation';
 import { projectColorVar } from '../components/projectColor';
 import { usePlan } from '../data/PlanContext';
@@ -38,6 +39,8 @@ const STATUS_TABS: { key: StatusTab; label: string }[] = [
 const STATUS_ORDER: Record<BlockStatus, number> = { in_progress: 0, planned: 1, done: 2 };
 const inTab = (tab: StatusTab, status: BlockStatus) => (tab === 'active' ? status !== 'done' : status === tab);
 
+/** Pełne imię i nazwisko; na węższym ekranie „Piotr W.” (pełne w podpowiedzi). */
+const shortName = (p: Programmer) => `${p.name} ${p.surname.charAt(0)}.`;
 const initials = (p: Programmer) => `${p.name.charAt(0)}${p.surname.charAt(0)}`.toUpperCase();
 
 /** Pole tekstowe, w którym pisze użytkownik - wtedy „/” wpisuje znak zamiast przenosić do wyszukiwarki. */
@@ -67,6 +70,8 @@ const ProgrammerMenuItems = ({ programmers, onPick }: ProgrammerMenuProps) => (
 
 const ListPage = () => {
 	const { state, now, updateBlock, updateBlocks } = usePlan();
+	const narrow = useMediaQuery(NARROW_SCREEN);
+	const personLabel = (p: Programmer) => (narrow ? shortName(p) : programmerName(p));
 	const navigate = useNavigate();
 	const [query, setQuery] = useState('');
 	const [statusTab, setStatusTab] = useState<StatusTab>('active');
@@ -283,16 +288,17 @@ const ListPage = () => {
 				<MultiSelect id="filterMachine" label="Maszyna" allLabel="wszystkie" options={machineOptions} selected={machineIds} onChange={setMachineIds} />
 				<MultiSelect id="filterProject" label="Projekt" allLabel="wszystkie" options={projectOptions} selected={projectNos} onChange={setProjectNos} />
 				<MultiSelect id="filterProgrammer" label="Programista" allLabel="wszyscy" options={programmerOptions} selected={programmerIds} onChange={setProgrammerIds} />
-				{!archived && (
-					<button
+				<span className="list-filters-extra">
+					{!archived && (
+						<button
 						type="button"
 						className={`filter-pill-warn ${unassignedOnly ? 'active' : ''}`}
 						aria-pressed={unassignedOnly}
 						onClick={() => setProgrammerIds(unassignedOnly ? [] : [UNASSIGNED])}>
 						Bez programisty <span className="mono">{unassignedCount}</span>
-					</button>
-				)}
-				<Form.Check
+						</button>
+					)}
+					<Form.Check
 					type="switch"
 					id="showArchive"
 					className="list-archive-switch"
@@ -303,7 +309,8 @@ const ListPage = () => {
 						setArchived(e.target.checked);
 						clearSelection();
 					}}
-				/>
+					/>
+				</span>
 			</div>
 
 			<div className="list-panel">
@@ -387,7 +394,9 @@ const ListPage = () => {
 										programmer && (
 											<>
 												<span className="avatar">{initials(programmer)}</span>
-												<span className="list-ellipsis">{programmerName(programmer)}</span>
+												<span className="list-ellipsis" title={programmerName(programmer)}>
+													{personLabel(programmer)}
+												</span>
 											</>
 										)
 									) : (
@@ -396,7 +405,9 @@ const ListPage = () => {
 												{programmer ? (
 													<>
 														<span className="avatar">{initials(programmer)}</span>
-														<span className="list-ellipsis">{programmerName(programmer)}</span>
+														<span className="list-ellipsis" title={programmerName(programmer)}>
+															{personLabel(programmer)}
+														</span>
 													</>
 												) : (
 													'Przypisz ▾'
