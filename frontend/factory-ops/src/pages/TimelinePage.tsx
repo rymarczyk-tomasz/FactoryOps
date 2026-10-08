@@ -1,13 +1,6 @@
 import FactoryOpsTimeline from '../components/FactoryOpsTimeline';
-import PageHeader from '../components/PageHeader';
 
-const TimelinePage = () => (
-	<>
-		<PageHeader title="Plan" />
-		<div className="page-body">
-			<FactoryOpsTimeline />
-		</div>
-	</>
-);
+/** Plan na pełną szerokość - pasek górny i panel zlecenia renderuje sam plan, bo zależą od jego stanu. */
+const TimelinePage = () => <FactoryOpsTimeline />;
 
 export default TimelinePage;

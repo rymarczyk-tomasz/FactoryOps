@@ -1,15 +1,17 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Badge, Button, ButtonGroup, Form, InputGroup } from 'react-bootstrap';
+import React, { CSSProperties, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Button } from 'react-bootstrap';
 import Timeline, {
+	CustomHeader,
+	CustomMarker,
 	DateHeader,
 	ReactCalendarTimelineProps,
 	SidebarHeader,
 	TimelineHeaders,
 	TimelineItemBase,
-	TimelineMarkers,
-	TodayMarker
+	TimelineMarkers
 } from 'react-calendar-timeline';
 import 'react-calendar-timeline/style.css';
+import './timeline.css';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { usePlan } from '../data/PlanContext';
 import {
@@ -26,8 +28,9 @@ import {
 	workMode
 } from '../domain/calendar';
 import { formatDateTime, formatHours, programmerName, timelineLabel } from '../domain/format';
+import { dailyLoad, loadPercent, loadUnits } from '../domain/load';
 import { blockStatus, previewMove } from '../domain/schedule';
-import { dayKey, nearestHourStart, shiftDayStart } from '../domain/shifts';
+import { addHours, dayKey, isWeekend, nearestHourStart, shiftDayStart } from '../domain/shifts';
 import { Block, Breakdown, Id, Line, Machine } from '../domain/types';
 import { RevealBreakdownState } from './AppRail';
 import BlockDetailsPanel from './BlockDetailsPanel';
@@ -35,10 +38,13 @@ import BlockFormModal, { BlockFormDefaults } from './BlockFormModal';
 import BreakdownModal, { BreakdownModalTarget } from './BreakdownModal';
 import ConfirmModal from './ConfirmModal';
 import DayCalendarModal from './DayCalendarModal';
+import PageHeader from './PageHeader';
+import { projectColor } from './projectColor';
 import RowContextMenu, { RowMenuTarget } from './RowContextMenu';
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
+const MINUTE = 60 * 1000;
 /** Prefiksy id elementów pomocniczych (czas wolny, awarie, kreska przy przeciąganiu) - nie da się ich zaznaczyć ani przesunąć. */
 const OFF_PREFIX = 'off:';
 const BREAKDOWN_PREFIX = 'brk:';
@@ -55,47 +61,57 @@ const AUTO_SCROLL_EDGE = 70;
 /** Co ile ms i o jaką część widocznego zakresu (przy samej krawędzi) przewija się plan. */
 const AUTO_SCROLL_INTERVAL = 50;
 const AUTO_SCROLL_STEP = 0.02;
+/** Obciążenie w wierszu planu: tyle dób od bieżącej. */
+const LOAD_DAYS = 7;
+/** Obciążenie powyżej tego progu wyróżniamy kolorem. */
+const LOAD_WARN = 90;
+/** Jak długo podświetla się wiersz po kliknięciu awarii w menu bocznym (z wygaszaniem). */
+const ROW_FLASH_MS = 1800;
 
-const PROJECT_COLORS = ['#2563eb', '#0d9488', '#d97706', '#7c3aed', '#db2777', '#059669', '#dc2626', '#4f46e5'];
-
-function projectColor(project: string): string {
-	let hash = 0;
-	for (const char of project) hash = (hash * 31 + char.charCodeAt(0)) | 0;
-	return PROJECT_COLORS[Math.abs(hash) % PROJECT_COLORS.length];
-}
+const COLOR_STRIPE_BASE = 'oklch(0.975 0.004 255)';
+const tint = (color: string, percent: number) => `color-mix(in oklch, ${color} ${percent}%, white)`;
 
 /**
- * Tło zlecenia: pełny kolor, a fragmenty przypadające na dni wolne maszyny (np. weekend między
+ * Tło zlecenia: jasny odcień koloru projektu, a fragmenty przypadające na dni wolne maszyny (np. weekend między
  * piątkiem a poniedziałkiem) zakreskowane - zlecenie stoi, ale wciąż zajmuje maszynę.
  */
 function blockBackground(color: string, start: number, end: number, offSegments: [number, number][]): string {
-	if (offSegments.length === 0) return color;
+	const fill = tint(color, 14);
+	if (offSegments.length === 0) return fill;
 	const pct = (ms: number) => `${(((ms - start) / (end - start)) * 100).toFixed(3)}%`;
-	// warstwa wierzchnia: pełny kolor z przezroczystymi "oknami", przez które widać paski spod spodu
-	const stops = offSegments.flatMap(([from, to]) => [`${color} ${pct(from)}`, `transparent ${pct(from)}`, `transparent ${pct(to)}`, `${color} ${pct(to)}`]);
-	const solid = `linear-gradient(to right, ${color} 0%, ${stops.join(', ')}, ${color} 100%)`;
-	const stripes = `repeating-linear-gradient(-45deg, ${color}59 0 6px, ${color}a6 6px 12px)`;
+	// warstwa wierzchnia: wypełnienie z przezroczystymi "oknami", przez które widać paski spod spodu
+	const stops = offSegments.flatMap(([from, to]) => [`${fill} ${pct(from)}`, `transparent ${pct(from)}`, `transparent ${pct(to)}`, `${fill} ${pct(to)}`]);
+	const solid = `linear-gradient(to right, ${fill} 0%, ${stops.join(', ')}, ${fill} 100%)`;
+	const stripes = `repeating-linear-gradient(-45deg, ${COLOR_STRIPE_BASE} 0 6px, ${tint(color, 10)} 6px 12px)`;
 	return `${solid}, ${stripes}`;
 }
+
+/** Wykonana część zlecenia w toku - ciemniejszy odcień od początku do „teraz”. */
+const progressLayer = (color: string, percent: number) => `linear-gradient(to right, ${tint(color, 34)} 0 ${percent}%, transparent ${percent}% 100%)`;
+
+type ItemKind = 'block' | 'off' | 'breakdown' | 'lineDown' | 'drop';
 
 /**
  * Element timeline: zlecenie albo awaria z wariantami opisu (renderer wybiera najdłuższy, który mieści się w kafelku).
  * `lineDown` - nakładka na wierszu linii: zamalowana część wysokości odpowiada części maszyn linii, które stoją.
  */
-type PlanItem = TimelineItemBase<number> & { labels?: string[]; lineDown?: { down: number; units: number; labels: string[] } };
+type PlanItem = TimelineItemBase<number> & {
+	kind: ItemKind;
+	labels?: string[];
+	lineDown?: { down: number; units: number; labels: string[] };
+};
 /** Biblioteka nie eksportuje typu propsów renderera - bierzemy go z propa `itemRenderer`. */
 type ItemRendererProps = Parameters<NonNullable<ReactCalendarTimelineProps<PlanItem>['itemRenderer']>>[0];
-type IntervalRendererProps = Parameters<NonNullable<React.ComponentProps<typeof DateHeader>['intervalRenderer']>>[0];
 
-/** Przybliżona szerokość znaku przy czcionce 0.8rem + odstępy wewnątrz kafelka. */
-const CHAR_WIDTH = 7;
-/** Napis awarii linii jest mniejszy (0.65rem). */
+/** Przybliżona szerokość znaku przy 12px + odstępy wewnątrz kafelka. */
+const CHAR_WIDTH = 6.8;
+/** Napis awarii jest mniejszy (10.5px). */
 const SMALL_CHAR_WIDTH = 6;
-const LABEL_PADDING = 14;
+const LABEL_PADDING = 16;
 
-/** Opis bloczka: stopień, numer projektu, nazwa projektu - od najdłuższego, renderer wybierze ten, który się zmieści. */
+/** Opis bloczka: operacja i numer projektu - nazwa projektu jest w podpowiedzi i panelu. */
 function blockLabels(block: Block): string[] {
-	return [`${block.operation} · ${block.projectNo} · ${block.project}`, `${block.operation} · ${block.projectNo}`, block.operation];
+	return [`${block.operation} · ${block.projectNo}`, block.operation];
 }
 
 /**
@@ -106,32 +122,44 @@ function renderItem({ item, itemContext, getItemProps }: ItemRendererProps) {
 	const { key, ref, ...props } = getItemProps(item.itemProps ?? {});
 	const width = itemContext.dimensions.width;
 	const fitting = (labels: string[], charWidth: number) => labels.find((l) => l.length * charWidth + LABEL_PADDING <= width) ?? '';
-	if (item.lineDown) {
-		const { down, units, labels } = item.lineDown;
-		const label = fitting(labels, SMALL_CHAR_WIDTH);
-		return (
-			<div {...props} ref={ref} key={key}>
-				<div key="fill" className="breakdown-fill" style={{ height: `${(down / units) * 100}%` }} />
-				{label && (
-					<span key="label" className="breakdown-label">
-						{label}
-					</span>
-				)}
-			</div>
-		);
+	switch (item.kind) {
+		case 'off':
+		case 'drop':
+			return <div {...props} ref={ref} key={key} />;
+		case 'lineDown': {
+			const { down, units, labels } = item.lineDown!;
+			const label = fitting(labels, SMALL_CHAR_WIDTH);
+			return (
+				<div {...props} ref={ref} key={key}>
+					<div className="row-fill line-down-fill" style={{ height: `${(down / units) * 100}%` }} />
+					{label && <span className="breakdown-label">{label}</span>}
+				</div>
+			);
+		}
+		case 'breakdown': {
+			const label = item.labels ? fitting(item.labels, SMALL_CHAR_WIDTH) : '';
+			return (
+				<div {...props} ref={ref} key={key}>
+					<div className="row-fill breakdown-fill">{label && <span className="breakdown-label">{label}</span>}</div>
+				</div>
+			);
+		}
+		default: {
+			const label = item.labels ? fitting(item.labels, CHAR_WIDTH) : itemContext.title;
+			return (
+				<div
+					{...props}
+					ref={ref}
+					key={key}
+					// biblioteka nie oznacza zaznaczenia klasą - ustawiamy ją sami
+					className={itemContext.selected ? `${props.className} is-selected` : props.className}
+					// TODO(etap 6): karta podpowiedzi z #3g zamiast natywnego dymka
+					title={item.itemProps?.title ?? props.title}>
+					<div className="plan-block-body">{label && <span className="plan-block-label">{label}</span>}</div>
+				</div>
+			);
+		}
 	}
-	const label = item.labels ? fitting(item.labels, CHAR_WIDTH) : itemContext.title;
-	return (
-		<div
-			{...props}
-			ref={ref}
-			key={key}
-			// biblioteka nie oznacza zaznaczenia klasą, a jej podpowiedź to sam tytuł - ustawiamy oba sami
-			className={itemContext.selected ? `${props.className} is-selected` : props.className}
-			title={item.itemProps?.title ?? props.title}>
-			{label && <div className="rct-item-content">{label}</div>}
-		</div>
-	);
 }
 
 /** Odcinki czasu, w których stoi ta sama grupa maszyn linii (z nakładających się awarii jej maszyn). */
@@ -167,8 +195,17 @@ type PlanGroup = {
 
 const GROUP_TITLES: Record<GroupKind, string> = { lines: 'Linie produkcyjne', machines: 'Maszyny' };
 const HEADER_HEIGHT = 30;
-const ROW_HEIGHT = 38;
-const LINE_MACHINE_ROW_HEIGHT = 30;
+const ROW_HEIGHT = 40;
+const LINE_MACHINE_ROW_HEIGHT = 32;
+const ITEM_HEIGHT_RATIO = 0.72;
+const SIDEBAR_WIDTH = 230;
+const DAY_HEADER_HEIGHT = 48;
+const HOUR_HEADER_HEIGHT = 24;
+/** Szerokość podpisu „dziś · od 6:00” z odstępem [px] - gdy kreska „teraz” jest dalej, podpis mieści się przed nią. */
+const TODAY_LABEL_WIDTH = 110;
+
+/** Odstęp między bloczkiem a krawędzią wiersza - tło (czas wolny, awaria) rozciągamy o niego na całą wysokość. */
+const rowGapStyle = (rowHeight: number): CSSProperties => ({ '--row-gap': `${(rowHeight * (1 - ITEM_HEIGHT_RATIO)) / 2}px` }) as CSSProperties;
 
 // treść zostaje po zamknięciu, żeby modal nie zmieniał się w trakcie animacji zamykania
 type FormState = { show: boolean; block?: Block; defaults?: BlockFormDefaults };
@@ -180,9 +217,9 @@ type DragState = { id: Id; machineId: Id; start: number };
 
 /** Widoczny zakres planu. Ułamek `lead` to część zakresu przed „teraz”. */
 const ZOOMS = [
-	{ label: 'Dzień', span: DAY, lead: 0.2 },
-	{ label: 'Tydzień', span: 7 * DAY, lead: 1 / 7 },
-	{ label: 'Miesiąc', span: 30 * DAY, lead: 0.1 }
+	{ label: 'Dzień', span: DAY, lead: 0.2, header: '1 doba' },
+	{ label: 'Tydzień', span: 7 * DAY, lead: 1 / 7, header: '7 dni' },
+	{ label: 'Miesiąc', span: 30 * DAY, lead: 0.1, header: '30 dni' }
 ];
 /** Godziny w nagłówku tylko przy małym zakresie - przy tygodniu byłyby nieczytelne. */
 const HOUR_HEADER_MAX_SPAN = 3 * DAY;
@@ -194,8 +231,38 @@ function matchesQuery(block: Block, query: string): boolean {
 	return [block.orderNo, block.projectNo, block.project, block.operation].some((field) => field.toLowerCase().includes(q));
 }
 
+const pad = (n: number) => String(n).padStart(2, '0');
+const weekdayFormat = new Intl.DateTimeFormat('pl-PL', { weekday: 'short' });
+const timeFormat = new Intl.DateTimeFormat('pl-PL', { hour: '2-digit', minute: '2-digit' });
+const weekday = (ms: number) => weekdayFormat.format(ms).replace('.', '');
+
+/** Zakres w pasku górnym: „07–14.10.2026”, „28.09–05.10.2026” albo „08.10.2026”. */
+function rangeLabel({ start, end }: Range): string {
+	const from = new Date(start);
+	const to = new Date(end - 1);
+	const full = (d: Date) => `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
+	if (from.toDateString() === to.toDateString()) return full(from);
+	if (from.getFullYear() !== to.getFullYear()) return `${full(from)}–${full(to)}`;
+	if (from.getMonth() === to.getMonth()) return `${pad(from.getDate())}–${full(to)}`;
+	return `${pad(from.getDate())}.${pad(from.getMonth() + 1)}–${full(to)}`;
+}
+
+/** Pole tekstowe, w którym pisze użytkownik - wtedy skróty klawiszowe planu nie działają. */
+const isTyping = (target: EventTarget | null) => target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
+
+/** Bieżąca minuta - dla kreski „teraz” i godziny na niej. */
+function useMinuteClock(): number {
+	const [now, setNow] = useState(() => Date.now());
+	useEffect(() => {
+		const timer = setInterval(() => setNow(Date.now()), MINUTE);
+		return () => clearInterval(timer);
+	}, []);
+	return now;
+}
+
 const FactoryOpsTimeline = () => {
-	const { state, now, moveBlock, deleteBlock, undo, canUndo } = usePlan();
+	const { state, now, moveBlock, deleteBlock } = usePlan();
+	const clock = useMinuteClock();
 	const [selectedId, setSelectedId] = useState<Id>();
 	const [form, setForm] = useState<FormState>({ show: false });
 	const [breakdownForm, setBreakdownForm] = useState<BreakdownFormState>({ show: false });
@@ -213,9 +280,12 @@ const FactoryOpsTimeline = () => {
 		() => new Set(state.lines.filter((l) => state.blocks.some((b) => l.machineIds.includes(b.machineId))).map((l) => l.id))
 	);
 	const [query, setQuery] = useState('');
+	const [matchIndex, setMatchIndex] = useState(0);
 	/** Wiersz, do którego przewinąć plan w pionie, gdy już będzie widoczny (po rozwinięciu grupy lub linii). */
 	const [scrollToRow, setScrollToRow] = useState<Id>();
-	const [matchIndex, setMatchIndex] = useState(0);
+	/** Wiersz chwilowo podświetlony - żeby było widać, gdzie przeniosło kliknięcie awarii. */
+	const [flashRow, setFlashRow] = useState<Id>();
+	const searchRef = useRef<HTMLInputElement>(null);
 	// przeciąganie pustego planu nie przesuwa widoku - myliło się z przeciąganiem zleceń
 	const panBlocked = useRef(false);
 
@@ -272,6 +342,12 @@ const FactoryOpsTimeline = () => {
 	const selected = state.blocks.find((b) => b.id === selectedId);
 	const select = (id: Id) => !isHelperItem(id) && setSelectedId(String(id));
 
+	// panel zlecenia zwęża plan - biblioteka przelicza szerokość tylko przy zmianie rozmiaru okna
+	const panelOpen = selected !== undefined;
+	useLayoutEffect(() => {
+		window.dispatchEvent(new Event('resize'));
+	}, [panelOpen]);
+
 	const openRowMenu = (resourceId: Id, time: number, e: React.SyntheticEvent) => {
 		e.preventDefault();
 		const { clientX, clientY } = e as React.MouseEvent;
@@ -308,8 +384,9 @@ const FactoryOpsTimeline = () => {
 		setRange(rangeAround(block.start, Math.max(span, (block.end - block.start) * 1.5), 0.15));
 	};
 
-	// klik w kartę awarii w menu bocznym: odsłonięcie maszyny i przewinięcie do początku awarii.
-	// Stan nawigacji czyścimy od razu - inaczej cofnięcie i odświeżenie strony przewijałyby plan jeszcze raz.
+	// klik w kartę awarii w menu bocznym: odsłonięcie maszyny, przewinięcie do początku awarii (w lewej ⅓ widoku)
+	// i chwilowe podświetlenie wiersza. Stan nawigacji czyścimy od razu - inaczej cofnięcie i odświeżenie strony
+	// przewijałyby plan jeszcze raz.
 	const location = useLocation();
 	const navigate = useNavigate();
 	const revealBreakdownId = (location.state as RevealBreakdownState | null)?.revealBreakdown;
@@ -318,13 +395,20 @@ const FactoryOpsTimeline = () => {
 		const breakdown = state.breakdowns.find((b) => b.id === revealBreakdownId);
 		if (breakdown) {
 			reveal(breakdown.machineId);
-			setRange(rangeAround(breakdown.start, span, 0.15));
+			setRange(rangeAround(breakdown.start, span, 0.25));
 			setScrollToRow(breakdown.machineId);
+			setFlashRow(breakdown.machineId);
 		}
 		navigate(location.pathname, { replace: true, state: null });
 		// reagujemy tylko na nowe polecenie z nawigacji
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [revealBreakdownId, location.key]);
+
+	useEffect(() => {
+		if (!flashRow) return;
+		const timer = setTimeout(() => setFlashRow(undefined), ROW_FLASH_MS);
+		return () => clearTimeout(timer);
+	}, [flashRow]);
 
 	// --- wyszukiwanie ---
 	const matches = useMemo(() => (query.trim() ? [...state.blocks].filter((b) => matchesQuery(b, query)).sort((a, b) => a.start - b.start) : []), [state.blocks, query]);
@@ -336,6 +420,21 @@ const FactoryOpsTimeline = () => {
 		setSelectedId(matches[wrapped].id);
 		showBlock(matches[wrapped]);
 	};
+
+	// skróty: „/” - wyszukiwarka, Esc - zamyka panel zlecenia (gdy nie ma otwartego okna)
+	useEffect(() => {
+		const onKey = (e: KeyboardEvent) => {
+			// okno lub menu prawego kliku obsługują klawisze same
+			if (isTyping(e.target) || document.querySelector('.modal.show, .day-menu')) return;
+			if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+				e.preventDefault();
+				searchRef.current?.focus();
+				searchRef.current?.select();
+			} else if (e.key === 'Escape') setSelectedId(undefined);
+		};
+		document.addEventListener('keydown', onKey);
+		return () => document.removeEventListener('keydown', onKey);
+	}, []);
 
 	// bloczki na maszynie nigdy na siebie nie nachodzą (pilnuje tego harmonogram), więc bez układania w stos -
 	// dzięki temu tło z dniami wolnymi leży pod zleceniami
@@ -366,6 +465,7 @@ const FactoryOpsTimeline = () => {
 		return [header('lines', state.lines.length), ...(collapsed.lines ? [] : lineRows), header('machines', standalone.length), ...(collapsed.machines ? [] : machineRows)];
 	}, [state.lines, state.machines, standalone, collapsed, expandedLines]);
 	const visibleIds = useMemo(() => new Set(groups.filter((g) => g.machine || g.line).map((g) => g.id)), [groups]);
+	const rowHeights = useMemo(() => new Map(groups.map((g) => [g.id, g.height ?? ROW_HEIGHT])), [groups]);
 	useEffect(() => {
 		if (!scrollToRow) return;
 		const index = groups.findIndex((g) => g.id === scrollToRow);
@@ -379,6 +479,27 @@ const FactoryOpsTimeline = () => {
 		return group?.machine || group?.line ? group.id : undefined;
 	};
 
+	// obciążenie każdego zasobu w najbliższych dobach (od 6:00 bieżącej) - mini-pasek w wierszu planu
+	const loadByResource = useMemo(() => {
+		const from = shiftDayStart(now);
+		const to = addHours(from, 24 * LOAD_DAYS);
+		const blocks = state.blocks.filter((b) => b.end > from && b.start < to);
+		const result = new Map<Id, number | undefined>();
+		for (const id of [...state.lines.map((l) => l.id), ...state.machines.map((m) => m.id)]) {
+			const units = loadUnits(state, blocks, id, now);
+			let available = 0;
+			let busy = 0;
+			for (let day = 0; day < LOAD_DAYS; day++) {
+				const load = dailyLoad(units, addHours(from, 24 * day));
+				available += load.available;
+				busy += load.busy;
+			}
+			result.set(id, loadPercent({ dayStart: from, available, busy }));
+		}
+		return result;
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [state.blocks, state.lines, state.machines, state.calendar, state.breakdowns, now]);
+
 	const windowFrom = Math.floor((range.start - span / 2) / WINDOW_STEP) * WINDOW_STEP;
 	const windowTo = Math.ceil((range.end + span / 2) / WINDOW_STEP) * WINDOW_STEP;
 
@@ -388,6 +509,7 @@ const FactoryOpsTimeline = () => {
 		return [...visibleIds].flatMap((id) =>
 			nonWorkingPeriods(calendars(id), windowFrom, windowTo).map(([start, end]) => ({
 				id: `${OFF_PREFIX}${id}:${start}`,
+				kind: 'off' as const,
 				group: id,
 				title: '',
 				start_time: start,
@@ -395,13 +517,14 @@ const FactoryOpsTimeline = () => {
 				canMove: false,
 				canResize: false,
 				canChangeGroup: false,
-				className: 'non-working-item'
+				className: 'non-working-item',
+				itemProps: { style: rowGapStyle(rowHeights.get(id) ?? ROW_HEIGHT) }
 			}))
 		);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [state.calendar, state.machines, state.lines, visibleIds, windowFrom, windowTo]);
+	}, [state.calendar, state.machines, state.lines, visibleIds, rowHeights, windowFrom, windowTo]);
 
-	// awaria maszyny to czerwony bloczek w jej wierszu; na wierszu linii - nakładka pokazująca, ile maszyn stoi
+	// awaria maszyny to czerwony pasek w jej wierszu; na wierszu linii - nakładka pokazująca, ile maszyn stoi
 	const breakdownItems = useMemo<PlanItem[]>(() => {
 		const machineNames = new Map(state.machines.map((m) => [m.id, m.name]));
 		const onMachines = state.breakdowns.map((breakdown): PlanItem => {
@@ -415,6 +538,7 @@ const FactoryOpsTimeline = () => {
 			].join('\n');
 			return {
 				id: `${BREAKDOWN_PREFIX}${breakdown.id}`,
+				kind: 'breakdown',
 				group: breakdown.machineId,
 				title: tooltip,
 				labels: ongoing ? ['Awaria · trwa', 'Awaria', '!'] : ['Awaria', '!'],
@@ -423,8 +547,8 @@ const FactoryOpsTimeline = () => {
 				canMove: false,
 				canResize: false,
 				canChangeGroup: false,
-				className: ongoing ? 'breakdown-block ongoing' : 'breakdown-block',
-				itemProps: { title: tooltip }
+				className: ongoing ? 'breakdown-item ongoing' : 'breakdown-item',
+				itemProps: { title: tooltip, style: rowGapStyle(rowHeights.get(breakdown.machineId) ?? ROW_HEIGHT) }
 			};
 		});
 		const onLines = state.lines.flatMap((line) =>
@@ -432,6 +556,7 @@ const FactoryOpsTimeline = () => {
 				const names = machineIds.map((id) => machineNames.get(id) ?? '').join(', ');
 				return {
 					id: `${LINE_DOWN_PREFIX}${line.id}:${start}`,
+					kind: 'lineDown',
 					group: line.id,
 					title: `Awaria ${names}`,
 					start_time: start,
@@ -445,7 +570,7 @@ const FactoryOpsTimeline = () => {
 			})
 		);
 		return [...onMachines, ...onLines];
-	}, [state.breakdowns, state.machines, state.lines, now]);
+	}, [state.breakdowns, state.machines, state.lines, rowHeights, now]);
 
 	const draggedId = drag?.id;
 	const searching = query.trim() !== '';
@@ -480,9 +605,17 @@ const FactoryOpsTimeline = () => {
 		return shown.map((block) => {
 			const color = projectColor(block.projectNo || block.project);
 			const { tooltip, background } = look(block, color);
-			const classes = [block.id === draggedId && 'dragging-block', searching && (matchIds.has(block.id) ? 'search-match' : 'dimmed')].filter(Boolean);
+			const status = blockStatus(block, now);
+			const progress = status === 'in_progress' ? Math.min(100, ((now - block.start) / (block.end - block.start)) * 100) : 0;
+			const classes = [
+				'plan-block',
+				status === 'done' && 'is-done',
+				block.id === draggedId && 'dragging-block',
+				searching && (matchIds.has(block.id) ? 'search-match' : 'dimmed')
+			].filter(Boolean);
 			return {
 				id: block.id,
+				kind: 'block',
 				group: block.machineId,
 				title: blockLabels(block)[0],
 				labels: blockLabels(block),
@@ -492,30 +625,27 @@ const FactoryOpsTimeline = () => {
 				// długość wynika z godzin w zamówieniu - zmienia się ją w formularzu, nie myszką
 				canResize: false,
 				canChangeGroup: true,
-				className: classes.join(' ') || undefined,
+				className: classes.join(' '),
 				itemProps: {
 					title: tooltip,
 					onDoubleClick: () => setForm({ show: true, block }),
 					style: {
-						background,
-						borderColor: color,
-						opacity: blockStatus(block, now) === 'done' ? 0.55 : 1
-					}
+						'--c': color,
+						'--block-bg': progress > 0 ? `${progressLayer(color, progress)}, ${background}` : background
+					} as CSSProperties
 				}
 			};
 		});
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [state.blocks, blockLooks, now, draggedId, selectedId, searching, matchIds, windowFrom, windowTo, visibleIds]);
 
-	// gdzie wyląduje przenoszony bloczek - opis na pasku narzędzi, żeby nie zasłaniał zleceń na planie
-	const dropInfo = preview && [
-		resourceName(state, drag?.machineId),
-		formatDateTime(preview.start),
-		preview.after && (preview.pinned ? `przerwa po ${preview.after.orderNo}` : `po ${preview.after.orderNo}`),
-		preview.before && `przed ${preview.before.orderNo}`
-	]
-		.filter(Boolean)
-		.join(' · ');
+	// gdzie wyląduje przenoszony bloczek - opis w stopce, żeby nie zasłaniał zleceń na planie
+	const dropInfo = preview && {
+		resource: resourceName(state, drag?.machineId),
+		start: formatDateTime(preview.start),
+		after: preview.after && { label: preview.pinned ? 'przerwa po' : 'po', orderNo: preview.after.orderNo },
+		before: preview.before?.orderNo
+	};
 
 	// kreska w miejscu, gdzie faktycznie wyląduje przenoszony bloczek (po zepchnięciu kolejki)
 	const indicatorItems = useMemo<PlanItem[]>(() => {
@@ -524,6 +654,7 @@ const FactoryOpsTimeline = () => {
 			{
 				// nowe id przy każdej zmianie: w trakcie przeciągania biblioteka nie przelicza położenia istniejących elementów
 				id: `${DROP_INDICATOR_PREFIX}${drag.machineId}:${preview.start}`,
+				kind: 'drop',
 				group: drag.machineId,
 				title: '',
 				start_time: preview.start,
@@ -531,10 +662,11 @@ const FactoryOpsTimeline = () => {
 				canMove: false,
 				canResize: false,
 				canChangeGroup: false,
-				className: 'drop-indicator'
+				className: 'drop-indicator',
+				itemProps: { style: rowGapStyle(rowHeights.get(drag.machineId) ?? ROW_HEIGHT) }
 			}
 		];
-	}, [drag, preview]);
+	}, [drag, preview, rowHeights]);
 
 	// elementy zwiniętych wierszy nie trafiają do biblioteki
 	const items = useMemo(
@@ -544,82 +676,93 @@ const FactoryOpsTimeline = () => {
 
 	const ongoingByMachine = useMemo(() => new Set(state.breakdowns.filter(isOngoing).map((b) => b.machineId)), [state.breakdowns]);
 
-	/** Komórka dnia w nagłówku: kliknięcie otwiera kalendarz dnia; kolor pokazuje wyjątek zakładu, kropka - wyjątki maszyn. */
-	const renderDayInterval = ({ getIntervalProps, intervalContext }: IntervalRendererProps) => {
-		const { interval } = intervalContext;
-		const date = new Date(interval.startTime.valueOf());
+	/** Granice dób zakładu (6:00) w zakresie rysowanym przez bibliotekę - kolumny nagłówka i linie siatki. */
+	const dayStarts = useMemo(() => {
+		const starts: number[] = [];
+		for (let day = shiftDayStart(windowFrom); day < windowTo; day = addHours(day, 24)) starts.push(day);
+		return starts;
+	}, [windowFrom, windowTo]);
+
+	const machineExceptionDays = useMemo(() => new Set(state.machines.flatMap((m) => Object.keys(m.overrides ?? {}))), [state.machines]);
+
+	/** Komórka doby w nagłówku: kliknięcie otwiera kalendarz dnia; podpis pokazuje dziś, dzień wolny lub wyjątek zakładu. */
+	const renderDayCell = (day: number, left: number, width: number, nowX?: number) => {
+		const date = new Date(day);
 		const key = dayKey(date);
 		const plant = state.calendar.overrides[key];
-		const machineExceptions = state.machines.some((m) => m.overrides?.[key] !== undefined);
-		const status = plant === undefined ? '' : plant === true ? 'day-working' : plant === false ? 'day-off' : 'day-hours';
-		const statusText = plant === undefined ? '' : plant === true ? 'pracujący' : plant === false ? 'wolny' : formatWorkingHours(plant);
-		// bez onClick biblioteki - ta przybliżałaby plan do klikniętego dnia
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		const { key: intervalKey, onClick, ...props } = getIntervalProps({ interval });
+		const today = day === shiftDayStart(clock);
+		const off = plant === false || (plant === undefined && isWeekend(date));
+		const sub = today
+			? 'dziś · od 6:00'
+			: plant === true
+				? 'pracujący'
+				: plant === false
+					? 'wolne · zakład'
+					: plant !== undefined
+						? formatWorkingHours(plant)
+						: off
+							? 'wolne pon–pt'
+							: '';
+		const label = `${weekday(day)} ${date.getDate()}.${date.getMonth() + 1}`;
+		// podpis dzisiejszej doby nie może wchodzić pod godzinę na kresce „teraz” - stoi za nią, chyba że mieści się przed
+		const nowOffset = today && nowX !== undefined ? nowX - left : undefined;
+		const todayPadding = nowOffset !== undefined && nowOffset < TODAY_LABEL_WIDTH ? Math.max(36, nowOffset + 30) : undefined;
+		const classes = ['day-cell', today && 'is-today', off && 'is-off', plant !== undefined && plant !== false && plant !== true && 'is-hours', plant === true && 'is-working'];
 		return (
-			<div
-				key={intervalKey}
-				{...props}
-				onClick={() => setDayForm({ show: true, day: shiftDayStart(new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12).getTime()) })}
-				className={`rct-dateHeader day-header-cell ${status}`}
-				title={[
-					timelineLabel([interval.startTime, interval.endTime], 'day', 200),
-					statusText && `cały zakład: ${statusText}`,
-					machineExceptions && 'są wyjątki maszyn'
-				]
-					.filter(Boolean)
-					.join(' · ')
-					.concat('\nKliknij: dzień pracujący / wolny')}>
-				<span>{timelineLabel([interval.startTime, interval.endTime], 'day', interval.labelWidth)}</span>
-				{machineExceptions && <span className="day-exception-dot" />}
-			</div>
+			<button
+				type="button"
+				key={day}
+				className={classes.filter(Boolean).join(' ')}
+				style={{ left, width, paddingLeft: todayPadding }}
+				onClick={() => setDayForm({ show: true, day })}
+				title={[label, sub, machineExceptionDays.has(key) && 'są wyjątki maszyn', 'Kliknij: dzień pracujący / wolny'].filter(Boolean).join(' · ')}>
+				{width >= 64 ? (
+					<>
+						{sub && <span className="day-cell-sub">{sub}</span>}
+						<span className="day-cell-date">{label}</span>
+					</>
+				) : (
+					width >= 22 && <span className="day-cell-date">{date.getDate()}</span>
+				)}
+				{machineExceptionDays.has(key) && <span className="day-exception-dot" />}
+			</button>
 		);
 	};
 
+	const zoomLabel = activeZoom?.header ?? `${Math.round(span / DAY)} dni`;
+
 	return (
 		<>
-			<div className="d-flex flex-wrap align-items-center gap-2 mb-3 plan-toolbar">
-				<Button size="sm" onClick={() => setForm({ show: true })}>
-					+ Dodaj zlecenie
-				</Button>
-				<Button size="sm" variant="outline-danger" onClick={() => setBreakdownForm({ show: true, target: {} })}>
-					Zgłoś awarię
-				</Button>
-				<Button size="sm" variant="outline-secondary" disabled={!canUndo} onClick={undo}>
-					Cofnij
-				</Button>
-				<div className="vr mx-1" />
-				<ButtonGroup size="sm" aria-label="Zakres planu">
-					{ZOOMS.map((zoom) => (
-						<Button key={zoom.label} variant={activeZoom === zoom ? 'secondary' : 'outline-secondary'} onClick={() => zoomTo(zoom)}>
-							{zoom.label}
-						</Button>
-					))}
-				</ButtonGroup>
-				<ButtonGroup size="sm" aria-label="Przewijanie planu">
-					<Button variant="outline-secondary" onClick={() => shift(-1)} aria-label="Wcześniej" title="Wcześniej (Shift + kółko myszy)">
-						‹
-					</Button>
-					<Button variant="outline-secondary" onClick={goToday}>
-						Dziś
-					</Button>
-					<Button variant="outline-secondary" onClick={() => shift(1)} aria-label="Później" title="Później (Shift + kółko myszy)">
-						›
-					</Button>
-				</ButtonGroup>
-				<Form.Check
-					type="switch"
-					id="showLineMachines"
-					className="ms-1 small"
-					label="Pokaż maszyny linii"
-					checked={allLinesExpanded}
-					onChange={(e) => setExpandedLines(e.target.checked ? new Set(state.lines.map((l) => l.id)) : new Set())}
-				/>
-				<div className="vr mx-1" />
-				<InputGroup size="sm" className="plan-search">
-					<Form.Control
+			<PageHeader
+				title="Plan"
+				context={rangeLabel(range)}
+				tools={
+					<>
+						<div className="segmented ms-2" role="group" aria-label="Zakres planu">
+							{ZOOMS.map((zoom) => (
+								<button key={zoom.label} type="button" className={`segmented-item ${activeZoom === zoom ? 'active' : ''}`} onClick={() => zoomTo(zoom)}>
+									{zoom.label}
+								</button>
+							))}
+						</div>
+						<div className="d-flex gap-1" role="group" aria-label="Przewijanie planu">
+							<button type="button" className="icon-button" onClick={() => shift(-1)} aria-label="Wcześniej" title="Wcześniej (Shift + kółko myszy)">
+								‹
+							</button>
+							<button type="button" className="icon-button px-2" onClick={goToday}>
+								Dziś
+							</button>
+							<button type="button" className="icon-button" onClick={() => shift(1)} aria-label="Później" title="Później (Shift + kółko myszy)">
+								›
+							</button>
+						</div>
+					</>
+				}>
+				<div className="search-field plan-search">
+					<input
+						ref={searchRef}
 						type="search"
-						placeholder="Szukaj: stopień, projekt, zamówienie"
+						placeholder="Szukaj zlecenia, projektu…"
 						aria-label="Szukaj zleceń"
 						value={query}
 						onChange={(e) => {
@@ -628,189 +771,284 @@ const FactoryOpsTimeline = () => {
 						}}
 						onKeyDown={(e) => {
 							if (e.key === 'Enter') jumpToMatch(e.shiftKey ? matchIndex - 1 : searching && selectedId === matches[matchIndex]?.id ? matchIndex + 1 : matchIndex);
-							if (e.key === 'Escape') setQuery('');
+							if (e.key === 'Escape') {
+								setQuery('');
+								e.currentTarget.blur();
+							}
 						}}
 					/>
-					{searching && (
+					{searching ? (
 						<>
-							<InputGroup.Text className="text-nowrap">{matches.length ? `${matchIndex + 1} / ${matches.length}` : 'brak'}</InputGroup.Text>
-							<Button variant="outline-secondary" disabled={!matches.length} onClick={() => jumpToMatch(matchIndex - 1)} aria-label="Poprzednie">
+							<span className="search-count mono">{matches.length ? `${matchIndex + 1}/${matches.length}` : 'brak'}</span>
+							<button type="button" className="search-step" disabled={!matches.length} onClick={() => jumpToMatch(matchIndex - 1)} aria-label="Poprzednie">
 								‹
-							</Button>
-							<Button variant="outline-secondary" disabled={!matches.length} onClick={() => jumpToMatch(matchIndex + 1)} aria-label="Następne">
+							</button>
+							<button type="button" className="search-step" disabled={!matches.length} onClick={() => jumpToMatch(matchIndex + 1)} aria-label="Następne">
 								›
-							</Button>
+							</button>
 						</>
+					) : (
+						<span className="kbd-hint" aria-hidden="true">
+							/
+						</span>
 					)}
-				</InputGroup>
-				{dropInfo ? (
-					<span className="ms-auto drop-info">Wstawisz: {dropInfo}</span>
-				) : (
-					<small className="text-secondary ms-auto">
-						<span className="legend-swatch non-working-item" /> czas wolny <span className="legend-swatch breakdown-swatch ms-2" /> awaria · kliknij dzień w nagłówku:
-						pracujący / wolny
-					</small>
+				</div>
+				<Button variant="outline-danger" onClick={() => setBreakdownForm({ show: true, target: {} })}>
+					Zgłoś awarię
+				</Button>
+				<Button onClick={() => setForm({ show: true })}>Nowe zlecenie</Button>
+			</PageHeader>
+
+			<div className="plan-layout">
+				<div className="plan-main">
+					<div
+						ref={timelineRef}
+						className={`plan-timeline ${span > HOUR_HEADER_MAX_SPAN ? 'zoom-wide' : 'zoom-hours'}`}
+						onPointerDownCapture={(e) => {
+							panBlocked.current = e.pointerType === 'mouse' && !(e.target as HTMLElement).closest('.rct-item');
+						}}
+						onPointerMoveCapture={(e) => {
+							if (panBlocked.current && e.buttons !== 0) e.stopPropagation();
+						}}
+						onPointerUpCapture={() => {
+							panBlocked.current = false;
+						}}>
+						<Timeline<PlanItem, PlanGroup>
+							groups={groups}
+							items={items}
+							visibleTimeStart={range.start}
+							visibleTimeEnd={range.end}
+							onTimeChange={(start, end) => setRange({ start, end })}
+							minZoom={12 * HOUR}
+							maxZoom={90 * DAY}
+							dragSnap={HOUR}
+							sidebarWidth={SIDEBAR_WIDTH}
+							lineHeight={ROW_HEIGHT}
+							itemHeightRatio={ITEM_HEIGHT_RATIO}
+							canMove
+							canChangeGroup
+							canResize={false}
+							selected={selectedId ? [selectedId] : []}
+							onItemSelect={select}
+							onItemClick={select}
+							onItemDeselect={() => setSelectedId(undefined)}
+							onCanvasDoubleClick={(groupId, time) =>
+								visibleIds.has(String(groupId)) && setForm({ show: true, defaults: { machineId: String(groupId), start: nearestHourStart(time) } })
+							}
+							onCanvasContextMenu={(groupId, time, e) => (visibleIds.has(String(groupId)) ? openRowMenu(String(groupId), time, e) : e.preventDefault())}
+							onItemContextMenu={(itemId, e, time) => {
+								const id = String(itemId);
+								const breakdown = id.startsWith(BREAKDOWN_PREFIX) ? state.breakdowns.find((b) => `${BREAKDOWN_PREFIX}${b.id}` === id) : undefined;
+								const resourceId = breakdown?.machineId ?? state.blocks.find((b) => b.id === id)?.machineId;
+								if (resourceId) openRowMenu(resourceId, time, e);
+								else e.preventDefault();
+							}}
+							moveResizeValidator={(_action, _item, time) => nearestHourStart(time)}
+							onItemDrag={(e) => {
+								if (e.eventType !== 'move') return;
+								const last = dragRef.current;
+								const id = String(e.itemId);
+								// nad nagłówkiem grupy zostajemy na ostatniej maszynie
+								const machineId = resourceAtRow(e.newGroupOrder) ?? last?.machineId ?? state.blocks.find((b) => b.id === id)?.machineId;
+								if (!machineId) return;
+								const next = { id, machineId, start: nearestHourStart(e.time) };
+								// zdarzenie przychodzi przy każdym ruchu myszy - przeliczamy tylko po zmianie godziny lub maszyny
+								if (last && last.id === next.id && last.machineId === next.machineId && last.start === next.start) return;
+								dragRef.current = next;
+								setDrag(next);
+							}}
+							onItemMove={(id, time, groupOrder) => {
+								const last = dragRef.current;
+								dragRef.current = undefined;
+								setDrag(undefined);
+								if (last && last.id === id) moveBlock(last.id, last.start, last.machineId);
+								else {
+									const machineId = resourceAtRow(groupOrder) ?? state.blocks.find((b) => b.id === id)?.machineId;
+									if (machineId) moveBlock(String(id), time, machineId);
+								}
+							}}
+							itemRenderer={renderItem}
+							horizontalLineClassNamesForGroup={(group) =>
+								[group.header ? 'group-header-row' : group.inLine ? 'line-machine-row' : '', group.id === flashRow ? 'row-flash' : ''].filter(Boolean)
+							}
+							groupRenderer={({ group }) => {
+								const flash = group.id === flashRow ? ' row-flash' : '';
+								if (group.header) {
+									const kind = group.header.kind;
+									return (
+										<button
+											type="button"
+											className="row-label group-header"
+											aria-expanded={!group.header.collapsed}
+											onClick={() => setCollapsed((c) => ({ ...c, [kind]: !c[kind] }))}>
+											<span className="group-chevron">{group.header.collapsed ? '▸' : '▾'}</span>
+											<span className="group-title">{group.title}</span>
+											<span className="group-count mono">{group.header.count}</span>
+										</button>
+									);
+								}
+								const load = loadByResource.get(group.id);
+								const loadBar = (
+									<span className="row-load" title={load === undefined ? 'Brak czasu pracy w najbliższych dobach' : `Obciążenie ${LOAD_DAYS} dni od dziś 6:00`}>
+										<span className="row-load-bar">
+											<span className={load !== undefined && load > LOAD_WARN ? 'is-high' : ''} style={{ width: `${load ?? 0}%` }} />
+										</span>
+										<span className="row-load-value mono">{load === undefined ? '—' : `${load}%`}</span>
+									</span>
+								);
+								if (group.line) {
+									const line = group.line;
+									const members = lineMachines(line, state.machines);
+									const expanded = expandedLines.has(line.id);
+									const down = members.filter((m) => ongoingByMachine.has(m.id));
+									const continuous = members.length > 0 && members.every((m) => workMode(m) === 'continuous');
+									return (
+										<div className={`row-label${flash}`} title={down.length ? `Awaria: ${down.map((m) => m.name).join(', ')}` : undefined}>
+											<button
+												type="button"
+												className="row-toggle"
+												aria-expanded={expanded}
+												title={expanded ? 'Zwiń maszyny linii' : 'Pokaż maszyny linii'}
+												onClick={() => toggleLine(line.id)}>
+												{expanded ? '▾' : '▸'}
+											</button>
+											<span className={`status-dot ${down.length ? 'danger' : ''}`} />
+											<span className="row-name mono">{group.title}</span>
+											<span className="row-meta">
+												{members.length}×{continuous ? ' · 24/7' : ''}
+											</span>
+											{loadBar}
+										</div>
+									);
+								}
+								const machine = group.machine;
+								return (
+									<div
+										className={`row-label${group.inLine ? ' in-line' : ''}${flash}`}
+										title={group.inLine ? `${group.title} · ${lineOfMachine(state.lines, group.id)?.name ?? ''}` : group.title}>
+										<span className={`status-dot ${ongoingByMachine.has(group.id) ? 'danger' : ''}`} />
+										<span className="row-name mono">{group.title}</span>
+										{!group.inLine && <span className="row-meta">{workMode(machine) === 'continuous' ? '24/7' : 'pon–pt'}</span>}
+										{loadBar}
+									</div>
+								);
+							}}>
+							<TimelineHeaders className="plan-headers">
+								<SidebarHeader>
+									{({ getRootProps }) => (
+										<div {...getRootProps()} className="plan-sidebar-header">
+											{state.lines.length > 0 && (
+												<button
+													type="button"
+													className="sidebar-link"
+													onClick={() => setExpandedLines(allLinesExpanded ? new Set() : new Set(state.lines.map((l) => l.id)))}>
+													{allLinesExpanded ? 'Zwiń maszyny linii' : 'Pokaż maszyny linii'}
+												</button>
+											)}
+											<span className="plan-sidebar-labels">
+												<span>Zasób</span>
+												<span>{zoomLabel}</span>
+											</span>
+										</div>
+									)}
+								</SidebarHeader>
+								<CustomHeader unit="day" height={DAY_HEADER_HEIGHT}>
+									{({ headerContext: { intervals }, getRootProps }) => {
+										// pozycja chwili w px - liniowo w obrębie doby kalendarzowej biblioteki (zmiana czasu przesuwa tylko jej dobę)
+										const x = (time: number) => {
+											const interval = intervals.find((i) => i.startTime.valueOf() <= time && time < i.endTime.valueOf());
+											if (!interval) return undefined;
+											const from = interval.startTime.valueOf();
+											return interval.left + ((time - from) / (interval.endTime.valueOf() - from)) * interval.labelWidth;
+										};
+										const nowX = x(clock);
+										return (
+											<div {...getRootProps()} className="plan-day-header">
+												{dayStarts.map((day) => {
+													const left = x(day);
+													const right = x(addHours(day, 24));
+													return left === undefined || right === undefined ? null : renderDayCell(day, left, right - left, nowX);
+												})}
+												{nowX !== undefined && (
+													<>
+														<span className="now-chip mono" style={{ left: nowX }}>
+															{timeFormat.format(clock)}
+														</span>
+														<span className="now-header-line" style={{ left: nowX }} />
+													</>
+												)}
+											</div>
+										);
+									}}
+								</CustomHeader>
+								{span <= HOUR_HEADER_MAX_SPAN && <DateHeader unit="hour" height={HOUR_HEADER_HEIGHT} labelFormat={timelineLabel} />}
+							</TimelineHeaders>
+							<TimelineMarkers>
+								{dayStarts.map((day) => (
+									<CustomMarker key={day} date={day}>
+										{({ styles }) => <div style={styles} className="day-boundary" />}
+									</CustomMarker>
+								))}
+								<CustomMarker date={clock}>{({ styles }) => <div style={styles} className="now-line" />}</CustomMarker>
+							</TimelineMarkers>
+						</Timeline>
+					</div>
+
+					<footer className={`plan-footer ${dropInfo ? 'is-dropping' : ''}`}>
+						{dropInfo ? (
+							<span className="drop-info">
+								<span className="drop-info-bar" />
+								<span>
+									<strong>Wstawisz:</strong> {dropInfo.resource} · {dropInfo.start}
+									{dropInfo.after && (
+										<>
+											{' '}
+											· {dropInfo.after.label} <span className="mono">{dropInfo.after.orderNo}</span>
+										</>
+									)}
+									{dropInfo.before && (
+										<>
+											{' '}
+											· przed <span className="mono">{dropInfo.before}</span>
+										</>
+									)}
+								</span>
+							</span>
+						) : (
+							<>
+								<span className="legend-item">
+									<span className="legend-swatch swatch-progress" /> w toku
+								</span>
+								<span className="legend-item">
+									<span className="legend-swatch swatch-off" /> wolne
+								</span>
+								<span className="legend-item">
+									<span className="legend-swatch swatch-breakdown" /> awaria
+								</span>
+								<span className="legend-hints mono">
+									<span>dwuklik · nowe zlecenie</span>
+									<span>prawy klik · awaria / dzień</span>
+									<span>klik w dzień · kalendarz</span>
+									<span>/ · szukaj</span>
+									<span>Ctrl+Z · cofnij</span>
+								</span>
+							</>
+						)}
+					</footer>
+				</div>
+
+				{selected && (
+					<BlockDetailsPanel
+						block={selected}
+						onSelect={setSelectedId}
+						onEdit={(block) => setForm({ show: true, block })}
+						onDelete={setToDelete}
+						onShow={showBlock}
+						onClose={() => setSelectedId(undefined)}
+					/>
 				)}
 			</div>
 
-			<div
-				ref={timelineRef}
-				className="plan-timeline"
-				onPointerDownCapture={(e) => {
-					panBlocked.current = e.pointerType === 'mouse' && !(e.target as HTMLElement).closest('.rct-item');
-				}}
-				onPointerMoveCapture={(e) => {
-					if (panBlocked.current && e.buttons !== 0) e.stopPropagation();
-				}}
-				onPointerUpCapture={() => {
-					panBlocked.current = false;
-				}}>
-				<Timeline<PlanItem, PlanGroup>
-					groups={groups}
-					items={items}
-					visibleTimeStart={range.start}
-					visibleTimeEnd={range.end}
-					onTimeChange={(start, end) => setRange({ start, end })}
-					minZoom={12 * HOUR}
-					maxZoom={90 * DAY}
-					dragSnap={HOUR}
-					sidebarWidth={210}
-					lineHeight={ROW_HEIGHT}
-					itemHeightRatio={0.8}
-					canMove
-					canChangeGroup
-					canResize={false}
-					selected={selectedId ? [selectedId] : []}
-					onItemSelect={select}
-					onItemClick={select}
-					onItemDeselect={() => setSelectedId(undefined)}
-					onCanvasDoubleClick={(groupId, time) =>
-						visibleIds.has(String(groupId)) && setForm({ show: true, defaults: { machineId: String(groupId), start: nearestHourStart(time) } })
-					}
-					onCanvasContextMenu={(groupId, time, e) => (visibleIds.has(String(groupId)) ? openRowMenu(String(groupId), time, e) : e.preventDefault())}
-					onItemContextMenu={(itemId, e, time) => {
-						const id = String(itemId);
-						const breakdown = id.startsWith(BREAKDOWN_PREFIX) ? state.breakdowns.find((b) => `${BREAKDOWN_PREFIX}${b.id}` === id) : undefined;
-						const resourceId = breakdown?.machineId ?? state.blocks.find((b) => b.id === id)?.machineId;
-						if (resourceId) openRowMenu(resourceId, time, e);
-						else e.preventDefault();
-					}}
-					moveResizeValidator={(_action, _item, time) => nearestHourStart(time)}
-					onItemDrag={(e) => {
-						if (e.eventType !== 'move') return;
-						const last = dragRef.current;
-						const id = String(e.itemId);
-						// nad nagłówkiem grupy zostajemy na ostatniej maszynie
-						const machineId = resourceAtRow(e.newGroupOrder) ?? last?.machineId ?? state.blocks.find((b) => b.id === id)?.machineId;
-						if (!machineId) return;
-						const next = { id, machineId, start: nearestHourStart(e.time) };
-						// zdarzenie przychodzi przy każdym ruchu myszy - przeliczamy tylko po zmianie godziny lub maszyny
-						if (last && last.id === next.id && last.machineId === next.machineId && last.start === next.start) return;
-						dragRef.current = next;
-						setDrag(next);
-					}}
-					onItemMove={(id, time, groupOrder) => {
-						const last = dragRef.current;
-						dragRef.current = undefined;
-						setDrag(undefined);
-						if (last && last.id === id) moveBlock(last.id, last.start, last.machineId);
-						else {
-							const machineId = resourceAtRow(groupOrder) ?? state.blocks.find((b) => b.id === id)?.machineId;
-							if (machineId) moveBlock(String(id), time, machineId);
-						}
-					}}
-					itemRenderer={renderItem}
-					horizontalLineClassNamesForGroup={(group) => (group.header ? ['group-header-row'] : group.inLine ? ['line-machine-row'] : [])}
-					groupRenderer={({ group }) => {
-						if (group.header) {
-							const kind = group.header.kind;
-							return (
-								<button
-									type="button"
-									className="group-header"
-									aria-expanded={!group.header.collapsed}
-									onClick={() => setCollapsed((c) => ({ ...c, [kind]: !c[kind] }))}>
-									<span className="group-chevron">{group.header.collapsed ? '▸' : '▾'}</span>
-									{group.title}
-									<span className="text-secondary fw-normal ms-1">({group.header.count})</span>
-								</button>
-							);
-						}
-						if (group.line) {
-							const line = group.line;
-							const members = lineMachines(line, state.machines);
-							const expanded = expandedLines.has(line.id);
-							const down = members.filter((m) => ongoingByMachine.has(m.id));
-							return (
-								<div className="d-flex align-items-center justify-content-between gap-1">
-									<button
-										type="button"
-										className="line-toggle text-truncate"
-										aria-expanded={expanded}
-										title={expanded ? 'Zwiń maszyny linii' : 'Pokaż maszyny linii'}
-										onClick={() => toggleLine(line.id)}>
-										<span className="group-chevron">{expanded ? '▾' : '▸'}</span>
-										{group.title}
-									</button>
-									<span className="d-flex gap-1">
-										{down.length > 0 && (
-											<Badge bg="danger" pill title={`Awaria: ${down.map((m) => m.name).join(', ')}`}>
-												!
-											</Badge>
-										)}
-										<Badge bg="primary" pill title={`Linia: ${members.length} maszyny pracujące równolegle`}>
-											{members.length}×
-										</Badge>
-										{members.length > 0 && members.every((m) => workMode(m) === 'continuous') && (
-											<Badge bg="success" pill title="System 4-brygadowy">
-												24/7
-											</Badge>
-										)}
-									</span>
-								</div>
-							);
-						}
-						return (
-							<div className={`d-flex align-items-center justify-content-between gap-1 ${group.inLine ? 'line-machine-label' : ''}`}>
-								<span className="text-truncate" title={group.inLine ? `${group.title} · ${lineOfMachine(state.lines, group.id)?.name ?? ''}` : group.title}>
-									{group.title}
-								</span>
-								<span className="d-flex gap-1">
-									{ongoingByMachine.has(group.id) && (
-										<Badge bg="danger" pill title="Trwa awaria">
-											awaria
-										</Badge>
-									)}
-									{!group.inLine && workMode(group.machine) === 'continuous' && (
-										<Badge bg="success" pill title="System 4-brygadowy">
-											24/7
-										</Badge>
-									)}
-								</span>
-							</div>
-						);
-					}}>
-					<TimelineHeaders className="sticky">
-						<SidebarHeader>{({ getRootProps }) => <div {...getRootProps()} className="timeline-sidebar-header">Linia / maszyna</div>}</SidebarHeader>
-						{/* przy małym zakresie dni w nagłówku mają nazwę miesiąca, więc wiersz miesięcy jest zbędny */}
-						{span > HOUR_HEADER_MAX_SPAN && <DateHeader unit="primaryHeader" labelFormat={timelineLabel} />}
-						<DateHeader unit="day" intervalRenderer={renderDayInterval} />
-						{span <= HOUR_HEADER_MAX_SPAN && <DateHeader unit="hour" labelFormat={timelineLabel} />}
-					</TimelineHeaders>
-					<TimelineMarkers>
-						<TodayMarker />
-					</TimelineMarkers>
-				</Timeline>
-			</div>
-
-			{/* panel chowa się na czas przeciągania, żeby nie zasłaniał miejsca, w które przenosimy zlecenie */}
-			<BlockDetailsPanel
-				block={dragging ? undefined : selected}
-				onEdit={(block) => setForm({ show: true, block })}
-				onDelete={setToDelete}
-				onShow={showBlock}
-				onClose={() => setSelectedId(undefined)}
-			/>
 			{rowMenu && (
 				<RowContextMenu
 					target={rowMenu}

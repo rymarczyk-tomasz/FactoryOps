@@ -1,0 +1,916 @@
+/*
+ * Plan: wygląd react-calendar-timeline, panel zlecenia i stopka.
+ * Importowany po react-calendar-timeline/style.css. Selektory zaczynają się od .plan-timeline - inne niż
+ * w bibliotece, więc minifikator ich nie scala (scalenie z regułą biblioteki gubiło nasze nadpisania).
+ * !important tylko tam, gdzie biblioteka ustawia styl inline.
+ */
+
+:root {
+	--details-panel-width: 340px;
+	--plan-row-line: var(--line-2);
+}
+
+/* ---- układ strony planu: plan + panel zlecenia obok ---- */
+
+.plan-layout {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+}
+
+.plan-main {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	background: var(--surface);
+}
+
+/* plan przewija się w pionie sam - nagłówek dób zostaje przyklejony u góry */
+.plan-timeline {
+	flex: 1;
+	min-height: 0;
+	overflow-x: hidden;
+	overflow-y: auto;
+}
+
+/* ---- pasek górny planu ---- */
+
+.icon-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 30px;
+	height: 30px;
+	padding: 0;
+	border: 1px solid var(--input-border);
+	border-radius: var(--radius);
+	background: var(--surface);
+	font-size: 13px;
+	color: var(--ink);
+	transition: background var(--transition-fast);
+}
+
+.icon-button:hover {
+	background: var(--hover);
+}
+
+.icon-button:focus-visible {
+	outline: none;
+	box-shadow: var(--focus-ring);
+}
+
+.search-field {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	height: 32px;
+	padding: 0 6px 0 11px;
+	border: 1px solid var(--input-border);
+	border-radius: var(--radius);
+	background: var(--surface);
+	transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.search-field:focus-within {
+	border-color: var(--accent);
+	box-shadow: inset 0 0 0 0.5px var(--accent), var(--focus-ring);
+}
+
+.search-field input {
+	flex: 1;
+	min-width: 0;
+	border: none;
+	outline: none;
+	background: transparent;
+	font-size: 13px;
+	color: var(--ink);
+}
+
+.search-field input::placeholder {
+	color: var(--ink-3);
+}
+
+.search-field input::-webkit-search-cancel-button {
+	display: none;
+}
+
+.plan-search {
+	width: 260px;
+}
+
+.search-count {
+	font-size: 11.5px;
+	color: var(--ink-3);
+	white-space: nowrap;
+}
+
+.search-step {
+	width: 22px;
+	height: 22px;
+	padding: 0;
+	border: none;
+	border-radius: var(--radius-sm);
+	background: transparent;
+	color: var(--ink-2);
+}
+
+.search-step:hover:not(:disabled) {
+	background: var(--hover);
+}
+
+.search-step:disabled {
+	opacity: 0.4;
+}
+
+/* ---- timeline: ramy, nagłówek, siatka ---- */
+
+.plan-timeline .react-calendar-timeline {
+	font-size: 14px;
+}
+
+/* nagłówek: biały, przyklejony przy przewijaniu w pionie */
+.plan-timeline .react-calendar-timeline .rct-header-root {
+	position: sticky;
+	top: 0;
+	z-index: 120;
+	background: var(--surface);
+	border-bottom: 1px solid var(--line);
+}
+
+.plan-timeline .react-calendar-timeline .rct-calendar-header {
+	border: none;
+}
+
+.plan-sidebar-header {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	padding: 6px 14px 8px;
+	border-right: 1px solid oklch(0.92 0.008 255);
+}
+
+.plan-sidebar-labels {
+	display: flex;
+	justify-content: space-between;
+	font-family: var(--font-mono);
+	font-size: 10.5px;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--ink-3);
+}
+
+.sidebar-link {
+	align-self: flex-start;
+	padding: 0;
+	border: none;
+	background: transparent;
+	font-size: 11.5px;
+	color: var(--accent);
+}
+
+.sidebar-link:hover {
+	color: var(--accent-ink);
+	text-decoration: underline;
+}
+
+/* doby zakładu (6:00-6:00) w nagłówku */
+.plan-day-header {
+	position: relative;
+	overflow: hidden;
+}
+
+.day-cell {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	padding: 0 0 0 8px;
+	border: none;
+	border-left: 1px solid oklch(0.93 0.006 255);
+	background: transparent;
+	text-align: left;
+	white-space: nowrap;
+	overflow: hidden;
+	line-height: 1.25;
+	transition: background var(--transition-fast);
+}
+
+.day-cell:hover {
+	background: var(--hover);
+}
+
+.day-cell:focus-visible {
+	outline: none;
+	box-shadow: inset var(--focus-ring);
+}
+
+.day-cell-sub {
+	font-size: 11px;
+	color: oklch(0.6 0.02 260);
+}
+
+.day-cell-date {
+	font-family: var(--font-mono);
+	font-size: 13px;
+	font-weight: 500;
+	color: #334155;
+}
+
+.day-cell.is-off .day-cell-date {
+	color: #94a3b8;
+}
+
+.day-cell.is-working .day-cell-sub {
+	color: #15803d;
+}
+
+.day-cell.is-hours .day-cell-sub {
+	color: var(--warn-ink);
+}
+
+/* dziś: podpis na czerwono; wcięcie (za kreską „teraz”) liczy komponent */
+.day-cell.is-today .day-cell-sub {
+	color: var(--danger);
+}
+
+.day-exception-dot {
+	position: absolute;
+	top: 6px;
+	right: 6px;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--warn);
+}
+
+/* godzina „teraz” na górze nagłówka, wyśrodkowana na kresce */
+.now-chip {
+	position: absolute;
+	top: 4px;
+	z-index: 2;
+	transform: translateX(-50%);
+	padding: 1px 5px;
+	border-radius: 3px;
+	background: var(--danger);
+	color: #fff;
+	font-size: 10.5px;
+	line-height: 1.45;
+	pointer-events: none;
+}
+
+.now-header-line {
+	position: absolute;
+	top: 22px;
+	bottom: 0;
+	width: 2px;
+	margin-left: -1px;
+	background: var(--danger);
+	pointer-events: none;
+}
+
+/* godziny w nagłówku (zakres „Dzień”) */
+.plan-timeline .react-calendar-timeline .rct-dateHeader {
+	background: var(--surface);
+	border-left: 1px solid var(--line-2);
+	border-bottom: none;
+	border-top: 1px solid var(--line-2);
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--ink-3);
+	cursor: default;
+}
+
+/* linie siatki: na granicach dób 6:00 (markery); przy zakresie „Dzień” także godziny biblioteki */
+.plan-timeline .react-calendar-timeline .rct-vertical-lines .rct-vl {
+	border-left: 1px solid oklch(0.965 0.004 255);
+}
+
+.plan-timeline.zoom-wide .react-calendar-timeline .rct-vertical-lines .rct-vl {
+	border-left-color: transparent;
+}
+
+/* weekendy biblioteki są wspólne dla wszystkich maszyn - dni wolne rysujemy osobno dla każdej maszyny */
+.plan-timeline .react-calendar-timeline .rct-vertical-lines .rct-vl.rct-day-6,
+.plan-timeline .react-calendar-timeline .rct-vertical-lines .rct-vl.rct-day-0 {
+	background: transparent;
+}
+
+.plan-timeline .day-boundary {
+	width: 1px !important;
+	background: var(--line) !important;
+	z-index: 45;
+}
+
+/* kreska „teraz” nad zleceniami */
+.plan-timeline .now-line {
+	width: 2px !important;
+	margin-left: -1px;
+	background: var(--danger) !important;
+	z-index: 100;
+}
+
+/* przeciąganie pustego planu nie przesuwa widoku, więc bez kursora „przesuń” */
+.plan-timeline .react-calendar-timeline .rct-scroll {
+	cursor: default !important;
+	background: var(--surface);
+}
+
+/* ---- wiersze ---- */
+
+.plan-timeline .react-calendar-timeline .rct-sidebar {
+	border-right: 1px solid oklch(0.92 0.008 255);
+}
+
+.plan-timeline .react-calendar-timeline .rct-sidebar .rct-sidebar-row,
+.plan-timeline .react-calendar-timeline .rct-sidebar .rct-sidebar-row.rct-sidebar-row-odd {
+	padding: 0;
+	background: var(--surface);
+	border-bottom: 1px solid var(--plan-row-line);
+}
+
+/* wiersze w tle planu przezroczyste - pod nimi leżą paski czasu wolnego i linie dób */
+.plan-timeline .react-calendar-timeline .rct-horizontal-lines .rct-hl-even,
+.plan-timeline .react-calendar-timeline .rct-horizontal-lines .rct-hl-odd {
+	background: transparent;
+	border-bottom: 1px solid var(--plan-row-line);
+}
+
+.plan-timeline .react-calendar-timeline .rct-horizontal-lines .group-header-row {
+	background: var(--subtle);
+	border-bottom-color: oklch(0.92 0.006 255);
+}
+
+/* zawartość wiersza w sidebarze wypełnia cały wiersz (tło nagłówków grup, podświetlenie) */
+.row-label {
+	position: relative;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	height: 100%;
+	padding: 0 14px;
+	overflow: hidden;
+}
+
+.row-label.in-line {
+	padding-left: 30px;
+	background: oklch(0.99 0.002 255);
+}
+
+/* przy braku miejsca najpierw zwęża się opis, potem nazwa - procent obciążenia zostaje zawsze */
+.row-name {
+	flex: 0 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--ink);
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.row-label.in-line .row-name {
+	font-size: 12px;
+	color: var(--ink-2);
+}
+
+.row-meta {
+	flex: 0 4 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-size: 11px;
+	color: oklch(0.58 0.02 260);
+	white-space: nowrap;
+}
+
+/* chevron rozwijania linii w lewym marginesie - nie zabiera miejsca nazwie */
+.row-toggle {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 1px;
+	width: 13px;
+	padding: 0;
+	border: none;
+	background: transparent;
+	font-size: 11px;
+	color: var(--ink-3);
+}
+
+.row-toggle:hover {
+	color: var(--ink);
+}
+
+/* obciążenie 7 dni: mini-pasek i procent */
+.row-load {
+	flex: none;
+	display: flex;
+	align-items: center;
+	gap: 0;
+	margin-left: auto;
+}
+
+.row-load-bar {
+	display: flex;
+	width: 36px;
+	height: 4px;
+	border-radius: 2px;
+	background: oklch(0.93 0.006 255);
+	overflow: hidden;
+}
+
+.row-load-bar > span {
+	background: #64748b;
+}
+
+.row-load-bar > span.is-high {
+	background: #d97706;
+}
+
+.row-load-value {
+	width: 30px;
+	font-size: 11px;
+	color: var(--ink-2);
+	text-align: right;
+}
+
+/* nagłówki zwijanych grup (Linie produkcyjne / Maszyny) */
+.group-header {
+	border: none;
+	background: var(--subtle);
+	text-align: left;
+	gap: 6px;
+}
+
+.group-chevron {
+	width: 12px;
+	font-size: 11px;
+	color: var(--ink-3);
+}
+
+.group-title {
+	font-size: 12.5px;
+	font-weight: 600;
+	color: var(--ink);
+}
+
+.group-count {
+	font-size: 11.5px;
+	color: var(--ink-3);
+}
+
+/* wiersz, do którego przeniosło kliknięcie awarii: chwilowe podświetlenie i wygaszenie */
+@keyframes row-flash {
+	0%,
+	83% {
+		background-color: var(--danger-tint);
+	}
+	100% {
+		background-color: transparent;
+	}
+}
+
+.row-label.row-flash,
+.plan-timeline .react-calendar-timeline .rct-horizontal-lines .row-flash {
+	animation: row-flash 1.8s ease-out;
+}
+
+/* ---- elementy na planie ---- */
+
+.plan-timeline .react-calendar-timeline .rct-item {
+	/* napis nie może wystawać na sąsiednie zlecenie - przechwytywałby jego kliknięcia */
+	overflow: hidden;
+}
+
+/* zlecenie: zewnętrzny element należy do biblioteki (pozycja, przeciąganie), wygląd ma warstwa wewnątrz */
+.plan-timeline .react-calendar-timeline .rct-item.plan-block {
+	background: transparent !important;
+	border-width: 0 !important;
+	color: color-mix(in oklch, var(--c) 72%, black) !important;
+	overflow: visible;
+}
+
+.plan-block-body {
+	position: absolute;
+	inset: 0 1px;
+	display: flex;
+	align-items: center;
+	padding: 0 7px;
+	border: 1px solid color-mix(in oklch, var(--c) 50%, white);
+	border-radius: 4px;
+	background: var(--block-bg);
+	overflow: hidden;
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 1.2;
+	transition: box-shadow var(--transition-fast), opacity var(--transition-fast);
+}
+
+.plan-block-label {
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.plan-timeline .rct-item.plan-block.is-done .plan-block-body {
+	opacity: 0.5;
+}
+
+.plan-timeline .rct-item.plan-block.is-selected .plan-block-body {
+	box-shadow: 0 0 0 2px var(--primary);
+	opacity: 1;
+}
+
+/* wyszukiwanie: pasujące zlecenia wyróżnione, reszta przygaszona */
+.plan-timeline .rct-item.plan-block.dimmed {
+	opacity: 0.2;
+}
+
+.plan-timeline .rct-item.plan-block.search-match .plan-block-body {
+	box-shadow: 0 0 0 2px var(--warn);
+}
+
+.plan-timeline .rct-item.plan-block.search-match.is-selected .plan-block-body {
+	box-shadow: 0 0 0 3px var(--primary);
+}
+
+/* przeciąganie: przenoszony bloczek prześwituje, kreska pokazuje miejsce wstawienia */
+.plan-timeline .rct-item.plan-block.dragging-block {
+	opacity: 0.45;
+}
+
+.plan-timeline .rct-item.plan-block.dragging-block .plan-block-body {
+	outline: 2px dashed var(--primary);
+	outline-offset: -2px;
+}
+
+/* elementy tła (czas wolny, awaria, kreska) rozciągnięte z wysokości bloczka na cały wiersz (--row-gap) */
+.plan-timeline .react-calendar-timeline .rct-item.non-working-item,
+.plan-timeline .react-calendar-timeline .rct-item.breakdown-item,
+.plan-timeline .react-calendar-timeline .rct-item.line-breakdown-item,
+.plan-timeline .react-calendar-timeline .rct-item.drop-indicator {
+	background: transparent !important;
+	border-width: 0 !important;
+	overflow: visible;
+	pointer-events: none;
+}
+
+.plan-timeline .react-calendar-timeline .rct-item.non-working-item {
+	z-index: 1 !important;
+}
+
+.plan-timeline .react-calendar-timeline .rct-item.non-working-item::before {
+	content: '';
+	position: absolute;
+	inset: calc(var(--row-gap) * -1) 0;
+	background: repeating-linear-gradient(-45deg, oklch(0.975 0.004 255) 0 5px, oklch(0.94 0.006 255) 5px 10px);
+}
+
+.row-fill {
+	position: absolute;
+	left: 0;
+	right: 0;
+}
+
+/* awaria maszyny: czerwony pasek nad zleceniem, które przerywa - 2px od krawędzi wiersza */
+.plan-timeline .react-calendar-timeline .rct-item.breakdown-item {
+	z-index: 95 !important;
+	pointer-events: auto;
+	cursor: context-menu !important;
+}
+
+.breakdown-fill {
+	top: calc(var(--row-gap) * -1 + 2px);
+	bottom: calc(var(--row-gap) * -1 + 2px);
+	border-radius: 3px;
+	background: repeating-linear-gradient(45deg, #dc2626 0 4px, #b91c1c 4px 8px);
+	opacity: 0.92;
+	overflow: hidden;
+}
+
+/* trwająca awaria: prawa krawędź „otwarta” - rośnie z czasem */
+.plan-timeline .rct-item.breakdown-item.ongoing .breakdown-fill {
+	border-radius: 3px 0 0 3px;
+	box-shadow: inset -3px 0 0 #fecaca;
+}
+
+/* awaria na wierszu linii: zamalowana część wysokości = część maszyn linii, które stoją.
+   Nie przechwytuje kliknięć - pod nią są zlecenia linii, które nadal da się zaznaczyć i przenieść. */
+.plan-timeline .react-calendar-timeline .rct-item.line-breakdown-item {
+	z-index: 90 !important;
+}
+
+.line-down-fill {
+	bottom: calc(var(--row-gap, 5.6px) * -1 + 2px);
+	min-height: 6px;
+	border-radius: 3px 3px 0 0;
+	border-top: 2px solid #991b1b;
+	background: repeating-linear-gradient(45deg, #dc2626 0 4px, #b91c1c 4px 8px);
+	opacity: 0.92;
+}
+
+.breakdown-label {
+	position: absolute;
+	top: 2px;
+	left: 4px;
+	padding: 0 4px;
+	border-radius: 3px;
+	background: #7f1d1d;
+	color: #fff;
+	font-size: 10.5px;
+	font-weight: 500;
+	line-height: 1.45;
+	white-space: nowrap;
+}
+
+.plan-timeline .rct-item.line-breakdown-item .breakdown-label {
+	top: auto;
+	bottom: calc(var(--row-gap, 5.6px) * -1 + 4px);
+}
+
+.plan-timeline .react-calendar-timeline .rct-item.drop-indicator {
+	width: 3px !important;
+	margin-left: -1px;
+	z-index: 200 !important;
+}
+
+.plan-timeline .react-calendar-timeline .rct-item.drop-indicator::before {
+	content: '';
+	position: absolute;
+	inset: calc(var(--row-gap) * -1) 0;
+	background: var(--warn);
+	box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
+}
+
+/* ---- stopka: legenda albo miejsce upuszczenia ---- */
+
+.plan-footer {
+	flex: none;
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	height: 32px;
+	padding: 0 20px;
+	border-top: 1px solid var(--line);
+	background: var(--subtle);
+	font-size: 12px;
+	color: var(--ink-2);
+	white-space: nowrap;
+	overflow: hidden;
+}
+
+.legend-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.legend-swatch {
+	display: inline-block;
+	width: 12px;
+	height: 12px;
+	border-radius: 2px;
+}
+
+.swatch-progress {
+	border: 1px solid color-mix(in oklch, #2563eb 50%, white);
+	background: linear-gradient(to right, color-mix(in oklch, #2563eb 34%, white) 50%, color-mix(in oklch, #2563eb 14%, white) 50%);
+}
+
+.swatch-off {
+	background: repeating-linear-gradient(-45deg, oklch(0.975 0.004 255) 0 3px, oklch(0.92 0.006 255) 3px 6px);
+}
+
+.swatch-breakdown {
+	background: var(--danger);
+}
+
+.legend-hints {
+	display: flex;
+	gap: 18px;
+	margin-left: auto;
+	overflow: hidden;
+	font-size: 11.5px;
+	color: var(--ink-3);
+}
+
+.drop-info {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	height: 24px;
+	padding: 0 12px 0 0;
+	border: 1px solid oklch(0.88 0.06 75);
+	border-radius: var(--radius);
+	background: var(--surface);
+	font-size: 12.5px;
+	color: var(--ink);
+	overflow: hidden;
+}
+
+.drop-info strong {
+	font-weight: 600;
+}
+
+.drop-info-bar {
+	flex: none;
+	align-self: stretch;
+	width: 3px;
+	background: var(--warn);
+}
+
+/* ---- panel zlecenia: kolumna obok planu ---- */
+
+.details-panel {
+	flex: none;
+	width: var(--details-panel-width);
+	display: flex;
+	flex-direction: column;
+	border-left: 1px solid var(--line);
+	background: var(--surface);
+}
+
+.details-header {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 18px 20px 14px;
+	border-bottom: 1px solid oklch(0.93 0.006 255);
+}
+
+.details-header-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.project-chip {
+	padding: 2px 7px;
+	border-radius: 4px;
+	background: color-mix(in oklch, var(--c) 14%, white);
+	color: color-mix(in oklch, var(--c) 72%, black);
+	font-size: 11px;
+	font-weight: 500;
+	white-space: nowrap;
+}
+
+.details-title {
+	margin: 0;
+	font-size: 19px;
+	font-weight: 600;
+	line-height: 1.25;
+}
+
+.details-order {
+	font-size: 12px;
+	color: var(--ink-3);
+}
+
+.details-progress {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-top: 4px;
+	font-size: 12px;
+}
+
+.details-progress-bar {
+	flex: 1;
+	display: flex;
+	height: 6px;
+	border-radius: 3px;
+	background: oklch(0.94 0.006 255);
+	overflow: hidden;
+}
+
+.details-progress-bar > span {
+	background: var(--success);
+}
+
+.details-body {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	padding: 16px 20px;
+	overflow-y: auto;
+}
+
+.details-alert {
+	padding: 10px 12px;
+	border-radius: var(--radius-md);
+	background: var(--danger-tint);
+	color: oklch(0.4 0.12 25);
+	font-size: 13px;
+	line-height: 1.45;
+}
+
+.details-list {
+	display: grid;
+	grid-template-columns: max-content minmax(0, 1fr);
+	gap: 7px 16px;
+	margin: 0;
+	font-size: 13.5px;
+}
+
+.details-list dt {
+	font-weight: 400;
+	color: oklch(0.52 0.02 260);
+}
+
+.details-list dd {
+	margin: 0;
+}
+
+.details-time {
+	font-size: 12.5px;
+}
+
+.details-panel .form-label {
+	font-size: 12px;
+}
+
+.form-select.is-unassigned {
+	color: var(--warn-ink);
+}
+
+.details-queue {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.details-queue-label {
+	font-size: 12px;
+	color: oklch(0.52 0.02 260);
+}
+
+.queue-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 8px;
+	border: none;
+	border-radius: var(--radius);
+	background: transparent;
+	text-align: left;
+	transition: background var(--transition-fast);
+}
+
+.queue-item:hover {
+	background: var(--hover);
+}
+
+.queue-item.is-current {
+	background: oklch(0.96 0.008 255);
+}
+
+.queue-item.is-done {
+	opacity: 0.55;
+}
+
+.queue-bar {
+	flex: none;
+	width: 4px;
+	height: 22px;
+	border-radius: 2px;
+	background: color-mix(in oklch, var(--c) 50%, white);
+}
+
+.queue-text {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	flex: 1;
+}
+
+.queue-title {
+	overflow: hidden;
+	font-size: 13px;
+	font-weight: 500;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.queue-when {
+	font-size: 11px;
+	color: oklch(0.52 0.02 260);
+}
+
+.details-footer {
+	display: flex;
+	gap: 8px;
+	padding: 14px 20px;
+	border-top: 1px solid oklch(0.93 0.006 255);
+}
+
+.details-footer .details-delete {
+	--bs-btn-color: oklch(0.48 0.16 25);
+	--bs-btn-hover-color: var(--danger-ink);
+	--bs-btn-hover-bg: var(--danger-tint);
+}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, Toast, ToastContainer } from 'react-bootstrap';
 import { Route, Routes } from 'react-router-dom';
 import AppRail from './components/AppRail';
@@ -11,9 +11,24 @@ import TimelinePage from './pages/TimelinePage';
 
 const NOTICE_DELAY_MS = 6000;
 
+/** Pole tekstowe, w którym pisze użytkownik - tam Ctrl+Z cofa wpisany tekst, nie zmianę planu. */
+const isTyping = (target: EventTarget | null) => target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
+
 function App() {
 	const { resetDemo, notice, dismissNotice, undo, canUndo } = usePlan();
 	const [confirmReset, setConfirmReset] = useState(false);
+
+	// Ctrl/⌘+Z cofa ostatnią zmianę planu (poza polami tekstowymi i otwartymi oknami)
+	useEffect(() => {
+		const onKey = (e: KeyboardEvent) => {
+			if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || e.key.toLowerCase() !== 'z') return;
+			if (isTyping(e.target) || document.querySelector('.modal.show') || !canUndo) return;
+			e.preventDefault();
+			undo();
+		};
+		document.addEventListener('keydown', onKey);
+		return () => document.removeEventListener('keydown', onKey);
+	}, [undo, canUndo]);
 
 	return (
 		<div className="app-shell">
