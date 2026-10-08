@@ -2,13 +2,9 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { usePlan } from '../data/PlanContext';
 import { isOngoing, lineOfMachine, resourceName } from '../domain/calendar';
 import { Breakdown } from '../domain/types';
+import { PlanNavigationState } from './planNavigation';
 
 const HOUR = 3600_000;
-
-/** Stan nawigacji: plan odsłania wiersz maszyny i przewija do początku awarii. */
-export interface RevealBreakdownState {
-	revealBreakdown: string;
-}
 
 const Logo = () => (
 	<svg width="22" height="22" viewBox="0 0 26 26" aria-hidden="true">
@@ -72,7 +68,7 @@ const AppRail = ({ onReset }: AppRailProps) => {
 						{ongoing.map((breakdown) => {
 							const line = lineOfMachine(state.lines, breakdown.machineId);
 							const name = resourceName(state, breakdown.machineId);
-							const reveal: RevealBreakdownState = { revealBreakdown: breakdown.id };
+							const reveal: PlanNavigationState = { revealBreakdown: breakdown.id };
 							return (
 								<button
 									key={breakdown.id}

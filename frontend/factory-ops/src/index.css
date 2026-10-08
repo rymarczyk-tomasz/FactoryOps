@@ -318,31 +318,6 @@
 	color: #b91c1c;
 }
 
-/* filtry z wielokrotnym wyborem */
-.multi-select .dropdown-toggle {
-	overflow: hidden;
-}
-
-.multi-select .dropdown-toggle.has-selection {
-	border-color: #2563eb;
-	color: #1d4ed8;
-}
-
-.multi-select-menu {
-	max-height: 360px;
-	overflow-y: auto;
-	min-width: 100%;
-}
-
-.multi-select-option {
-	padding: 2px 16px 2px 40px;
-	white-space: nowrap;
-}
-
-.multi-select-option.indent {
-	padding-left: 60px;
-}
-
 .line-member-row {
 	padding: 4px 0;
 	border-bottom: 1px solid #f1f5f9;
@@ -404,22 +379,4 @@
 
 .table-group-row th {
 	background: #f1f5f9 !important;
-}
-
-/* lista zleceń: sortowanie po kliknięciu w nagłówek */
-.list-table th.sortable button {
-	padding: 0;
-	border: none;
-	background: none;
-	font-weight: inherit;
-	color: inherit;
-	white-space: nowrap;
-}
-
-.sort-arrow {
-	display: inline-block;
-	width: 1em;
-	margin-left: 2px;
-	font-size: 0.7em;
-	color: #64748b;
 }

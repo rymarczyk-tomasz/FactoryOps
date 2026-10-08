@@ -26,6 +26,8 @@ const sameBlocks = (a: Block[], b: Block[]) => {
 const machineName = (s: PlanState, id: Id | undefined) => resourceName(s, id);
 const breakdownMachine = (s: PlanState, id: Id) => s.breakdowns.filter((b) => b.id === id).map((b) => b.machineId);
 const orderNo = (s: PlanState, id: Id) => s.blocks.find((b) => b.id === id)?.orderNo ?? '';
+/** „zlecenia” / „zleceń” po liczbie (2-4 zlecenia, 5 zleceń, 22 zlecenia, 12 zleceń). */
+const ordersWord = (n: number) => (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'zlecenia' : 'zleceń');
 
 /** Zmiana ustawienia dnia: `value` undefined usuwa wyjątek. */
 export interface DayChange {
@@ -60,6 +62,8 @@ export interface Notice {
 interface PlanActions {
 	addBlock(draft: BlockDraft): Id;
 	updateBlock(id: Id, patch: Partial<Omit<Block, 'id' | 'end'>>): void;
+	/** Ta sama zmiana dla kilku zleceń (np. przypisanie programisty) - jeden krok cofania. */
+	updateBlocks(ids: Id[], patch: Partial<Omit<Block, 'id' | 'end'>>): void;
 	moveBlock(id: Id, start: number, machineId: Id): void;
 	deleteBlock(id: Id): void;
 	compactMachine(machineId: Id): void;
@@ -180,6 +184,11 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 				withBlocks(
 					(s) => schedule.updateBlock(s.blocks, id, patch, s, Date.now()),
 					(before) => `Zapisano ${orderNo(before, id)}`
+				),
+			updateBlocks: (ids, patch) =>
+				withBlocks(
+					(s) => ids.reduce((blocks, id) => schedule.updateBlock(blocks, id, patch, s, Date.now()), s.blocks),
+					() => (ids.length === 1 ? 'Zapisano 1 zlecenie' : `Zapisano ${ids.length} ${ordersWord(ids.length)}`)
 				),
 			moveBlock: (id, start, machineId) =>
 				withBlocks(

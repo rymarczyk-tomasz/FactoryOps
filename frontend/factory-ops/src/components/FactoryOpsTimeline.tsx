@@ -32,13 +32,13 @@ import { dailyLoad, loadPercent, loadUnits } from '../domain/load';
 import { blockStatus, previewMove } from '../domain/schedule';
 import { addHours, dayKey, isWeekend, nearestHourStart, shiftDayStart } from '../domain/shifts';
 import { Block, Breakdown, Id, Line, Machine } from '../domain/types';
-import { RevealBreakdownState } from './AppRail';
 import BlockDetailsPanel from './BlockDetailsPanel';
 import BlockFormModal, { BlockFormDefaults } from './BlockFormModal';
 import BreakdownModal, { BreakdownModalTarget } from './BreakdownModal';
 import ConfirmModal from './ConfirmModal';
 import DayCalendarModal from './DayCalendarModal';
 import PageHeader from './PageHeader';
+import { PlanNavigationState } from './planNavigation';
 import { projectColor } from './projectColor';
 import RowContextMenu, { RowMenuTarget } from './RowContextMenu';
 
@@ -405,25 +405,31 @@ const FactoryOpsTimeline = () => {
 		setRange(rangeAround(block.start, Math.max(span, (block.end - block.start) * 1.5), 0.15));
 	};
 
-	// klik w kartę awarii w menu bocznym: odsłonięcie maszyny, przewinięcie do początku awarii (w lewej ⅓ widoku)
-	// i chwilowe podświetlenie wiersza. Stan nawigacji czyścimy od razu - inaczej cofnięcie i odświeżenie strony
-	// przewijałyby plan jeszcze raz.
+	// polecenia z innych widoków: klik w kartę awarii w menu bocznym (odsłonięcie maszyny, początek awarii w lewej
+	// części widoku, chwilowe podświetlenie wiersza) albo „Pokaż na planie” na liście (zaznaczenie zlecenia).
+	// Stan nawigacji czyścimy od razu - inaczej cofnięcie i odświeżenie strony przewijałyby plan jeszcze raz.
 	const location = useLocation();
 	const navigate = useNavigate();
-	const revealBreakdownId = (location.state as RevealBreakdownState | null)?.revealBreakdown;
+	const command = location.state as PlanNavigationState | null;
 	useEffect(() => {
-		if (!revealBreakdownId) return;
-		const breakdown = state.breakdowns.find((b) => b.id === revealBreakdownId);
+		if (!command?.revealBreakdown && !command?.showBlock) return;
+		const breakdown = command.revealBreakdown && state.breakdowns.find((b) => b.id === command.revealBreakdown);
+		const block = command.showBlock && state.blocks.find((b) => b.id === command.showBlock);
+		const rowId = breakdown ? breakdown.machineId : block ? block.machineId : undefined;
 		if (breakdown) {
 			reveal(breakdown.machineId);
 			setRange(rangeAround(breakdown.start, span, 0.25));
-			setScrollToRow(breakdown.machineId);
 			setFlashRow(breakdown.machineId);
 		}
+		if (block) {
+			setSelectedId(block.id);
+			showBlock(block);
+		}
+		if (rowId) setScrollToRow(rowId);
 		navigate(location.pathname, { replace: true, state: null });
 		// reagujemy tylko na nowe polecenie z nawigacji
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [revealBreakdownId, location.key]);
+	}, [command?.revealBreakdown, command?.showBlock, location.key]);
 
 	useEffect(() => {
 		if (!flashRow) return;
