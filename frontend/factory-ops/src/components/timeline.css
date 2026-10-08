@@ -12,6 +12,12 @@
 
 /* ---- układ strony planu: plan + panel zlecenia obok ---- */
 
+/* zakres dat za nawigacją, o stałej szerokości najdłuższego wariantu („28.12.2026–04.01.2027”) -
+   po zmianie zakresu nic w pasku górnym się nie przesuwa */
+.plan-range {
+	min-width: 21ch;
+}
+
 .plan-layout {
 	position: relative;
 	flex: 1;

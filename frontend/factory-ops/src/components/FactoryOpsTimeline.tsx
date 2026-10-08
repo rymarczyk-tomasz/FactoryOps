@@ -228,7 +228,7 @@ const HOUR_HEADER_HEIGHT = 24;
 /** Szerokość podpisu „dziś · od 6:00” z odstępem [px] - gdy kreska „teraz” jest dalej, podpis mieści się przed nią. */
 const TODAY_LABEL_WIDTH = 110;
 const DAY_CELL_PADDING = 8;
-/** Doba widoczna węziej niż tyle [px] nie ma podpisu - zostałby z niego skrawek. */
+/** Doba ucięta lewą krawędzią i widoczna węziej niż tyle [px] nie ma podpisu - zostałby z niego skrawek. */
 const DAY_CELL_MIN_VISIBLE = 56;
 /** Przybliżone szerokości znaku daty (mono 13px i 12px) i podpisu nad nią (11px) - do dopasowania podpisu doby. */
 const DATE_CHAR_WIDTH = 7.9;
@@ -790,15 +790,17 @@ const FactoryOpsTimeline = () => {
 		const hiddenPart = Math.max(0, visibleLeft - left);
 		const paddingLeft = Math.max(DAY_CELL_PADDING, todayPadding, hiddenPart + DAY_CELL_PADDING);
 		const room = width - paddingLeft;
-		const showLabel = width - hiddenPart >= DAY_CELL_MIN_VISIBLE;
+		// skrawek doby uciętej lewą krawędzią - bez podpisu; cała doba (też wąska, np. w widoku miesiąca) ma podpis
+		const showLabel = hiddenPart === 0 || width - hiddenPart >= DAY_CELL_MIN_VISIBLE;
 		// za mało miejsca: najpierw znika podpis nad datą, potem data maleje do 12px, na końcu zostaje „8.10”
+		// (tylko dziś i 1. dzień miesiąca - pozostałe wąskie doby mają sam numer dnia, żeby format był jednolity)
 		const shortLabel = `${date.getDate()}.${date.getMonth() + 1}`;
 		const dateMode =
 			label.length * DATE_CHAR_WIDTH <= room
 				? 'full'
 				: label.length * DATE_CHAR_WIDTH_SMALL <= room
 					? 'compact'
-					: shortLabel.length * DATE_CHAR_WIDTH_SMALL <= room
+					: (today || date.getDate() === 1) && shortLabel.length * DATE_CHAR_WIDTH_SMALL <= room
 						? 'short'
 						: room >= 14
 							? 'day'
@@ -832,7 +834,7 @@ const FactoryOpsTimeline = () => {
 		<>
 			<PageHeader
 				title="Plan"
-				context={rangeLabel(range)}
+				// nawigacja przed zakresem dat: zakres ma zmienną długość i przesuwałby przyciski
 				tools={
 					<>
 						<Segmented
@@ -853,6 +855,7 @@ const FactoryOpsTimeline = () => {
 								›
 							</button>
 						</div>
+						<span className="page-context mono plan-range">{rangeLabel(range)}</span>
 					</>
 				}>
 				<div className="search-field plan-search">
