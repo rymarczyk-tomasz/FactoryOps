@@ -289,12 +289,6 @@
 	}
 }
 
-/* menu prawego kliku na planie */
-.day-menu {
-	z-index: 1080;
-	min-width: 300px;
-}
-
 .text-pre-wrap {
 	white-space: pre-wrap;
 }

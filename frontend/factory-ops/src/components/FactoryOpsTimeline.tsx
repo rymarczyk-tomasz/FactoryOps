@@ -34,6 +34,7 @@ import { Block, Breakdown, Id, Line, Machine } from '../domain/types';
 import BlockDetailsPanel from './BlockDetailsPanel';
 import BlockFormModal, { BlockFormDefaults } from './BlockFormModal';
 import BreakdownModal, { BreakdownModalTarget } from './BreakdownModal';
+import BlockHoverCard, { HoverAnchor } from './BlockHoverCard';
 import ConfirmModal from './ConfirmModal';
 import DayCalendarModal from './DayCalendarModal';
 import PageHeader from './PageHeader';
@@ -65,6 +66,8 @@ const AUTO_SCROLL_STEP = 0.02;
 const LOAD_DAYS = 7;
 /** Jak długo podświetla się wiersz po kliknięciu awarii w menu bocznym (z wygaszaniem). */
 const ROW_FLASH_MS = 1800;
+/** Po ilu ms bez ruchu nad zleceniem pokazuje się karta podpowiedzi. */
+const HOVER_DELAY = 400;
 
 const COLOR_STRIPE_BASE = 'oklch(0.975 0.004 255)';
 const tint = (color: string, percent: number) => `color-mix(in oklch, ${color} ${percent}%, white)`;
@@ -165,8 +168,10 @@ function renderItem({ item, itemContext, timelineContext, getItemProps }: ItemRe
 					key={key}
 					// biblioteka nie oznacza zaznaczenia klasą - ustawiamy ją sami
 					className={itemContext.selected ? `${props.className} is-selected` : props.className}
-					// TODO(etap 6): karta podpowiedzi z #3g zamiast natywnego dymka
-					title={item.itemProps?.title ?? props.title}>
+					// bez natywnego dymka - plan pokazuje własną kartę podpowiedzi (szuka zlecenia po data-block-id)
+					title={undefined}
+					aria-label={item.itemProps?.['aria-label']}
+					data-block-id={item.id}>
 					<div className="plan-block-body">
 						{label && (
 							<span className="plan-block-label" style={labelStyle}>
@@ -317,6 +322,29 @@ const FactoryOpsTimeline = () => {
 	const [scrollToRow, setScrollToRow] = useState<Id>();
 	/** Wiersz chwilowo podświetlony - żeby było widać, gdzie przeniosło kliknięcie awarii. */
 	const [flashRow, setFlashRow] = useState<Id>();
+	/** Karta podpowiedzi zlecenia - pokazuje się po chwili bez ruchu nad zleceniem, znika przy kliknięciu i przeciąganiu. */
+	const [hover, setHover] = useState<{ id: Id; anchor: HoverAnchor }>();
+	const hoverTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+	const hoverTarget = useRef<Id>(undefined);
+	const hideHover = useCallback(() => {
+		clearTimeout(hoverTimer.current);
+		hoverTarget.current = undefined;
+		setHover(undefined);
+	}, []);
+	const trackHover = (e: React.MouseEvent) => {
+		const element = (e.target as Element).closest<HTMLElement>('[data-block-id]');
+		const id = element?.dataset.blockId;
+		if (id === hoverTarget.current) return;
+		hideHover();
+		if (!element || !id || e.buttons !== 0) return;
+		hoverTarget.current = id;
+		const x = e.clientX;
+		hoverTimer.current = setTimeout(() => {
+			const rect = element.getBoundingClientRect();
+			setHover({ id, anchor: { x, top: rect.top, bottom: rect.bottom } });
+		}, HOVER_DELAY);
+	};
+	useEffect(() => () => clearTimeout(hoverTimer.current), []);
 	const searchRef = useRef<HTMLInputElement>(null);
 	// przeciąganie pustego planu nie przesuwa widoku - myliło się z przeciąganiem zleceń
 	const panBlocked = useRef(false);
@@ -666,7 +694,8 @@ const FactoryOpsTimeline = () => {
 				canChangeGroup: true,
 				className: classes.join(' '),
 				itemProps: {
-					title: tooltip,
+					// opis dla czytników ekranu (getItemProps go nie przekazuje - ustawia go renderItem)
+					'aria-label': tooltip,
 					onDoubleClick: () => setForm({ show: true, block }),
 					style: {
 						'--c': color,
@@ -858,7 +887,7 @@ const FactoryOpsTimeline = () => {
 			</PageHeader>
 
 			<div className="plan-layout">
-				<div className="plan-main">
+				<div className="plan-main" onMouseOver={trackHover} onMouseLeave={hideHover} onMouseDownCapture={hideHover} onWheelCapture={hideHover}>
 					<div
 						ref={timelineRef}
 						className={`plan-timeline ${span > HOUR_HEADER_MAX_SPAN ? 'zoom-wide' : 'zoom-hours'}`}
@@ -1108,6 +1137,9 @@ const FactoryOpsTimeline = () => {
 				)}
 			</div>
 
+			{hover && !dragging && !rowMenu && state.blocks.some((b) => b.id === hover.id) && (
+				<BlockHoverCard block={state.blocks.find((b) => b.id === hover.id)!} anchor={hover.anchor} />
+			)}
 			{rowMenu && (
 				<RowContextMenu
 					target={rowMenu}

@@ -1,0 +1,77 @@
+/* Karta podpowiedzi zlecenia (#3g) */
+
+.hover-card {
+	position: fixed;
+	z-index: 1070;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	width: max-content;
+	max-width: 420px;
+	padding: 12px 14px;
+	border: 1px solid oklch(0.92 0.006 255);
+	border-radius: var(--radius-lg);
+	background: var(--surface);
+	box-shadow: var(--shadow-popover);
+	font-size: 14px;
+	color: var(--ink);
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity var(--transition-fast);
+}
+
+.hover-card.is-visible {
+	opacity: 1;
+}
+
+.hover-card-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+}
+
+.hover-card-title {
+	overflow: hidden;
+	font-weight: 600;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.hover-card-list {
+	display: grid;
+	grid-template-columns: max-content minmax(0, 1fr);
+	gap: 3px 12px;
+	margin: 0;
+	font-size: 12.5px;
+}
+
+.hover-card-list dt {
+	font-weight: 400;
+	color: oklch(0.52 0.02 260);
+}
+
+.hover-card-list dd {
+	margin: 0;
+}
+
+.hover-card-list dd.mono {
+	white-space: nowrap;
+}
+
+.hover-card-list dd.is-unassigned {
+	color: var(--warn-ink);
+}
+
+.hover-card-note {
+	display: -webkit-box;
+	overflow: hidden;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	white-space: pre-wrap;
+}
+
+.hover-card-foot {
+	font-size: 11.5px;
+	color: oklch(0.55 0.02 260);
+}

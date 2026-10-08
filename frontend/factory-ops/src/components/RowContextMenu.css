@@ -1,0 +1,107 @@
+/* Menu prawego kliku na wierszu planu (#3g) */
+
+.row-menu {
+	z-index: 1080;
+	width: 330px;
+	border: 1px solid oklch(0.92 0.006 255);
+	border-radius: var(--radius-lg);
+	background: var(--surface);
+	box-shadow: var(--shadow-popover);
+	font-size: 14px;
+	color: var(--ink);
+	overflow: hidden;
+}
+
+.row-menu-head {
+	padding: 12px 14px 10px;
+	border-bottom: 1px solid oklch(0.94 0.005 255);
+}
+
+.row-menu-title {
+	font-weight: 600;
+}
+
+.row-menu-sub {
+	font-size: 12px;
+	color: oklch(0.5 0.02 260);
+}
+
+.row-menu-body {
+	display: flex;
+	flex-direction: column;
+	padding: 6px;
+}
+
+.row-menu-item {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	width: 100%;
+	padding: 8px 10px;
+	border: none;
+	border-radius: var(--radius);
+	background: transparent;
+	text-align: left;
+	color: inherit;
+	transition: background var(--transition-fast);
+}
+
+.row-menu-item:hover,
+.row-menu-item:focus-visible {
+	outline: none;
+	background: var(--hover);
+}
+
+.row-menu-item.is-danger {
+	color: var(--danger-ink);
+}
+
+.row-menu-hint {
+	margin-left: auto;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: oklch(0.55 0.02 260);
+	white-space: nowrap;
+}
+
+.row-menu-breakdown {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin: 6px 4px;
+	padding: 9px 10px;
+	border-radius: var(--radius);
+	background: oklch(0.97 0.015 25);
+	font-size: 12.5px;
+	color: oklch(0.42 0.13 25);
+}
+
+.row-menu-breakdown b {
+	font-weight: 600;
+}
+
+.row-menu-breakdown-actions {
+	display: flex;
+	gap: 6px;
+}
+
+.row-menu-breakdown-actions .btn {
+	height: 26px;
+	padding: 0 10px;
+	font-size: 12px;
+	line-height: 24px;
+}
+
+.row-menu .row-menu-remove {
+	--bs-btn-color: oklch(0.45 0.15 25);
+	--bs-btn-hover-color: oklch(0.4 0.15 25);
+	--bs-btn-hover-bg: oklch(0.94 0.03 25);
+	--bs-btn-border-color: transparent;
+	--bs-btn-hover-border-color: transparent;
+}
+
+.row-menu-divider {
+	height: 1px;
+	margin: 4px 6px;
+	background: oklch(0.94 0.005 255);
+}

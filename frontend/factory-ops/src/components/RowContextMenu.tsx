@@ -5,6 +5,8 @@ import { formatDateTime } from '../domain/format';
 import { addHours } from '../domain/shifts';
 import { Id } from '../domain/types';
 import { BreakdownModalTarget } from './BreakdownModal';
+import { machinesLabel } from './planSelectors';
+import './RowContextMenu.css';
 
 export interface RowMenuTarget {
 	x: number;
@@ -27,6 +29,8 @@ interface RowContextMenuProps {
 
 const dayFormat = new Intl.DateTimeFormat('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' });
 const hourFormat = new Intl.DateTimeFormat('pl-PL', { hour: '2-digit', minute: '2-digit' });
+const weekdayFormat = new Intl.DateTimeFormat('pl-PL', { weekday: 'short' });
+const HOUR = 3600_000;
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 /** Menu prawego przycisku na wierszu planu: dodanie zlecenia, awarie maszyn wiersza i kalendarz dnia. */
@@ -78,49 +82,68 @@ const RowContextMenu = ({ target, onAddBlock, onReportBreakdown, onOpenDay, onCl
 		onClose();
 	};
 
+	const dayDate = new Date(target.day);
+	const dayLabel = `${weekdayFormat.format(target.day).replace('.', '')} ${dayDate.getDate()}.${dayDate.getMonth() + 1}`;
+	/** Godzina, gdy awaria zaczęła się w ciągu ostatniej doby; dawniej - pełna data. */
+	const since = (ms: number) => (now - ms < 24 * HOUR && ms <= now ? hourFormat.format(ms) : formatDateTime(ms));
+
 	return (
-		<div ref={ref} className="dropdown-menu show shadow day-menu" style={{ position: 'fixed', ...position }}>
-			<h6 className="dropdown-header">
-				{capitalize(dayFormat.format(target.day))} · {name}
-				<div className="fw-normal small">
+		<div ref={ref} className="row-menu" role="menu" style={{ position: 'fixed', ...position }}>
+			<div className="row-menu-head">
+				<div className="row-menu-title">
+					{capitalize(dayFormat.format(target.day))} · {name}
+				</div>
+				<div className="row-menu-sub">
 					{machine
 						? `${describeDay(effectiveDay(state.calendar, machine, target.day))} · ${WORK_MODE_LABELS[workMode(machine)]}`
-						: `Linia: ${machines.length} maszyny pracujące równolegle`}
+						: `Linia: ${machinesLabel(machines.length)} pracujące równolegle`}
 				</div>
-			</h6>
-			<button className="dropdown-item" onClick={run(onAddBlock)}>
-				Dodaj zlecenie od {hourFormat.format(target.hour)}
-			</button>
-			<div className="dropdown-divider" />
-			{breakdowns.map((breakdown) => (
-				<div key={breakdown.id} className="d-flex align-items-center justify-content-between gap-3 px-3 py-1 small">
-					<span className="text-danger">
-						Awaria{line ? ` ${names.get(breakdown.machineId)}` : ''} od {formatDateTime(breakdown.start)}
-						{isOngoing(breakdown) ? <strong> · trwa</strong> : ` do ${formatDateTime(breakdownEnd(breakdown, now))}`}
-					</span>
-					<span className="d-flex gap-2 text-nowrap">
-						{isOngoing(breakdown) && (
-							<button type="button" className="btn btn-danger btn-sm py-0" onClick={run(() => endBreakdown(breakdown.id))}>
-								Zakończ teraz
-							</button>
-						)}
-						<button type="button" className="btn btn-link btn-sm p-0 text-danger" onClick={run(() => removeBreakdown(breakdown.id))}>
-							Usuń
-						</button>
-					</span>
-				</div>
-			))}
-			{!machineDown && (
-				<button
-					className="dropdown-item text-danger"
-					onClick={run(() => onReportBreakdown(machine ? { machineId: machine.id } : { machineIds: machines.map((m) => m.id) }))}>
-					{machine ? `Zgłoś awarię ${machine.name}…` : 'Zgłoś awarię maszyny linii…'}
+			</div>
+			<div className="row-menu-body">
+				<button type="button" role="menuitem" className="row-menu-item" onClick={run(onAddBlock)}>
+					Dodaj zlecenie od {hourFormat.format(target.hour)}
+					<span className="row-menu-hint">dwuklik</span>
 				</button>
-			)}
-			<div className="dropdown-divider" />
-			<button className="dropdown-item" onClick={run(onOpenDay)}>
-				Dzień pracujący / wolny: {dayFormat.format(target.day)}…
-			</button>
+				{breakdowns.map((breakdown) => (
+					<div key={breakdown.id} className="row-menu-breakdown">
+						<span>
+							Awaria{line ? ` ${names.get(breakdown.machineId)}` : ''} od {since(breakdown.start)}
+							{isOngoing(breakdown) ? (
+								<>
+									{' '}
+									· <b>trwa</b>
+								</>
+							) : (
+								` do ${formatDateTime(breakdownEnd(breakdown, now))}`
+							)}
+						</span>
+						<span className="row-menu-breakdown-actions">
+							{isOngoing(breakdown) && (
+								<button type="button" role="menuitem" className="btn btn-danger" onClick={run(() => endBreakdown(breakdown.id))}>
+									Zakończ teraz
+								</button>
+							)}
+							<button type="button" role="menuitem" className="btn row-menu-remove" onClick={run(() => removeBreakdown(breakdown.id))}>
+								Usuń
+							</button>
+						</span>
+					</div>
+				))}
+				{!machineDown && (
+					<button
+						type="button"
+						role="menuitem"
+						className="row-menu-item is-danger"
+						onClick={run(() => onReportBreakdown(machine ? { machineId: machine.id } : { machineIds: machines.map((m) => m.id) }))}>
+						{machine ? `Zgłoś awarię ${machine.name}…` : 'Zgłoś awarię maszyny linii…'}
+					</button>
+				)}
+				<div className="row-menu-divider" />
+				<button type="button" role="menuitem" className="row-menu-item" onClick={run(onOpenDay)}>
+					Dzień pracujący / wolny…
+					<span className="row-menu-hint">{dayLabel}</span>
+				</button>
+			</div>
 		</div>
 	);
 };
