@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:oklch(0.93 0.006 255);font-family:'IBM Plex Sans',system-ui,sans-serif;color:oklch(0.22 0.02 260);-webkit-font-smoothing:antialiased}
+a{color:#2563eb}a:hover{color:#1d4ed8}
+*{box-sizing:border-box}
+</style>
+</helmet>
+
+<section id="turn-3" data-screen-label="1b – okna i drobne elementy" style="padding:72px 72px 24px;display:flex;flex-direction:column;gap:28px">
+  <div style="display:flex;flex-direction:column;gap:8px;max-width:1100px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:oklch(0.5 0.02 260)">Kierunek 1b · okna i drobne elementy</div>
+    <div style="font-size:32px;font-weight:600;letter-spacing:-0.01em;line-height:1.2">Formularze, potwierdzenia, menu i komunikaty</div>
+    <div style="font-size:16px;line-height:1.55;color:oklch(0.4 0.02 260);text-wrap:pretty">Każde okno z kodu (BlockFormModal, BreakdownModal, DayCalendarModal, LineFormModal, MachineFormModal, ConfirmModal) oraz RowContextMenu, toast i MultiSelect. Pola i teksty pochodzą z kodu. Dodałem podgląd skutków przed zapisem i szybkie wybory. W <a href="#3a">3a</a>, <a href="#3c">3c</a> i <a href="#3e">3e</a> przełączniki są klikalne.</div>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:48px;align-items:flex-start">
+
+    <div id="3a" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;background:oklch(0.22 0.02 260);color:#fff;padding:3px 9px;border-radius:4px">3a</span><span style="font-size:18px;font-weight:600">Nowe / edycja zlecenia</span></div>
+      <div style="width:880px;padding:40px 60px;background:oklch(0.82 0.012 255);border-radius:6px;font-size:14px;color:oklch(0.25 0.02 260)">
+        <div style="background:#fff;border-radius:12px;box-shadow:0 20px 50px rgba(15,23,42,0.25);overflow:hidden">
+          <div style="padding:20px 24px 16px;display:flex;align-items:center;gap:10px"><span style="font-size:18px;font-weight:600">Nowe zlecenie</span><span style="margin-left:auto;font-size:20px;line-height:1;color:oklch(0.55 0.02 260)">×</span></div>
+          <div style="padding:0 24px 20px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px 18px">
+            <div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12.5px;color:oklch(0.45 0.02 260)">Nr projektu</span><div style="height:36px;border:1.5px solid #2563eb;box-shadow:0 0 0 3px rgba(37,99,235,0.15);border-radius:6px;padding:0 11px;display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:13px">IMR-6001</div></div>
+            <div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12.5px;color:oklch(0.45 0.02 260)">Nazwa projektu</span><div style="height:36px;border:1px solid oklch(0.88 0.008 255);border-radius:6px;padding:0 11px;display:flex;align-items:center;justify-content:space-between"><span>Manzanillo</span><span style="font-size:11.5px;color:#15803d">uzupełniono z IMR-6001</span></div></div>
+            <div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12.5px;color:oklch(0.45 0.02 260)">Operacja / stopień</span><div style="height:36px;border:1px solid oklch(0.88 0.008 255);border-radius:6px;padding:0 11px;display:flex;align-items:center">Stopień 2</div><div style="display:flex;flex-wrap:wrap;gap:4px"><sc-for list="{{ f3.ops }}" as="o" hint-placeholder-count="5"><span style="font-size:11.5px;padding:1px 8px;border-radius:999px;background:oklch(0.96 0.006 255);color:oklch(0.4 0.02 260)">{{ o }}</span></sc-for></div></div>
+            <div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12.5px;color:oklch(0.45 0.02 260)">Nr zamówienia</span><div style="height:36px;border:1px solid oklch(0.88 0.008 255);border-radius:6px;padding:0 11px;display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:13px">ZAM/2026/00451</div></div>
+            <div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12.5px;color:oklch(0.45 0.02 260)">Linia / maszyna</span><div style="height:36px;border:1px solid oklch(0.88 0.008 255);border-radius:6px;padding:0 11px;display:flex;align-items:center;gap:8px"><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500">Linia 1</span><span style="color:oklch(0.5 0.02 260)">cała linia · 3 maszyny</span><span style="margin-left:auto;color:oklch(0.55 0.02 260)">▾</span></div></div>
+            <div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12.5px;color:oklch(0.45 0.02 260)">Czas pracy jednej maszyny</span><div style="height:36px;border:1px solid oklch(0.88 0.008 255);border-radius:6px;padding:0 11px;display:flex;align-items:center;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:13px"><span>60</span><span style="color:oklch(0.55 0.02 260)">h</span></div><span style="font-size:12px;color:oklch(0.45 0.02 260)">Linia, 3 maszyny: ok. <b style="font-weight:600">20 h na planie</b>, gdy pracują wszystkie</span></div>
+            <div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12.5px;color:oklch(0.45 0.02 260)">Programista</span><div style="height:36px;border:1px solid oklch(0.88 0.008 255);border-radius:6px;padding:0 11px;display:flex;align-items:center;justify-content:space-between;color:oklch(0.5 0.1 60)"><span>— nie przypisano —</span><span style="color:oklch(0.55 0.02 260)">▾</span></div></div>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <span style="font-size:12.5px;color:oklch(0.45 0.02 260)">Start</span>
+              <div style="display:flex;background:oklch(0.95 0.006 255);border-radius:7px;padding:3px;gap:2px">
+                <span onClick="{{ f3.setQueue }}" style="flex:1;text-align:center;padding:5px 8px;border-radius:5px;font-size:13px;cursor:pointer;background:{{ f3.qBg }};font-weight:{{ f3.qFw }};box-shadow:{{ f3.qSh }}">Na koniec kolejki</span>
+                <span onClick="{{ f3.setManual }}" style="flex:1;text-align:center;padding:5px 8px;border-radius:5px;font-size:13px;cursor:pointer;background:{{ f3.mBg }};font-weight:{{ f3.mFw }};box-shadow:{{ f3.mSh }}">Od wybranej godziny</span>
+              </div>
+              <sc-if value="{{ f3.manual }}" hint-placeholder-val="{{ false }}"><div style="height:36px;border:1px solid oklch(0.88 0.008 255);border-radius:6px;padding:0 11px;display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:13px">08.10.2026, 14:00</div><span style="font-size:12px;color:oklch(0.5 0.02 260)">Zostanie zaokrąglony do pełnej godziny.</span></sc-if>
+            </div>
+            <div style="grid-column:1 / -1;background:oklch(0.97 0.012 255);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:14px;font-size:13px">
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:oklch(0.5 0.02 260)">Podgląd</span>
+              <span>{{ f3.preview }}</span>
+            </div>
+            <div style="grid-column:1 / -1;display:flex;flex-direction:column;gap:5px"><span style="font-size:12.5px;color:oklch(0.45 0.02 260)">Uwagi</span><div style="height:64px;border:1px solid oklch(0.88 0.008 255);border-radius:6px;padding:9px 11px;color:oklch(0.6 0.02 260)">np. czeka na materiał, uwagi dla programisty…</div></div>
+          </div>
+          <div style="padding:14px 24px;border-top:1px solid oklch(0.93 0.006 255);background:oklch(0.985 0.003 255);display:flex;align-items:center;gap:8px">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:oklch(0.5 0.02 260)">Ctrl+Enter · zapisz i dodaj kolejne</span>
+            <span style="margin-left:auto;height:34px;padding:0 14px;border-radius:6px;display:flex;align-items:center;font-size:13px;color:oklch(0.4 0.02 260)">Anuluj</span>
+            <span style="height:34px;padding:0 14px;border-radius:6px;display:flex;align-items:center;font-size:13px;border:1px solid oklch(0.85 0.008 255);background:#fff;white-space:nowrap">Zapisz i dodaj kolejne</span>
+            <span style="height:34px;padding:0 18px;border-radius:6px;display:flex;align-items:center;font-size:13px;font-weight:500;background:#1e293b;color:#fff">Dodaj</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="3b" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;background:oklch(0.22 0.02 260);color:#fff;padding:3px 9px;border-radius:4px">3b</span><span style="font-size:18px;font-weight:600">Zgłoś awarię</span></div>
+      <div style="width:600px;padding:40px 60px;background:oklch(0.82 0.012 255);border-radius:6px;font-size:14px;color:oklch(0.25 0.02 260)">
+        <div style="background:#fff;border-radius:12px;box-shadow:0 20px 50px rgba(15,23,42,0.25);overflow:hidden">
+          <div style="padding:20px 24px 16px;display:flex;align-items:center;gap:10px"><span style="width:9px;height:9px;border-radius:50%;background:#dc2626"></span><span style="font-size:18px;font-weight:600">Zgłoś awarię</span><span style="margin-left:auto;font-size:20px;line-height:1;color:oklch(0.55 0.02 260)">×</span></div>
+          <div style="padding:0 24px 20px;display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12.5px;color:oklch(0.45 0.02 260)">Maszyna</span><div style="height:36px;border:1px solid oklch(0.88 0.008 255);border-radius:6px;padding:0 11px;display:flex;align-items:center;gap:8px"><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500">L3-M2</span><span style="color:oklch(0.5 0.02 260)">Linia 3</span><span style="margin-left:auto;color:oklch(0.55 0.02 260)">▾</span></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:oklch(0.45 0.02 260)">Stoi od</span>
+              <div style="display:flex;gap:6px"><sc-for list="{{ f3.since }}" as="s" hint-placeholder-count="5"><span style="padding:5px 11px;border-radius:999px;font-size:12.5px;font-family:'IBM Plex Mono',monospace;background:{{ s.bg }};color:{{ s.ink }};border:1px solid {{ s.bd }}">{{ s.t }}</span></sc-for></div>
+              <div style="height:36px;border:1px solid oklch(0.88 0.008 255);border-radius:6px;padding:0 11px;display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:13px">08.10.2026, 07:00</div>
+              <span style="font-size:12px;color:oklch(0.5 0.02 260)">Awarii nie planuje się naprzód — tylko godzina, która już minęła.</span>
+            </div>
+            <div style="border:1px solid oklch(0.9 0.04 25);background:oklch(0.98 0.012 25);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-size:13px">
+              <span style="font-weight:600;color:oklch(0.42 0.13 25)">Co się stanie</span>
+              <span style="color:oklch(0.35 0.04 25);line-height:1.45">L3-M2 stoi do odwołania, czas awarii rośnie co godzinę. Linia 3 nie staje — pracuje na 2 z 3 maszyn, więc jej zlecenia się wydłużą.</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:oklch(0.42 0.1 25)">Wydłuży: Wirnik · IMR-6003 (w toku), Korpus · IMR-6000</span>
+            </div>
+          </div>
+          <div style="padding:14px 24px;border-top:1px solid oklch(0.93 0.006 255);background:oklch(0.985 0.003 255);display:flex;align-items:center;gap:8px;justify-content:flex-end">
+            <span style="height:34px;padding:0 14px;border-radius:6px;display:flex;align-items:center;font-size:13px;color:oklch(0.4 0.02 260)">Anuluj</span>
+            <span style="height:34px;padding:0 18px;border-radius:6px;display:flex;align-items:center;font-size:13px;font-weight:500;background:#dc2626;color:#fff">Zgłoś awarię</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="3c" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;background:oklch(0.22 0.02 260);color:#fff;padding:3px 9px;border-radius:4px">3c</span><span style="font-size:18px;font-weight:600">Kalendarz dnia</span></div>
+      <div style="width:940px;padding:40px 60px;background:oklch(0.82 0.012 255);border-radius:6px;font-size:14px;color:oklch(0.25 0.02 260)">
+        <div style="background:#fff;border-radius:12px;box-shadow:0 20px 50px rgba(15,23,42,0.25);overflow:hidden">
+          <div style="padding:20px 24px 16px;display:flex;align-items:baseline;gap:12px"><span style="font-size:18px;font-weight:600">Sobota, 10 października 2026</span><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:oklch(0.5 0.02 260)">doba 6:00 → nd 6:00</span><span style="margin-left:auto;font-size:20px;line-height:1;color:oklch(0.55 0.02 260)">×</span></div>
+          <div style="padding:0 24px 20px;display:flex;flex-direction:column;gap:18px">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-weight:600">Cały zakład</span>
+              <div style="display:flex;background:oklch(0.95 0.006 255);border-radius:8px;padding:3px;gap:2px">
+                <sc-for list="{{ f3.kinds }}" as="k" hint-placeholder-count="4"><span onClick="{{ k.onClick }}" style="flex:1;text-align:center;padding:6px 8px;border-radius:6px;font-size:13px;cursor:pointer;background:{{ k.bg }};font-weight:{{ k.fw }};box-shadow:{{ k.sh }}">{{ k.label }}</span></sc-for>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:oklch(0.45 0.02 260)"><span>{{ f3.kindText }}</span><sc-if value="{{ f3.isHours }}" hint-placeholder-val="{{ false }}"><span style="height:28px;padding:0 9px;border:1px solid oklch(0.88 0.008 255);border-radius:5px;display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:oklch(0.25 0.02 260)">6:00 ▾</span><span>–</span><span style="height:28px;padding:0 9px;border:1px solid oklch(0.88 0.008 255);border-radius:5px;display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:oklch(0.25 0.02 260)">18:00 ▾</span></sc-if></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;gap:10px"><span style="font-weight:600">Wyjątki dla linii i maszyn</span><span style="font-size:12.5px;color:oklch(0.5 0.02 260)">pracuje <b style="font-family:'IBM Plex Mono',monospace;font-weight:500;color:oklch(0.25 0.02 260)">{{ f3.working }}</b> z 60 maszyn</span><div style="margin-left:auto;width:200px;height:30px;border:1px solid oklch(0.88 0.008 255);border-radius:6px;padding:0 10px;display:flex;align-items:center;font-size:12.5px;color:oklch(0.55 0.02 260)">Szukaj maszyny</div></div>
+              <div style="border:1px solid oklch(0.92 0.006 255);border-radius:8px;overflow:hidden">
+                <sc-for list="{{ f3.dayRows }}" as="r" hint-placeholder-count="9">
+                  <div style="display:grid;grid-template-columns:minmax(0,1fr) 260px 110px;align-items:center;gap:12px;height:{{ r.h }};padding:0 14px 0 {{ r.pad }};background:{{ r.bg }};border-bottom:1px solid oklch(0.95 0.004 255)">
+                    <span style="display:flex;align-items:center;gap:8px"><sc-if value="{{ r.exc }}" hint-placeholder-val="{{ false }}"><span style="width:6px;height:6px;border-radius:50%;background:#f59e0b"></span></sc-if><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:{{ r.fw }}">{{ r.name }}</span><span style="font-size:11.5px;color:oklch(0.55 0.02 260)">{{ r.mode }}</span></span>
+                    <span style="height:30px;border:1px solid {{ r.selBd }};border-radius:6px;padding:0 10px;display:flex;align-items:center;justify-content:space-between;font-size:13px;background:#fff"><span>{{ r.choice }}</span><span style="color:oklch(0.55 0.02 260)">▾</span></span>
+                    <span style="text-align:right;font-size:12.5px;font-weight:500;color:{{ r.resInk }}">{{ r.result }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+          <div style="padding:14px 24px;border-top:1px solid oklch(0.93 0.006 255);background:oklch(0.985 0.003 255);display:flex;align-items:center;gap:8px">
+            <span style="font-size:12.5px;color:oklch(0.5 0.02 260)">2 wyjątki maszyn · zmiany przesuną zlecenia po zapisie</span>
+            <span style="margin-left:auto;height:34px;padding:0 14px;border-radius:6px;display:flex;align-items:center;font-size:13px;color:oklch(0.4 0.02 260)">Anuluj</span>
+            <span style="height:34px;padding:0 18px;border-radius:6px;display:flex;align-items:center;font-size:13px;font-weight:500;background:#1e293b;color:#fff">Zapisz</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="3d" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;background:oklch(0.22 0.02 260);color:#fff;padding:3px 9px;border-radius:4px">3d</span><span style="font-size:18px;font-weight:600">Nowa linia produkcyjna</span></div>
+      <div style="width:640px;padding:40px 60px;background:oklch(0.82 0.012 255);border-radius:6px;font-size:14px;color:oklch(0.25 0.02 260)">
+        <div style="background:#fff;border-radius:12px;box-shadow:0 20px 50px rgba(15,23,42,0.25);overflow:hidden">
+          <div style="padding:20px 24px 16px;display:flex;align-items:center"><span style="font-size:18px;font-weight:600">Nowa linia produkcyjna</span><span style="margin-left:auto;font-size:20px;line-height:1;color:oklch(0.55 0.02 260)">×</span></div>
+          <div style="padding:0 24px 20px;display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12.5px;color:oklch(0.45 0.02 260)">Nazwa linii</span><div style="height:36px;border:1px solid oklch(0.88 0.008 255);border-radius:6px;padding:0 11px;display:flex;align-items:center">Linia 10</div></div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font-size:12.5px;color:oklch(0.45 0.02 260)">Maszyny w linii · pracują równolegle</span>
+              <div style="border:1px solid oklch(0.92 0.006 255);border-radius:8px;overflow:hidden">
+                <sc-for list="{{ f3.members }}" as="m" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-bottom:1px solid oklch(0.95 0.004 255)"><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:oklch(0.55 0.02 260);width:16px">{{ m.n }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500">{{ m.name }}</span><sc-if value="{{ m.isNew }}" hint-placeholder-val="{{ false }}"><span style="font-size:11px;font-weight:500;padding:1px 7px;border-radius:999px;background:#dcfce7;color:#166534">nowa</span></sc-if><span style="font-size:12px;color:{{ m.noteInk }}">{{ m.note }}</span><span style="margin-left:auto;color:oklch(0.55 0.02 260);font-size:16px">×</span></div>
+                </sc-for>
+                <div style="display:flex;gap:8px;padding:10px 12px;background:oklch(0.985 0.003 255)">
+                  <span style="flex:1;height:32px;border:1px solid oklch(0.88 0.008 255);border-radius:6px;padding:0 10px;display:flex;align-items:center;justify-content:space-between;font-size:13px;background:#fff;color:oklch(0.45 0.02 260)"><span>Dodaj istniejącą…</span><span>▾</span></span>
+                  <span style="flex:1;height:32px;border:1px solid oklch(0.88 0.008 255);border-radius:6px;padding:0 10px;display:flex;align-items:center;font-size:13px;background:#fff;color:oklch(0.6 0.02 260)">Nowa, np. L10-M4</span>
+                  <span style="height:32px;padding:0 12px;border-radius:6px;border:1px solid oklch(0.88 0.008 255);background:#fff;display:flex;align-items:center;font-size:13px;white-space:nowrap">Dodaj</span>
+                </div>
+              </div>
+              <span style="font-size:12px;color:oklch(0.5 0.02 260)">Zlecenie linii dzieli się między maszyny. Awaria jednej maszyny spowalnia linię, ale jej nie zatrzymuje.</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12.5px;color:oklch(0.45 0.02 260)">System pracy maszyn linii</span><div style="height:36px;border:1px solid oklch(0.88 0.008 255);border-radius:6px;padding:0 11px;display:flex;align-items:center;justify-content:space-between"><span>4-brygadowy, 24/7</span><span style="color:oklch(0.55 0.02 260)">▾</span></div></div>
+          </div>
+          <div style="padding:14px 24px;border-top:1px solid oklch(0.93 0.006 255);background:oklch(0.985 0.003 255);display:flex;align-items:center;gap:8px;justify-content:flex-end">
+            <span style="height:34px;padding:0 14px;border-radius:6px;display:flex;align-items:center;font-size:13px;color:oklch(0.4 0.02 260)">Anuluj</span>
+            <span style="height:34px;padding:0 18px;border-radius:6px;display:flex;align-items:center;font-size:13px;font-weight:500;background:#1e293b;color:#fff">Dodaj linię</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="3e" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;background:oklch(0.22 0.02 260);color:#fff;padding:3px 9px;border-radius:4px">3e</span><span style="font-size:18px;font-weight:600">Edycja maszyny</span></div>
+      <div style="width:600px;padding:40px 60px;background:oklch(0.82 0.012 255);border-radius:6px;font-size:14px;color:oklch(0.25 0.02 260)">
+        <div style="background:#fff;border-radius:12px;box-shadow:0 20px 50px rgba(15,23,42,0.25);overflow:hidden">
+          <div style="padding:20px 24px 16px;display:flex;align-items:center;gap:8px"><span style="font-size:18px;font-weight:600">Edytuj:</span><span style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:500">HSTM 305</span><span style="margin-left:auto;font-size:20px;line-height:1;color:oklch(0.55 0.02 260)">×</span></div>
+          <div style="padding:0 24px 20px;display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12.5px;color:oklch(0.45 0.02 260)">Nazwa maszyny</span><div style="height:36px;border:1px solid oklch(0.88 0.008 255);border-radius:6px;padding:0 11px;display:flex;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:13px">HSTM 305</div></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:oklch(0.45 0.02 260)">System pracy</span>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <sc-for list="{{ f3.modes }}" as="w" hint-placeholder-count="2"><div onClick="{{ w.onClick }}" style="border:1.5px solid {{ w.bd }};background:{{ w.bg }};border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;cursor:pointer"><span style="font-weight:500">{{ w.label }}</span><span style="font-size:12px;color:oklch(0.5 0.02 260)">{{ w.sub }}</span></div></sc-for>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12.5px;color:oklch(0.45 0.02 260)">Linia produkcyjna</span><div style="height:36px;border:1px solid oklch(0.88 0.008 255);border-radius:6px;padding:0 11px;display:flex;align-items:center;justify-content:space-between"><span>— maszyna samodzielna —</span><span style="color:oklch(0.55 0.02 260)">▾</span></div><span style="font-size:12px;color:oklch(0.5 0.02 260)">Maszyny linii pracują równolegle na zlecenia linii. Można też dać zlecenie bezpośrednio na tę maszynę.</span></div>
+          </div>
+          <div style="padding:14px 24px;border-top:1px solid oklch(0.93 0.006 255);background:oklch(0.985 0.003 255);display:flex;align-items:center;gap:8px;justify-content:flex-end">
+            <span style="height:34px;padding:0 14px;border-radius:6px;display:flex;align-items:center;font-size:13px;color:oklch(0.4 0.02 260)">Anuluj</span>
+            <span style="height:34px;padding:0 18px;border-radius:6px;display:flex;align-items:center;font-size:13px;font-weight:500;background:#1e293b;color:#fff">Zapisz</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="3f" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;background:oklch(0.22 0.02 260);color:#fff;padding:3px 9px;border-radius:4px">3f</span><span style="font-size:18px;font-weight:600">Potwierdzenie</span></div>
+      <div style="width:580px;padding:40px 60px;background:oklch(0.82 0.012 255);border-radius:6px;font-size:14px;color:oklch(0.25 0.02 260)">
+        <div style="background:#fff;border-radius:12px;box-shadow:0 20px 50px rgba(15,23,42,0.25);overflow:hidden">
+          <div style="padding:22px 24px 8px;font-size:18px;font-weight:600">Usunąć zlecenie?</div>
+          <div style="padding:0 24px 20px;display:flex;flex-direction:column;gap:12px;line-height:1.5">
+            <span>Zlecenie <b style="font-family:'IBM Plex Mono',monospace;font-weight:500">ZAM/2026/00452</b> (Stopień 2) zostanie usunięte z planu. Następne zlecenia na maszynie cofną się na jego miejsce.</span>
+            <div style="background:oklch(0.97 0.006 255);border-radius:8px;padding:10px 12px;font-size:13px;display:flex;flex-direction:column;gap:3px"><span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:oklch(0.5 0.02 260)">Skutek</span><span>Linia 1 · 3 kolejne zlecenia startują 20 h wcześniej</span></div>
+            <span style="font-size:12.5px;color:oklch(0.5 0.02 260)">Można cofnąć z komunikatu na górze ekranu lub Ctrl+Z.</span>
+          </div>
+          <div style="padding:14px 24px;border-top:1px solid oklch(0.93 0.006 255);background:oklch(0.985 0.003 255);display:flex;align-items:center;gap:8px;justify-content:flex-end">
+            <span style="height:34px;padding:0 14px;border-radius:6px;display:flex;align-items:center;font-size:13px;color:oklch(0.4 0.02 260)">Anuluj</span>
+            <span style="height:34px;padding:0 18px;border-radius:6px;display:flex;align-items:center;font-size:13px;font-weight:500;background:#dc2626;color:#fff">Usuń</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="3g" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;background:oklch(0.22 0.02 260);color:#fff;padding:3px 9px;border-radius:4px">3g</span><span style="font-size:18px;font-weight:600">Menu, komunikaty, filtry</span><span style="font-size:15px;color:oklch(0.45 0.02 260)">Menu prawego kliku, toast z „Cofnij”, karta podpowiedzi zamiast systemowego tooltipa, opis miejsca upuszczenia, filtr wielokrotnego wyboru.</span></div>
+      <div style="width:1280px;padding:36px;background:oklch(0.965 0.006 255);border-radius:6px;font-size:14px;color:oklch(0.25 0.02 260);display:grid;grid-template-columns:330px 380px minmax(0,1fr);gap:32px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:oklch(0.5 0.02 260)">Prawy klik na wierszu</span>
+          <div style="background:#fff;border-radius:10px;box-shadow:0 12px 32px rgba(15,23,42,0.18);border:1px solid oklch(0.92 0.006 255);overflow:hidden">
+            <div style="padding:12px 14px 10px;border-bottom:1px solid oklch(0.94 0.005 255)"><div style="font-weight:600">Czwartek, 8 października · Linia 2</div><div style="font-size:12px;color:oklch(0.5 0.02 260)">Linia: 3 maszyny pracujące równolegle</div></div>
+            <div style="padding:6px">
+              <div style="display:flex;align-items:center;padding:8px 10px;border-radius:6px;background:oklch(0.96 0.008 255)"><span>Dodaj zlecenie od 14:00</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:oklch(0.55 0.02 260)">dwuklik</span></div>
+              <div style="margin:6px 4px;padding:9px 10px;border-radius:6px;background:oklch(0.97 0.015 25);display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:oklch(0.42 0.13 25)">Awaria L2-M2 od 04:00 · <b>trwa</b></span><span style="display:flex;gap:6px"><span style="height:26px;padding:0 10px;border-radius:5px;background:#dc2626;color:#fff;font-size:12px;display:flex;align-items:center">Zakończ teraz</span><span style="height:26px;padding:0 10px;border-radius:5px;color:oklch(0.45 0.15 25);font-size:12px;display:flex;align-items:center">Usuń</span></span></div>
+              <div style="padding:8px 10px;color:oklch(0.45 0.15 25)">Zgłoś awarię maszyny linii…</div>
+              <div style="height:1px;background:oklch(0.94 0.005 255);margin:4px 6px"></div>
+              <div style="padding:8px 10px;display:flex;align-items:center"><span>Dzień pracujący / wolny…</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:oklch(0.55 0.02 260)">czw 8.10</span></div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:22px">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:oklch(0.5 0.02 260)">Komunikat po zmianie</span>
+            <div style="background:#1e293b;color:#fff;border-radius:10px;padding:10px 12px 10px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 10px 28px rgba(15,23,42,0.25);font-size:13px"><span style="width:7px;height:7px;border-radius:50%;background:#4ade80;flex:none"></span><span style="flex:1;line-height:1.4">Przeniesiono <span style="font-family:'IBM Plex Mono',monospace">ZAM/2026/00452</span> na Linia 3 · czw., 08.10, 14:00</span><span style="height:26px;padding:0 10px;border-radius:5px;background:#fff;color:#1e293b;font-weight:500;display:flex;align-items:center">Cofnij</span><span style="opacity:0.6">×</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:oklch(0.5 0.02 260)">Najechanie na zlecenie</span>
+            <div style="background:#fff;border-radius:10px;box-shadow:0 12px 32px rgba(15,23,42,0.18);border:1px solid oklch(0.92 0.006 255);padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;gap:8px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;padding:2px 6px;border-radius:4px;background:color-mix(in oklch, #0d9488 14%, white);color:color-mix(in oklch, #0d9488 72%, black)">IMR-6001</span><span style="font-weight:600">Stopień 2 · Manzanillo</span></div>
+              <div style="display:grid;grid-template-columns:max-content 1fr;gap:3px 12px;font-size:12.5px"><span style="color:oklch(0.52 0.02 260)">Zamówienie</span><span style="font-family:'IBM Plex Mono',monospace">ZAM/2026/00452</span><span style="color:oklch(0.52 0.02 260)">Czas</span><span>60 h maszyny · linia: 3 maszyny</span><span style="color:oklch(0.52 0.02 260)">Termin</span><span style="font-family:'IBM Plex Mono',monospace">czw. 14:00 → pt. 10:00</span><span style="color:oklch(0.52 0.02 260)">Programista</span><span>Anna Nowak</span></div>
+              <span style="font-size:11.5px;color:oklch(0.55 0.02 260)">Klik: szczegóły · dwuklik: edycja · przeciągnij: przenieś</span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:oklch(0.5 0.02 260)">Podczas przeciągania</span>
+            <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid oklch(0.88 0.06 75);border-radius:8px;padding:8px 12px;font-size:12.5px"><span style="width:3px;height:22px;background:#f59e0b;border-radius:2px"></span><span><b style="font-weight:600">Wstawisz:</b> Linia 3 · czw. 14:00 · po <span style="font-family:'IBM Plex Mono',monospace">00448</span> · przed <span style="font-family:'IBM Plex Mono',monospace">00455</span></span></div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:oklch(0.5 0.02 260)">Filtr wielokrotnego wyboru</span>
+          <span style="height:32px;padding:0 11px;border-radius:6px;border:1.5px solid #2563eb;background:#fff;display:flex;align-items:center;gap:6px;font-size:13px;width:240px;color:#1d4ed8"><span style="color:oklch(0.52 0.02 260)">Maszyna</span><span style="font-weight:500">3 wybrane</span><span style="margin-left:auto">▴</span></span>
+          <div style="width:300px;background:#fff;border-radius:10px;box-shadow:0 12px 32px rgba(15,23,42,0.18);border:1px solid oklch(0.92 0.006 255);overflow:hidden">
+            <div style="padding:8px"><div style="height:30px;border:1px solid oklch(0.88 0.008 255);border-radius:6px;padding:0 10px;display:flex;align-items:center;font-size:12.5px;color:oklch(0.55 0.02 260)">Szukaj…</div></div>
+            <sc-for list="{{ f3.ms }}" as="o" hint-placeholder-count="9">
+              <sc-if value="{{ o.isHead }}" hint-placeholder-val="{{ false }}"><div style="padding:8px 12px 4px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:oklch(0.52 0.02 260)">{{ o.label }}</div></sc-if>
+              <sc-if value="{{ o.isOpt }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;gap:9px;padding:6px 12px 6px {{ o.pad }};font-size:13px"><span style="width:15px;height:15px;border-radius:4px;border:1.5px solid {{ o.bd }};background:{{ o.bg }};color:#fff;font-size:10px;line-height:12px;text-align:center">{{ o.tick }}</span><span style="font-family:{{ o.font }}">{{ o.label }}</span></div></sc-if>
+            </sc-for>
+            <div style="display:flex;justify-content:space-between;padding:8px 12px;border-top:1px solid oklch(0.94 0.005 255);font-size:12.5px"><span style="color:oklch(0.45 0.02 260)">Wyczyść wybór</span><span style="font-weight:500">Gotowe</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="turn-2" data-screen-label="1b – kolejne widoki" style="padding:72px 72px 24px;display:flex;flex-direction:column;gap:28px">
+  <div style="display:flex;flex-direction:column;gap:8px;max-width:1100px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:oklch(0.5 0.02 260)">Kierunek 1b · pozostałe widoki</div>
+    <div style="font-size:32px;font-weight:600;letter-spacing:-0.01em;line-height:1.2">Lista zleceń, Obciążenie i Maszyny w języku pulpitu</div>
+    <div style="font-size:16px;line-height:1.55;color:oklch(0.4 0.02 260);text-wrap:pretty">Wspólne menu boczne z awariami, ten sam pasek górny i bloczki projektów. Plan to <a href="#1b">1b</a>. Na liście można zaznaczać wiersze, żeby zobaczyć akcje zbiorcze. Liczby zleceń są przykładowe.</div>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:56px;align-items:flex-start">
+
+    <div id="2a" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;background:oklch(0.22 0.02 260);color:#fff;padding:3px 9px;border-radius:4px">2a</span><span style="font-size:18px;font-weight:600">Lista zleceń</span><span style="font-size:15px;color:oklch(0.45 0.02 260)">Szybkie filtry z licznikami, filtr „bez programisty”, zaznaczanie i przypisywanie zbiorcze zamiast 200 selectów.</span></div>
+      <div style="width:1600px;height:1000px;background:#fff;border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);display:flex;font-size:14px;color:oklch(0.25 0.02 260)">
+        <div style="width:200px;flex:none;background:oklch(0.965 0.006 255);border-right:1px solid oklch(0.9 0.008 255);padding:18px 12px;display:flex;flex-direction:column;gap:24px">
+          <div style="display:flex;align-items:center;gap:8px;padding:0 8px;font-weight:600;font-size:15px"><svg width="22" height="22" viewBox="0 0 26 26"><rect x="1" y="1" width="24" height="24" rx="6" fill="#2563eb"></rect><rect x="5" y="7" width="10" height="3" rx="1.5" fill="#fff"></rect><rect x="9" y="12" width="12" height="3" rx="1.5" fill="#93c5fd"></rect><rect x="5" y="17" width="7" height="3" rx="1.5" fill="#fff"></rect></svg><span>FactoryOps</span></div>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <div style="padding:8px 10px;border-radius:6px;color:oklch(0.42 0.02 260)">Plan</div>
+            <div style="padding:8px 10px;border-radius:6px;background:#fff;font-weight:500;box-shadow:0 1px 2px rgba(15,23,42,0.06)">Lista zleceń</div>
+            <div style="padding:8px 10px;border-radius:6px;color:oklch(0.42 0.02 260)">Obciążenie</div>
+            <div style="padding:8px 10px;border-radius:6px;color:oklch(0.42 0.02 260)">Maszyny</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="padding:0 10px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:oklch(0.5 0.15 25)">Awarie teraz · 2</div>
+            <sc-for list="{{ downList }}" as="dn" hint-placeholder-count="2">
+              <div style="margin:0 2px;padding:8px 10px;border-radius:6px;background:#fff;border:1px solid oklch(0.9 0.04 25);display:flex;flex-direction:column;gap:2px">
+                <div style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:#dc2626"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:500">{{ dn.name }}</span><span style="font-size:12px;color:oklch(0.5 0.02 260)">{{ dn.where }}</span></div>
+                <div style="font-size:12px;color:oklch(0.45 0.12 25)">{{ dn.since }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin-top:auto;padding:0 10px;font-size:12.5px;color:oklch(0.5 0.02 260)">Resetuj demo</div>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;background:oklch(0.985 0.003 255)">
+          <div style="height:60px;flex:none;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid oklch(0.91 0.008 255);background:#fff">
+            <span style="font-size:19px;font-weight:600">Lista zleceń</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:oklch(0.5 0.02 260)">{{ l2.total }} aktywnych · {{ l2.archived }} w archiwum</span>
+            <div style="margin-left:auto;width:340px;height:32px;border:1px solid oklch(0.88 0.008 255);border-radius:6px;display:flex;align-items:center;gap:8px;padding:0 6px 0 11px;font-size:13px;color:oklch(0.55 0.02 260);background:#fff"><span style="flex:1">Szukaj: nr zamówienia, projekt, operacja…</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;border:1px solid oklch(0.88 0.008 255);border-radius:4px;padding:0 5px">/</span></div>
+            <span style="height:32px;padding:0 14px;border-radius:6px;display:flex;align-items:center;font-size:13px;border:1px solid oklch(0.88 0.008 255);background:#fff;white-space:nowrap;flex:none">Eksport do Excela</span>
+            <span style="height:32px;padding:0 14px;border-radius:6px;display:flex;align-items:center;font-size:13px;font-weight:500;background:#1e293b;color:#fff;white-space:nowrap;flex:none">Nowe zlecenie</span>
+          </div>
+          <div style="flex:none;display:flex;align-items:center;gap:8px;padding:14px 24px">
+            <div style="display:flex;background:oklch(0.95 0.006 255);border-radius:7px;padding:3px;gap:2px">
+              <sc-for list="{{ l2.tabs }}" as="t" hint-placeholder-count="4">
+                <span style="padding:4px 11px;border-radius:5px;font-size:13px;display:flex;gap:6px;align-items:center;background:{{ t.bg }};font-weight:{{ t.fw }};box-shadow:{{ t.sh }};color:{{ t.ink }}"><span>{{ t.label }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:oklch(0.55 0.02 260)">{{ t.n }}</span></span>
+              </sc-for>
+            </div>
+            <span style="height:30px;padding:0 11px;border-radius:6px;border:1px solid oklch(0.88 0.008 255);background:#fff;display:flex;align-items:center;gap:6px;font-size:13px"><span style="color:oklch(0.52 0.02 260)">Maszyna</span><span>wszystkie</span><span style="color:oklch(0.6 0.02 260)">▾</span></span>
+            <span style="height:30px;padding:0 11px;border-radius:6px;border:1px solid oklch(0.88 0.008 255);background:#fff;display:flex;align-items:center;gap:6px;font-size:13px"><span style="color:oklch(0.52 0.02 260)">Projekt</span><span>wszystkie</span><span style="color:oklch(0.6 0.02 260)">▾</span></span>
+            <span style="height:30px;padding:0 11px;border-radius:6px;border:1px solid oklch(0.88 0.008 255);background:#fff;display:flex;align-items:center;gap:6px;font-size:13px"><span style="color:oklch(0.52 0.02 260)">Programista</span><span>wszyscy</span><span style="color:oklch(0.6 0.02 260)">▾</span></span>
+            <span style="height:30px;padding:0 11px;border-radius:999px;background:oklch(0.96 0.04 75);color:oklch(0.45 0.1 60);display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500">Bez programisty<span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">{{ l2.noProg }}</span></span>
+            <span style="margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;color:oklch(0.45 0.02 260)"><span style="width:28px;height:16px;border-radius:8px;background:oklch(0.88 0.008 255);display:flex;align-items:center;padding:0 2px"><span style="width:12px;height:12px;border-radius:50%;background:#fff"></span></span>Archiwum</span>
+          </div>
+          <div style="flex:1;min-height:0;margin:0 24px 0;background:#fff;border:1px solid oklch(0.91 0.008 255);border-radius:8px 8px 0 0;overflow:hidden;display:flex;flex-direction:column">
+            <div style="display:grid;grid-template-columns:44px 120px minmax(0,1.5fr) minmax(0,1fr) 110px 200px 70px minmax(0,1fr);align-items:center;height:38px;flex:none;border-bottom:1px solid oklch(0.92 0.006 255);font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:oklch(0.52 0.02 260)">
+              <span style="display:flex;justify-content:center"><span style="width:15px;height:15px;border-radius:4px;border:1.5px solid oklch(0.75 0.01 255);background:#fff"></span></span>
+              <span>Status</span><span>Zlecenie</span><span>Projekt</span><span>Zasób</span><span style="color:oklch(0.3 0.02 260)">Start ▲ → koniec</span><span style="text-align:right;padding-right:16px">Czas</span><span>Programista</span>
+            </div>
+            <sc-for list="{{ l2.rows }}" as="r" hint-placeholder-count="14">
+              <div onClick="{{ r.onToggle }}" style="display:grid;grid-template-columns:44px 120px minmax(0,1.5fr) minmax(0,1fr) 110px 200px 70px minmax(0,1fr);align-items:center;height:50px;flex:none;border-bottom:1px solid oklch(0.95 0.004 255);background:{{ r.bg }};cursor:pointer">
+                <span style="display:flex;justify-content:center"><span style="width:15px;height:15px;border-radius:4px;border:1.5px solid {{ r.cbBorder }};background:{{ r.cbBg }};color:#fff;font-size:11px;line-height:12px;text-align:center">{{ r.tick }}</span></span>
+                <span style="display:flex;align-items:center;gap:7px;font-size:13px;color:{{ r.stInk }}"><span style="width:7px;height:7px;border-radius:50%;background:{{ r.stDot }}"></span>{{ r.status }}</span>
+                <span style="display:flex;flex-direction:column;min-width:0"><span style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.title }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:oklch(0.55 0.02 260)">{{ r.orderNo }}</span></span>
+                <span style="display:flex;align-items:center;gap:8px;min-width:0"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;padding:2px 6px;border-radius:4px;background:{{ r.tint }};color:{{ r.ink }};flex:none">{{ r.pno }}</span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.pname }}</span></span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px">{{ r.res }}</span>
+                <span style="display:flex;flex-direction:column;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.35"><span>{{ r.start }}</span><span style="color:oklch(0.55 0.02 260)">→ {{ r.end }}</span></span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;text-align:right;padding-right:16px">{{ r.hours }}</span>
+                <span style="display:flex;align-items:center;gap:8px">
+                  <sc-if value="{{ r.hasProg }}" hint-placeholder-val="{{ true }}"><span style="width:24px;height:24px;border-radius:50%;background:oklch(0.93 0.01 255);font-size:10.5px;font-weight:600;display:flex;align-items:center;justify-content:center;color:oklch(0.4 0.02 260)">{{ r.init }}</span><span>{{ r.prog }}</span></sc-if>
+                  <sc-if value="{{ r.noProg }}" hint-placeholder-val="{{ false }}"><span style="height:26px;padding:0 10px;border-radius:6px;border:1px dashed oklch(0.75 0.08 70);color:oklch(0.45 0.1 60);display:flex;align-items:center;font-size:12.5px">Przypisz ▾</span></sc-if>
+                </span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="height:56px;flex:none;margin:0 24px 16px;display:flex;align-items:center;gap:14px;padding:0 16px;border-radius:0 0 8px 8px;background:{{ l2.barBg }};color:{{ l2.barInk }};font-size:13px">
+            <sc-if value="{{ l2.hasSel }}" hint-placeholder-val="{{ true }}">
+              <span style="font-weight:600">{{ l2.selCount }} zaznaczone</span>
+              <span style="height:30px;padding:0 12px;border-radius:6px;background:#fff;color:#1e293b;display:flex;align-items:center;font-weight:500">Przypisz programistę ▾</span>
+              <span style="height:30px;padding:0 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.3);display:flex;align-items:center">Pokaż na planie</span>
+              <span style="height:30px;padding:0 12px;border-radius:6px;border:1px solid rgba(255,255,255,0.3);display:flex;align-items:center">Eksportuj zaznaczone</span>
+              <span onClick="{{ l2.clear }}" style="margin-left:auto;cursor:pointer;opacity:0.8">Wyczyść zaznaczenie</span>
+            </sc-if>
+            <sc-if value="{{ l2.noSel }}" hint-placeholder-val="{{ false }}">
+              <span>Pokazano 15 najbliższych z {{ l2.total }} · zakończone wcześniej ukryte</span><span style="margin-left:auto">Załaduj kolejne 200</span>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="2b" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;background:oklch(0.22 0.02 260);color:#fff;padding:3px 9px;border-radius:4px">2b</span><span style="font-size:18px;font-weight:600">Obciążenie</span><span style="font-size:15px;color:oklch(0.45 0.02 260)">Mapa cieplna z wyraźnie zaznaczonymi dniami wolnymi i dzisiejszym dniem. Awarie w kolumnie obok zamiast pod tabelą.</span></div>
+      <div style="width:1600px;height:1000px;background:#fff;border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);display:flex;font-size:14px;color:oklch(0.25 0.02 260)">
+        <div style="width:200px;flex:none;background:oklch(0.965 0.006 255);border-right:1px solid oklch(0.9 0.008 255);padding:18px 12px;display:flex;flex-direction:column;gap:24px">
+          <div style="display:flex;align-items:center;gap:8px;padding:0 8px;font-weight:600;font-size:15px"><svg width="22" height="22" viewBox="0 0 26 26"><rect x="1" y="1" width="24" height="24" rx="6" fill="#2563eb"></rect><rect x="5" y="7" width="10" height="3" rx="1.5" fill="#fff"></rect><rect x="9" y="12" width="12" height="3" rx="1.5" fill="#93c5fd"></rect><rect x="5" y="17" width="7" height="3" rx="1.5" fill="#fff"></rect></svg><span>FactoryOps</span></div>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <div style="padding:8px 10px;border-radius:6px;color:oklch(0.42 0.02 260)">Plan</div>
+            <div style="padding:8px 10px;border-radius:6px;color:oklch(0.42 0.02 260)">Lista zleceń</div>
+            <div style="padding:8px 10px;border-radius:6px;background:#fff;font-weight:500;box-shadow:0 1px 2px rgba(15,23,42,0.06)">Obciążenie</div>
+            <div style="padding:8px 10px;border-radius:6px;color:oklch(0.42 0.02 260)">Maszyny</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="padding:0 10px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:oklch(0.5 0.15 25)">Awarie teraz · 2</div>
+            <sc-for list="{{ downList }}" as="dn" hint-placeholder-count="2">
+              <div style="margin:0 2px;padding:8px 10px;border-radius:6px;background:#fff;border:1px solid oklch(0.9 0.04 25);display:flex;flex-direction:column;gap:2px">
+                <div style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:#dc2626"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:500">{{ dn.name }}</span><span style="font-size:12px;color:oklch(0.5 0.02 260)">{{ dn.where }}</span></div>
+                <div style="font-size:12px;color:oklch(0.45 0.12 25)">{{ dn.since }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin-top:auto;padding:0 10px;font-size:12.5px;color:oklch(0.5 0.02 260)">Resetuj demo</div>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;background:oklch(0.985 0.003 255)">
+          <div style="height:60px;flex:none;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid oklch(0.91 0.008 255);background:#fff">
+            <span style="font-size:19px;font-weight:600">Obciążenie</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:oklch(0.5 0.02 260)">08–14.10 · doby 6:00–6:00</span>
+            <div style="margin-left:auto;display:flex;background:oklch(0.95 0.006 255);border-radius:7px;padding:3px;gap:2px">
+              <span style="padding:4px 11px;border-radius:5px;font-size:13px;background:#fff;font-weight:500;box-shadow:0 1px 2px rgba(15,23,42,0.08)">7 dni</span>
+              <span style="padding:4px 11px;border-radius:5px;font-size:13px;color:oklch(0.45 0.02 260)">14 dni</span>
+              <span style="padding:4px 11px;border-radius:5px;font-size:13px;color:oklch(0.45 0.02 260)">30 dni</span>
+            </div>
+          </div>
+          <div style="flex:1;min-height:0;display:flex;gap:20px;padding:20px 24px">
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:16px">
+              <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+                <div style="background:#fff;border:1px solid oklch(0.91 0.008 255);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:oklch(0.5 0.02 260)">Linie · zajętość 7 dni</span><span style="font-size:28px;font-weight:600;line-height:1">{{ load.avgLines }}%</span><span style="height:4px;border-radius:2px;background:oklch(0.94 0.006 255);display:flex;overflow:hidden"><span style="width:{{ l3.avgLinesW }};background:#2563eb"></span></span></div>
+                <div style="background:#fff;border:1px solid oklch(0.91 0.008 255);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:oklch(0.5 0.02 260)">Maszyny · zajętość 7 dni</span><span style="font-size:28px;font-weight:600;line-height:1">{{ load.avgMachines }}%</span><span style="height:4px;border-radius:2px;background:oklch(0.94 0.006 255);display:flex;overflow:hidden"><span style="width:{{ l3.avgMachW }};background:#2563eb"></span></span></div>
+                <div style="background:#fff;border:1px solid oklch(0.9 0.04 25);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:oklch(0.5 0.02 260)">Awarie trwające teraz</span><span style="font-size:28px;font-weight:600;line-height:1;color:#dc2626">2</span><span style="font-size:12px;color:oklch(0.45 0.12 25)">wydłużają 2 zlecenia</span></div>
+              </div>
+              <div style="background:#fff;border:1px solid oklch(0.91 0.008 255);border-radius:8px;overflow:hidden;display:flex;flex-direction:column">
+                <div style="display:grid;grid-template-columns:200px repeat(7,minmax(0,1fr)) 150px 80px;align-items:center;height:44px;border-bottom:1px solid oklch(0.92 0.006 255);padding:0 14px;gap:6px">
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:oklch(0.52 0.02 260)">Zasób</span>
+                  <sc-for list="{{ l3.days }}" as="d" hint-placeholder-count="7"><span style="display:flex;flex-direction:column;align-items:center;line-height:1.2"><span style="font-size:11px;color:{{ d.subInk }}">{{ d.sub }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:500;color:{{ d.ink }}">{{ d.label }}</span></span></sc-for>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:oklch(0.52 0.02 260)">Wolna od</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:oklch(0.52 0.02 260);text-align:right">Kolejka</span>
+                </div>
+                <sc-for list="{{ l3.rows }}" as="r" hint-placeholder-count="17">
+                  <sc-if value="{{ r.isGroup }}" hint-placeholder-val="{{ false }}"><div style="width:100%;align-self:stretch;height:30px;display:flex;align-items:center;gap:8px;padding:0 14px;background:oklch(0.975 0.004 255);border-bottom:1px solid oklch(0.93 0.006 255);font-size:12.5px;white-space:nowrap"><span style="font-weight:600">{{ r.title }}</span><span style="color:oklch(0.52 0.02 260)">średnio {{ r.avg }}%</span></div></sc-if>
+                  <sc-if value="{{ r.isRow }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:grid;grid-template-columns:200px repeat(7,minmax(0,1fr)) 150px 80px;align-items:center;height:38px;padding:0 14px;gap:6px;border-bottom:1px solid oklch(0.95 0.004 255)">
+                      <span style="display:flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:50%;background:{{ r.dot }}"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500">{{ r.name }}</span><span style="font-size:11px;color:oklch(0.58 0.02 260)">{{ r.meta }}</span></span>
+                      <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="7"><span style="height:28px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:12px;background:{{ c.bg }};color:{{ c.ink }};box-shadow:{{ c.ring }}">{{ c.text }}</span></sc-for>
+                      <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:oklch(0.4 0.02 260)">{{ r.free }}</span>
+                      <span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;text-align:right">{{ r.queued }}</span>
+                    </div>
+                  </sc-if>
+                </sc-for>
+              </div>
+            </div>
+            <div style="width:340px;flex:none;display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;align-items:center;gap:8px"><span style="font-size:15px;font-weight:600">Awarie</span><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:oklch(0.5 0.02 260)">2 trwają · 1 zakończona</span><span style="margin-left:auto;height:30px;padding:0 12px;border-radius:6px;display:flex;align-items:center;font-size:13px;color:oklch(0.45 0.15 25);border:1px solid oklch(0.88 0.04 25);background:#fff;white-space:nowrap;flex:none">Zgłoś awarię</span></div>
+              <sc-for list="{{ l3.brk }}" as="k" hint-placeholder-count="3">
+                <div style="background:#fff;border:1px solid {{ k.border }};border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;opacity:{{ k.op }}">
+                  <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:{{ k.dot }}"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:500">{{ k.name }}</span><span style="font-size:12.5px;color:oklch(0.5 0.02 260)">{{ k.line }}</span><span style="margin-left:auto;font-size:12px;font-weight:500;padding:2px 8px;border-radius:999px;background:{{ k.stBg }};color:{{ k.stInk }}">{{ k.status }}</span></div>
+                  <div style="display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;font-size:13px"><span style="color:oklch(0.52 0.02 260)">Od</span><span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px">{{ k.from }}</span><span style="color:oklch(0.52 0.02 260)">Do</span><span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:{{ k.toInk }}">{{ k.to }}</span><span style="color:oklch(0.52 0.02 260)">Czas</span><span>{{ k.dur }}</span><span style="color:oklch(0.52 0.02 260)">Wpływ</span><span>{{ k.impact }}</span></div>
+                  <sc-if value="{{ k.ongoing }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:8px"><span style="height:32px;flex:1;border-radius:6px;background:#dc2626;color:#fff;font-size:13px;font-weight:500;display:flex;align-items:center;justify-content:center">Zakończ teraz</span><span style="height:32px;padding:0 12px;border-radius:6px;border:1px solid oklch(0.88 0.008 255);font-size:13px;display:flex;align-items:center;white-space:nowrap;flex:none">Pokaż na planie</span></div></sc-if>
+                </div>
+              </sc-for>
+              <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;font-size:12px;color:oklch(0.45 0.02 260)">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:oklch(0.52 0.02 260)">Skala</span>
+                <span style="display:flex;gap:3px"><sc-for list="{{ l3.scale }}" as="s" hint-placeholder-count="6"><span style="flex:1;height:18px;border-radius:3px;background:{{ s.bg }};font-family:'IBM Plex Mono',monospace;font-size:10px;color:{{ s.ink }};display:flex;align-items:center;justify-content:center">{{ s.t }}</span></sc-for></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="2c" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;background:oklch(0.22 0.02 260);color:#fff;padding:3px 9px;border-radius:4px">2c</span><span style="font-size:18px;font-weight:600">Maszyny</span><span style="font-size:15px;color:oklch(0.45 0.02 260)">Linie jako karty ze składem i obciążeniem. Usuwanie schowane w menu „⋯”, żeby nie stało obok „Edytuj”.</span></div>
+      <div style="width:1600px;height:1000px;background:#fff;border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);display:flex;font-size:14px;color:oklch(0.25 0.02 260)">
+        <div style="width:200px;flex:none;background:oklch(0.965 0.006 255);border-right:1px solid oklch(0.9 0.008 255);padding:18px 12px;display:flex;flex-direction:column;gap:24px">
+          <div style="display:flex;align-items:center;gap:8px;padding:0 8px;font-weight:600;font-size:15px"><svg width="22" height="22" viewBox="0 0 26 26"><rect x="1" y="1" width="24" height="24" rx="6" fill="#2563eb"></rect><rect x="5" y="7" width="10" height="3" rx="1.5" fill="#fff"></rect><rect x="9" y="12" width="12" height="3" rx="1.5" fill="#93c5fd"></rect><rect x="5" y="17" width="7" height="3" rx="1.5" fill="#fff"></rect></svg><span>FactoryOps</span></div>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <div style="padding:8px 10px;border-radius:6px;color:oklch(0.42 0.02 260)">Plan</div>
+            <div style="padding:8px 10px;border-radius:6px;color:oklch(0.42 0.02 260)">Lista zleceń</div>
+            <div style="padding:8px 10px;border-radius:6px;color:oklch(0.42 0.02 260)">Obciążenie</div>
+            <div style="padding:8px 10px;border-radius:6px;background:#fff;font-weight:500;box-shadow:0 1px 2px rgba(15,23,42,0.06)">Maszyny</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="padding:0 10px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:oklch(0.5 0.15 25)">Awarie teraz · 2</div>
+            <sc-for list="{{ downList }}" as="dn" hint-placeholder-count="2">
+              <div style="margin:0 2px;padding:8px 10px;border-radius:6px;background:#fff;border:1px solid oklch(0.9 0.04 25);display:flex;flex-direction:column;gap:2px">
+                <div style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:#dc2626"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:500">{{ dn.name }}</span><span style="font-size:12px;color:oklch(0.5 0.02 260)">{{ dn.where }}</span></div>
+                <div style="font-size:12px;color:oklch(0.45 0.12 25)">{{ dn.since }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin-top:auto;padding:0 10px;font-size:12.5px;color:oklch(0.5 0.02 260)">Resetuj demo</div>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;background:oklch(0.985 0.003 255)">
+          <div style="height:60px;flex:none;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid oklch(0.91 0.008 255);background:#fff">
+            <span style="font-size:19px;font-weight:600">Maszyny</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:oklch(0.5 0.02 260)">60 maszyn · 9 linii · 29 w liniach</span>
+            <div style="margin-left:auto;width:260px;height:32px;border:1px solid oklch(0.88 0.008 255);border-radius:6px;display:flex;align-items:center;padding:0 11px;font-size:13px;color:oklch(0.55 0.02 260);background:#fff">Szukaj maszyny…</div>
+            <span style="height:32px;padding:0 14px;border-radius:6px;display:flex;align-items:center;font-size:13px;border:1px solid oklch(0.88 0.008 255);background:#fff;white-space:nowrap;flex:none">Nowa linia</span>
+            <span style="height:32px;padding:0 14px;border-radius:6px;display:flex;align-items:center;font-size:13px;font-weight:500;background:#1e293b;color:#fff;white-space:nowrap;flex:none">Nowa maszyna</span>
+          </div>
+          <div style="flex:1;min-height:0;overflow:hidden;padding:20px 24px;display:flex;flex-direction:column;gap:22px">
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:15px;font-weight:600">Linie produkcyjne</span><span style="font-size:13px;color:oklch(0.5 0.02 260)">Maszyny pracujące równolegle — zlecenie na linię dzieli się między nie.</span></div>
+              <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+                <sc-for list="{{ m3.lines }}" as="l" hint-placeholder-count="9">
+                  <div style="background:#fff;border:1px solid {{ l.border }};border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+                    <div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14.5px">{{ l.name }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:oklch(0.55 0.02 260)">{{ l.units }}× · 24/7</span><sc-if value="{{ l.down }}" hint-placeholder-val="{{ false }}"><span style="font-size:11.5px;font-weight:500;padding:1px 7px;border-radius:999px;background:oklch(0.95 0.03 25);color:oklch(0.45 0.15 25)">1 stoi</span></sc-if><span style="margin-left:auto;color:oklch(0.55 0.02 260);font-size:16px;line-height:1;letter-spacing:1px">⋯</span></div>
+                    <div style="display:flex;flex-wrap:wrap;gap:4px"><sc-for list="{{ l.members }}" as="m" hint-placeholder-count="3"><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:2px 7px;border-radius:4px;background:{{ m.bg }};color:{{ m.ink }};border:1px solid {{ m.bd }}">{{ m.name }}</span></sc-for></div>
+                    <div style="display:flex;align-items:center;gap:10px;font-size:12.5px;color:oklch(0.45 0.02 260)"><span style="flex:1;height:4px;border-radius:2px;background:oklch(0.94 0.006 255);display:flex;overflow:hidden"><span style="width:{{ l.load }};background:{{ l.loadC }}"></span></span><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;width:32px;text-align:right">{{ l.load }}</span><span>{{ l.count }}</span></div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:15px;font-weight:600">Maszyny samodzielne</span><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:oklch(0.5 0.02 260)">31</span></div>
+              <div style="background:#fff;border:1px solid oklch(0.91 0.008 255);border-radius:8px;overflow:hidden">
+                <div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1.2fr) 90px 150px 40px;align-items:center;height:36px;padding:0 16px;border-bottom:1px solid oklch(0.92 0.006 255);font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:oklch(0.52 0.02 260)"><span>Maszyna</span><span>System pracy</span><span>Obciążenie 7 dni</span><span style="text-align:right">Zlecenia</span><span style="padding-left:20px">Stan</span><span></span></div>
+                <sc-for list="{{ m3.machines }}" as="m" hint-placeholder-count="6">
+                  <div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1.2fr) 90px 150px 40px;align-items:center;height:40px;padding:0 16px;border-bottom:1px solid oklch(0.95 0.004 255)">
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500">{{ m.name }}</span>
+                    <span style="font-size:13px;color:oklch(0.45 0.02 260)">pon–pt, 3 zmiany</span>
+                    <span style="display:flex;align-items:center;gap:10px"><span style="width:120px;height:4px;border-radius:2px;background:oklch(0.94 0.006 255);display:flex;overflow:hidden"><span style="width:{{ m.load }};background:{{ m.loadC }}"></span></span><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">{{ m.load }}</span></span>
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;text-align:right">{{ m.count }}</span>
+                    <span style="padding-left:20px;display:flex;align-items:center;gap:6px;font-size:13px;color:{{ m.stInk }}"><span style="width:7px;height:7px;border-radius:50%;background:{{ m.stDot }}"></span>{{ m.st }}</span>
+                    <span style="color:oklch(0.55 0.02 260);font-size:16px;letter-spacing:1px;text-align:right">⋯</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="turn-1" data-screen-label="Przegląd i propozycje" style="padding:72px 72px 40px;display:flex;flex-direction:column;gap:36px">
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1120px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:oklch(0.5 0.02 260)">FactoryOps · branch demo · przegląd UI</div>
+    <div style="font-size:40px;font-weight:600;letter-spacing:-0.01em;line-height:1.15;text-wrap:pretty">Funkcjonalnie aplikacja jest mocna. Do poprawy jest hierarchia wizualna i odkrywalność — nie trzeba projektować jej od zera.</div>
+    <div style="font-size:17px;line-height:1.55;color:oklch(0.4 0.02 260);text-wrap:pretty">Logika planowania (linie, doba od 6:00, awarie, przesuwanie kolejki, cofanie), panel zlecenia, wyszukiwanie i eksport już działają. Problemy są w tym, jak to jest pokazane. Poniżej: uwagi, dwie propozycje (<a href="#1a">1a</a> porządek na obecnym stosie, <a href="#1b">1b</a> pulpit planisty) i odtworzony stan obecny (<a href="#0a">0a</a>–<a href="#0d">0d</a>).</div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(4,minmax(0,330px));gap:16px">
+    <div style="background:#fff;border-radius:10px;padding:20px 22px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:#2563eb">Hierarchia i gęstość</div>
+      <div style="font-size:14px;line-height:1.5;display:flex;flex-direction:column;gap:8px">
+        <div>Pasek planu ma 12 kontrolek i długą legendę — przy 1440 px łamie się na dwie linie.</div>
+        <div>Plan siedzi w karcie z podwójnym marginesem, choć powinien zajmować całą szerokość.</div>
+        <div>Każdy wiersz linii ma 2–3 kolorowe znaczki (3×, 24/7). Robi się szum, a awaria ginie wśród nich.</div>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:20px 22px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:#d97706">Kolor i czytelność</div>
+      <div style="font-size:14px;line-height:1.5;display:flex;flex-direction:column;gap:8px">
+        <div>Paleta projektów zawiera czerwień #dc2626 — myli się z awarią.</div>
+        <div>Biały tekst z cieniem na nasyconych kolorach i paskach czyta się słabo. Na planie nie widać, które zlecenia są „w toku”.</div>
+        <div>Kolumny dni zaczynają się o północy, a doba zakładu o 6:00 — nie pokrywają się.</div>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:20px 22px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:#dc2626">Ukryte i zasłonięte</div>
+      <div style="font-size:14px;line-height:1.5;display:flex;flex-direction:column;gap:8px">
+        <div>Dwuklik (nowe zlecenie), prawy klik (awaria, dzień) i klik w nagłówek dnia są opisane tylko w legendzie.</div>
+        <div>Panel zlecenia nakłada się na plan i zasłania nadchodzące zlecenia.</div>
+        <div>Trwające awarie widać dopiero po przewinięciu do wiersza albo na stronie Obciążenie.</div>
+      </div>
+    </div>
+    <div style="background:#fff;border-radius:10px;padding:20px 22px;display:flex;flex-direction:column;gap:12px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:#0d9488">Lista i obciążenie</div>
+      <div style="font-size:14px;line-height:1.5;display:flex;flex-direction:column;gap:8px">
+        <div>Lista renderuje 200 selectów programisty naraz. Brakuje akcji zbiorczej „przypisz zaznaczone”.</div>
+        <div>Obciążenie jest osobną stroną — procent zajętości przydałby się też w wierszu planu.</div>
+        <div>Sześć filtrów o równej szerokości — wyszukiwarka dostaje tyle miejsca co filtr statusu.</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:56px;align-items:flex-start">
+
+    <div id="1a" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:12px;max-width:1440px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;background:oklch(0.22 0.02 260);color:#fff;padding:3px 9px;border-radius:4px">1a</span>
+        <span style="font-size:18px;font-weight:600;white-space:nowrap">Porządek</span>
+        <span style="font-size:15px;color:oklch(0.45 0.02 260)">Bootstrap i react-calendar-timeline zostają. Plan na całą szerokość, pasek w 3 strefach, pasek awarii, doby od 6:00, paleta bez czerwieni, postęp „w toku” na bloczku, znaczki zastąpione szarym opisem.</span>
+      </div>
+      <div style="width:1440px;height:1000px;background:#fff;border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;color:#212529;font-size:16px;line-height:1.5;display:flex;flex-direction:column">
+        <div style="height:56px;flex:none;background:#212529;display:flex;align-items:center;padding:0 16px;gap:16px">
+          <div style="display:flex;align-items:center;gap:8px;color:#fff;font-size:20px;font-weight:600"><svg width="26" height="26" viewBox="0 0 26 26"><rect x="1" y="1" width="24" height="24" rx="6" fill="#2563eb"></rect><rect x="5" y="7" width="10" height="3" rx="1.5" fill="#fff"></rect><rect x="9" y="12" width="12" height="3" rx="1.5" fill="#93c5fd"></rect><rect x="5" y="17" width="7" height="3" rx="1.5" fill="#fff"></rect></svg><span>FactoryOps</span></div>
+          <div style="display:flex;gap:4px;font-size:16px"><span style="padding:8px;color:#fff">Plan</span><span style="padding:8px;color:rgba(255,255,255,0.55)">Lista zleceń</span><span style="padding:8px;color:rgba(255,255,255,0.55)">Obciążenie</span><span style="padding:8px;color:rgba(255,255,255,0.55)">Maszyny</span></div>
+          <button style="margin-left:auto;font:inherit;font-size:14px;padding:4px 8px;border:1px solid rgba(255,255,255,0.5);background:transparent;color:rgba(255,255,255,0.8);border-radius:4px">Resetuj demo</button>
+        </div>
+        <div style="flex:none;display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid #e2e8f0">
+          <button style="font:inherit;font-size:14px;padding:4px 10px;border:1px solid #2563eb;background:#2563eb;color:#fff;border-radius:4px">+ Dodaj zlecenie</button>
+          <button style="font:inherit;font-size:14px;padding:4px 10px;border:1px solid #dc3545;background:#fff;color:#dc3545;border-radius:4px">Zgłoś awarię</button>
+          <button style="font:inherit;font-size:14px;padding:4px 10px;border:1px solid #ced4da;background:#fff;color:#adb5bd;border-radius:4px">Cofnij</button>
+          <div style="flex:1;display:flex;justify-content:center;align-items:center;gap:10px">
+            <div style="display:flex"><button style="font:inherit;font-size:14px;padding:4px 10px;border:1px solid #6c757d;background:#fff;color:#6c757d;border-radius:4px 0 0 4px">Dzień</button><button style="font:inherit;font-size:14px;padding:4px 10px;border:1px solid #6c757d;background:#6c757d;color:#fff">Tydzień</button><button style="font:inherit;font-size:14px;padding:4px 10px;border:1px solid #6c757d;border-left:none;background:#fff;color:#6c757d;border-radius:0 4px 4px 0">Miesiąc</button></div>
+            <div style="display:flex"><button style="font:inherit;font-size:14px;padding:4px 9px;border:1px solid #6c757d;background:#fff;color:#6c757d;border-radius:4px 0 0 4px">‹</button><button style="font:inherit;font-size:14px;padding:4px 10px;border:1px solid #6c757d;border-left:none;background:#fff;color:#6c757d">Dziś</button><button style="font:inherit;font-size:14px;padding:4px 9px;border:1px solid #6c757d;border-left:none;background:#fff;color:#6c757d;border-radius:0 4px 4px 0">›</button></div>
+            <span style="font-size:15px;font-weight:600;color:#1e293b">7 – 14 paź 2026</span>
+          </div>
+          <div style="width:280px;height:31px;border:1px solid #dee2e6;border-radius:4px;padding:0 10px;display:flex;align-items:center;font-size:14px;color:#6c757d">Szukaj: stopień, projekt, zamówienie</div>
+          <button style="font:inherit;font-size:14px;padding:4px 10px;border:1px solid #6c757d;background:#fff;color:#6c757d;border-radius:4px">Widok ▾</button>
+        </div>
+        <div style="flex:none;display:flex;align-items:center;gap:12px;padding:6px 16px;background:#fef2f2;border-bottom:1px solid #fecaca;font-size:14px;color:#991b1b">
+          <span style="width:8px;height:8px;border-radius:50%;background:#dc2626"></span>
+          <span style="font-weight:600">2 trwające awarie</span>
+          <span>L2-M2 (Linia 2) od 04:00</span><span style="color:#fca5a5">·</span><span>DMU 85 od 02:00</span>
+          <span style="margin-left:auto;text-decoration:underline">Pokaż na planie</span>
+        </div>
+        <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column">
+          <div style="display:flex;flex:none;border-bottom:1px solid #cbd5e1;background:#f8fafc">
+            <div style="width:220px;flex:none;border-right:1px solid #e2e8f0;display:flex;align-items:flex-end;padding:0 12px 8px;font-size:12px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:#64748b">Linia / maszyna</div>
+            <div style="width:1220px;display:flex;height:44px;position:relative">
+              <sc-for list="{{ a.days }}" as="d" hint-placeholder-count="8">
+                <div style="position:absolute;top:0;bottom:0;left:{{ d.left }};width:{{ d.width }};border-left:1px solid #e2e8f0;display:flex;flex-direction:column;justify-content:center;padding-left:10px;background:{{ d.bg }};overflow:hidden;white-space:nowrap"><span style="font-size:13px;font-weight:{{ d.fw }};color:{{ d.ink }}">{{ d.label }}</span><span style="font-size:11px;color:#94a3b8">{{ d.sub }}</span></div>
+              </sc-for>
+              <div style="position:absolute;top:0;bottom:0;left:{{ a.nowX }};width:2px;background:#dc2626"></div>
+            </div>
+          </div>
+          <sc-for list="{{ a.rows }}" as="r" hint-placeholder-count="12">
+            <div style="display:flex;flex:none;height:{{ r.h }};border-bottom:1px solid {{ r.line }}">
+              <div style="width:220px;flex:none;border-right:1px solid #e2e8f0;padding:0 12px 0 {{ r.pad }};display:flex;align-items:center;gap:8px;background:{{ r.sbg }};overflow:hidden">
+                <sc-if value="{{ r.isHdr }}" hint-placeholder-val="{{ false }}"><span style="font-size:13px;font-weight:600;color:#1e293b">▾ {{ r.title }}</span><span style="font-size:13px;color:#64748b">{{ r.count }}</span></sc-if>
+                <sc-if value="{{ r.isRes }}" hint-placeholder-val="{{ true }}"><span style="font-size:{{ r.fs }};color:{{ r.nameInk }};white-space:nowrap">{{ r.chev }}{{ r.title }}</span><span style="font-size:12px;color:#94a3b8;white-space:nowrap">{{ r.meta }}</span><sc-if value="{{ r.down }}" hint-placeholder-val="{{ false }}"><span style="margin-left:auto;font-size:11px;font-weight:700;color:#fff;background:#dc2626;border-radius:999px;padding:2px 7px">awaria</span></sc-if></sc-if>
+              </div>
+              <div style="width:1220px;position:relative;background:{{ r.cbg }};overflow:hidden">
+                <sc-for list="{{ r.offs }}" as="o" hint-placeholder-count="0"><div style="position:absolute;top:0;bottom:0;left:{{ o.left }};width:{{ o.width }};background:repeating-linear-gradient(-45deg,#f1f5f9 0 6px,#e2e8f0 6px 12px)"></div></sc-for>
+                <sc-for list="{{ a.vlines }}" as="v" hint-placeholder-count="0"><div style="position:absolute;top:0;bottom:0;left:{{ v }};border-left:1px solid #e2e8f0"></div></sc-for>
+                <sc-for list="{{ r.downs }}" as="k" hint-placeholder-count="0"><div style="position:absolute;top:0;bottom:0;left:{{ k.left }};width:{{ k.width }};border:1px dashed #b91c1c;z-index:3"><div style="position:absolute;left:0;right:0;bottom:0;height:{{ k.fill }};border-top:2px solid #b91c1c;background:repeating-linear-gradient(45deg,rgba(220,38,38,0.55) 0 5px,rgba(220,38,38,0.2) 5px 10px)"></div></div></sc-for>
+                <sc-for list="{{ r.items }}" as="it" hint-placeholder-count="0">
+                  <div onClick="{{ it.onClick }}" style="position:absolute;left:{{ it.left }};width:{{ it.width }};top:{{ it.top }};height:{{ it.ih }};background:{{ it.bg }};border:1px solid {{ it.edge }};box-shadow:{{ it.ring }};border-radius:4px;color:{{ it.ink }};font-size:12.8px;line-height:{{ it.lh }};padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;z-index:2">{{ it.label }}</div>
+                </sc-for>
+                <div style="position:absolute;top:0;bottom:0;left:{{ a.nowX }};width:2px;background:#dc2626;z-index:4"></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="flex:none;height:34px;border-top:1px solid #e2e8f0;background:#f8fafc;display:flex;align-items:center;gap:18px;padding:0 16px;font-size:13px;color:#475569">
+          <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:2px;background:linear-gradient(to right,#1e40af 50%,#2563eb 50%)"></span>w toku (ciemniejsza część = wykonane)</span>
+          <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:2px;background:#cbd5e1"></span>zakończone</span>
+          <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:2px;background:repeating-linear-gradient(-45deg,#f1f5f9 0 4px,#e2e8f0 4px 8px)"></span>czas wolny</span>
+          <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:2px;background:repeating-linear-gradient(45deg,rgba(220,38,38,0.55) 0 4px,rgba(220,38,38,0.2) 4px 8px)"></span>awaria</span>
+          <span style="margin-left:auto;color:#64748b">Dwuklik: nowe zlecenie · Prawy klik: awaria, dzień wolny · Klik w dzień: kalendarz</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="1b" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:12px;max-width:1600px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;background:oklch(0.22 0.02 260);color:#fff;padding:3px 9px;border-radius:4px">1b</span>
+        <span style="font-size:18px;font-weight:600;white-space:nowrap">Pulpit planisty</span>
+        <span style="font-size:15px;color:oklch(0.45 0.02 260)">Nowa warstwa wizualna przy tych samych danych. Awarie stale widoczne w bocznym menu, obciążenie w wierszu planu, panel zlecenia dosunięty do planu (bez zasłaniania), kolejka maszyny w panelu, jasne bloczki z ciemnym tekstem. Kliknij zlecenie.</span>
+      </div>
+      <div style="width:1600px;height:1000px;background:oklch(0.985 0.003 255);border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);display:flex;font-size:14px;color:oklch(0.25 0.02 260)">
+        <div style="width:200px;flex:none;background:oklch(0.965 0.006 255);border-right:1px solid oklch(0.9 0.008 255);padding:18px 12px;display:flex;flex-direction:column;gap:24px">
+          <div style="display:flex;align-items:center;gap:8px;padding:0 8px;font-weight:600;font-size:15px"><svg width="22" height="22" viewBox="0 0 26 26"><rect x="1" y="1" width="24" height="24" rx="6" fill="#2563eb"></rect><rect x="5" y="7" width="10" height="3" rx="1.5" fill="#fff"></rect><rect x="9" y="12" width="12" height="3" rx="1.5" fill="#93c5fd"></rect><rect x="5" y="17" width="7" height="3" rx="1.5" fill="#fff"></rect></svg><span>FactoryOps</span></div>
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <div style="padding:8px 10px;border-radius:6px;background:#fff;font-weight:500;box-shadow:0 1px 2px rgba(15,23,42,0.06)">Plan</div>
+            <div style="padding:8px 10px;border-radius:6px;color:oklch(0.42 0.02 260)">Lista zleceń</div>
+            <div style="padding:8px 10px;border-radius:6px;color:oklch(0.42 0.02 260)">Obciążenie</div>
+            <div style="padding:8px 10px;border-radius:6px;color:oklch(0.42 0.02 260)">Maszyny</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="padding:0 10px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;color:oklch(0.5 0.15 25)">Awarie teraz · 2</div>
+            <sc-for list="{{ downList }}" as="dn" hint-placeholder-count="2">
+              <div style="margin:0 2px;padding:8px 10px;border-radius:6px;background:#fff;border:1px solid oklch(0.9 0.04 25);display:flex;flex-direction:column;gap:2px">
+                <div style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:#dc2626"></span><span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:500">{{ dn.name }}</span><span style="font-size:12px;color:oklch(0.5 0.02 260)">{{ dn.where }}</span></div>
+                <div style="font-size:12px;color:oklch(0.45 0.12 25)">{{ dn.since }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="margin-top:auto;padding:0 10px;font-size:12.5px;color:oklch(0.5 0.02 260)">Resetuj demo</div>
+        </div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+          <div style="height:60px;flex:none;display:flex;align-items:center;gap:12px;padding:0 20px;border-bottom:1px solid oklch(0.91 0.008 255);background:#fff">
+            <span style="font-size:19px;font-weight:600">Plan</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:oklch(0.5 0.02 260)">07–14.10.2026</span>
+            <div style="display:flex;background:oklch(0.95 0.006 255);border-radius:7px;padding:3px;gap:2px;margin-left:8px">
+              <span style="padding:4px 11px;border-radius:5px;font-size:13px;color:oklch(0.45 0.02 260)">Dzień</span>
+              <span style="padding:4px 11px;border-radius:5px;font-size:13px;background:#fff;font-weight:500;box-shadow:0 1px 2px rgba(15,23,42,0.08)">Tydzień</span>
+              <span style="padding:4px 11px;border-radius:5px;font-size:13px;color:oklch(0.45 0.02 260)">Miesiąc</span>
+            </div>
+            <div style="display:flex;gap:4px">
+              <span style="width:30px;height:30px;border-radius:6px;border:1px solid oklch(0.88 0.008 255);display:flex;align-items:center;justify-content:center;background:#fff">‹</span>
+              <span style="height:30px;padding:0 11px;border-radius:6px;border:1px solid oklch(0.88 0.008 255);display:flex;align-items:center;background:#fff;font-size:13px">Dziś</span>
+              <span style="width:30px;height:30px;border-radius:6px;border:1px solid oklch(0.88 0.008 255);display:flex;align-items:center;justify-content:center;background:#fff">›</span>
+            </div>
+            <div style="margin-left:auto;width:260px;height:32px;border:1px solid oklch(0.88 0.008 255);border-radius:6px;display:flex;align-items:center;gap:8px;padding:0 6px 0 11px;font-size:13px;color:oklch(0.55 0.02 260);background:#fff"><span style="flex:1">Szukaj zlecenia, projektu…</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;border:1px solid oklch(0.88 0.008 255);border-radius:4px;padding:0 5px">/</span></div>
+            <span style="height:32px;padding:0 14px;border-radius:6px;display:flex;align-items:center;font-size:13px;color:oklch(0.45 0.15 25);border:1px solid oklch(0.88 0.04 25);background:#fff">Zgłoś awarię</span>
+            <span style="height:32px;padding:0 14px;border-radius:6px;display:flex;align-items:center;font-size:13px;font-weight:500;background:#1e293b;color:#fff;white-space:nowrap;flex:none">Nowe zlecenie</span>
+          </div>
+          <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;background:#fff">
+            <div style="display:flex;flex:none;border-bottom:1px solid oklch(0.9 0.008 255)">
+              <div style="width:230px;flex:none;border-right:1px solid oklch(0.92 0.008 255);display:flex;align-items:flex-end;justify-content:space-between;padding:0 14px 8px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:oklch(0.52 0.02 260)"><span>Zasób</span><span>7 dni</span></div>
+              <div style="width:830px;height:48px;position:relative">
+                <sc-for list="{{ b.days }}" as="d" hint-placeholder-count="8">
+                  <div style="position:absolute;top:0;bottom:0;left:{{ d.left }};width:{{ d.width }};border-left:1px solid oklch(0.93 0.006 255);display:flex;flex-direction:column;justify-content:center;padding-left:{{ d.pl }};overflow:hidden;white-space:nowrap"><span style="font-size:11px;color:{{ d.subInk }}">{{ d.sub }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;color:{{ d.ink }}">{{ d.label }}</span></div>
+                </sc-for>
+                <div style="position:absolute;top:4px;left:{{ b.nowX }};transform:translateX(-50%);background:#dc2626;color:#fff;font-family:'IBM Plex Mono',monospace;font-size:10.5px;padding:1px 5px;border-radius:3px;z-index:2">07:24</div>
+                <div style="position:absolute;top:22px;bottom:0;left:{{ b.nowX }};width:2px;background:#dc2626"></div>
+              </div>
+            </div>
+            <sc-for list="{{ b.rows }}" as="r" hint-placeholder-count="12">
+              <div style="display:flex;flex:none;height:{{ r.h }};border-bottom:1px solid oklch(0.94 0.005 255)">
+                <div style="width:230px;flex:none;border-right:1px solid oklch(0.92 0.008 255);padding:0 14px 0 {{ r.pad }};display:flex;align-items:center;gap:8px;background:{{ r.sbg }};overflow:hidden">
+                  <sc-if value="{{ r.isHdr }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;font-weight:600">{{ r.title }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:oklch(0.55 0.02 260)">{{ r.count }}</span></sc-if>
+                  <sc-if value="{{ r.isRes }}" hint-placeholder-val="{{ true }}">
+                    <span style="width:7px;height:7px;border-radius:50%;flex:none;background:{{ r.dot }}"></span>
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:{{ r.fs }};font-weight:500;white-space:nowrap;color:{{ r.nameInk }}">{{ r.title }}</span>
+                    <span style="font-size:11px;color:oklch(0.58 0.02 260);white-space:nowrap">{{ r.meta }}</span>
+                    <span style="margin-left:auto;width:36px;height:4px;border-radius:2px;background:oklch(0.93 0.006 255);display:flex;overflow:hidden;flex:none"><span style="width:{{ r.load }};background:{{ r.loadC }}"></span></span>
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:oklch(0.45 0.02 260);width:30px;text-align:right;flex:none">{{ r.load }}</span>
+                  </sc-if>
+                </div>
+                <div style="width:830px;position:relative;background:{{ r.cbg }};overflow:hidden">
+                  <sc-for list="{{ r.offs }}" as="o" hint-placeholder-count="0"><div style="position:absolute;top:0;bottom:0;left:{{ o.left }};width:{{ o.width }};background:repeating-linear-gradient(-45deg,oklch(0.975 0.004 255) 0 5px,oklch(0.94 0.006 255) 5px 10px)"></div></sc-for>
+                  <sc-for list="{{ b.vlines }}" as="v" hint-placeholder-count="0"><div style="position:absolute;top:0;bottom:0;left:{{ v }};border-left:1px solid oklch(0.94 0.005 255)"></div></sc-for>
+                  <sc-for list="{{ r.downs }}" as="k" hint-placeholder-count="0"><div style="position:absolute;top:2px;bottom:2px;left:{{ k.left }};width:{{ k.width }};border-radius:3px;background:repeating-linear-gradient(45deg,#dc2626 0 4px,#b91c1c 4px 8px);opacity:0.9;z-index:3"></div></sc-for>
+                  <sc-for list="{{ r.items }}" as="it" hint-placeholder-count="0">
+                    <div onClick="{{ it.onClick }}" style="position:absolute;left:{{ it.left }};width:{{ it.width }};top:{{ it.top }};height:{{ it.ih }};background:{{ it.bg }};border:1px solid {{ it.edge }};box-shadow:{{ it.ring }};opacity:{{ it.op }};border-radius:4px;color:{{ it.ink }};font-size:12px;font-weight:500;line-height:{{ it.lh }};padding:0 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;z-index:2">{{ it.label }}</div>
+                  </sc-for>
+                  <div style="position:absolute;top:0;bottom:0;left:{{ b.nowX }};width:2px;background:#dc2626;z-index:4"></div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="height:32px;flex:none;border-top:1px solid oklch(0.91 0.008 255);background:oklch(0.975 0.004 255);display:flex;align-items:center;gap:16px;padding:0 20px;font-size:12px;color:oklch(0.45 0.02 260)">
+            <span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:2px;background:linear-gradient(to right,color-mix(in oklch,#2563eb 34%,white) 50%,color-mix(in oklch,#2563eb 14%,white) 50%);border:1px solid color-mix(in oklch,#2563eb 50%,white)"></span>w toku</span>
+            <span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:2px;background:repeating-linear-gradient(-45deg,oklch(0.975 0.004 255) 0 3px,oklch(0.92 0.006 255) 3px 6px)"></span>wolne</span>
+            <span style="display:flex;align-items:center;gap:6px"><span style="width:12px;height:12px;border-radius:2px;background:#dc2626"></span>awaria</span>
+            <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11.5px">dwuklik · nowe zlecenie   prawy klik · awaria / dzień   / · szukaj   ⌘Z · cofnij</span>
+          </div>
+        </div>
+        <div style="width:340px;flex:none;background:#fff;border-left:1px solid oklch(0.9 0.008 255);display:flex;flex-direction:column">
+          <div style="padding:18px 20px 14px;border-bottom:1px solid oklch(0.93 0.006 255);display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;padding:2px 7px;border-radius:4px;background:{{ insp.tint }};color:{{ insp.ink }}">{{ insp.pno }}</span><span style="font-size:12px;font-weight:500;padding:2px 8px;border-radius:999px;background:{{ insp.stBg }};color:{{ insp.stInk }}">{{ insp.status }}</span><span style="margin-left:auto;color:oklch(0.55 0.02 260);font-size:18px;line-height:1">×</span></div>
+            <div style="font-size:19px;font-weight:600;line-height:1.25">{{ insp.op }} · {{ insp.pname }}</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:oklch(0.5 0.02 260)">{{ insp.orderNo }}</div>
+            <sc-if value="{{ insp.inProg }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:10px;margin-top:4px"><span style="flex:1;height:6px;border-radius:3px;background:oklch(0.94 0.006 255);display:flex;overflow:hidden"><span style="width:{{ insp.pct }};background:#16a34a"></span></span><span style="font-family:'IBM Plex Mono',monospace;font-size:12px">{{ insp.pct }}</span></div>
+            </sc-if>
+          </div>
+          <div style="padding:16px 20px;display:flex;flex-direction:column;gap:16px;flex:1;min-height:0;overflow:hidden">
+            <sc-if value="{{ insp.hasDown }}" hint-placeholder-val="{{ false }}">
+              <div style="background:oklch(0.965 0.02 25);border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.45;color:oklch(0.4 0.12 25)"><div style="font-weight:600">Awaria w trakcie zlecenia</div><div>{{ insp.downText }}</div></div>
+            </sc-if>
+            <div style="display:grid;grid-template-columns:max-content minmax(0,1fr);gap:7px 16px;font-size:13.5px">
+              <span style="color:oklch(0.52 0.02 260)">{{ insp.resLabel }}</span><span>{{ insp.res }}</span>
+              <span style="color:oklch(0.52 0.02 260)">Czas pracy</span><span>{{ insp.hours }}</span>
+              <span style="color:oklch(0.52 0.02 260)">Start</span><span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px">{{ insp.start }}</span>
+              <span style="color:oklch(0.52 0.02 260)">Koniec</span><span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px">{{ insp.end }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px"><span style="font-size:12px;color:oklch(0.52 0.02 260)">Programista</span><div style="height:34px;border:1px solid oklch(0.88 0.008 255);border-radius:6px;padding:0 10px;display:flex;align-items:center;justify-content:space-between;color:{{ insp.progInk }}"><span>{{ insp.prog }}</span><span style="color:oklch(0.55 0.02 260)">▾</span></div></div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <span style="font-size:12px;color:oklch(0.52 0.02 260)">Kolejka · {{ insp.res }}</span>
+              <sc-for list="{{ insp.queue }}" as="q" hint-placeholder-count="4">
+                <div onClick="{{ q.onClick }}" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;background:{{ q.bg }};cursor:pointer;opacity:{{ q.op }}"><span style="width:4px;height:22px;border-radius:2px;background:{{ q.color }};flex:none"></span><span style="display:flex;flex-direction:column;min-width:0;flex:1"><span style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ q.title }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:oklch(0.52 0.02 260)">{{ q.when }}</span></span></div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="padding:14px 20px;border-top:1px solid oklch(0.93 0.006 255);display:flex;gap:8px">
+            <span style="height:34px;flex:1;border-radius:6px;background:#1e293b;color:#fff;font-size:13px;font-weight:500;display:flex;align-items:center;justify-content:center">Edytuj</span>
+            <span style="height:34px;padding:0 12px;border-radius:6px;border:1px solid oklch(0.88 0.008 255);font-size:13px;display:flex;align-items:center">Pokaż</span>
+            <span style="height:34px;padding:0 12px;border-radius:6px;border:1px solid oklch(0.88 0.008 255);font-size:13px;display:flex;align-items:center;color:oklch(0.48 0.16 25)">Usuń</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="turn-0" data-screen-label="Stan obecny" style="padding:40px 72px 96px;display:flex;flex-direction:column;gap:28px">
+  <div style="display:flex;flex-direction:column;gap:6px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;color:oklch(0.5 0.02 260)">Stan obecny · branch demo · odtworzony z kodu</div>
+    <div style="font-size:15px;color:oklch(0.4 0.02 260);max-width:960px;text-wrap:pretty">Bootstrap 5.3 + react-calendar-timeline 0.30 z motywem z index.css. Zlecenia wygenerowane według zasad z seed.ts (projekty, operacje, maszyny, awarie), ale nie identyczne. W <a href="#0a">0a</a> kliknięcie zlecenia otwiera panel.</div>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:56px;align-items:flex-start">
+
+    <div id="0a" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;background:oklch(0.45 0.02 260);color:#fff;padding:3px 9px;border-radius:4px">0a</span><span style="font-size:18px;font-weight:600">Plan</span></div>
+      <div style="width:1440px;height:1000px;background:#f3f4f6;overflow:hidden;position:relative;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.08);font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#212529;font-size:16px;line-height:1.5">
+        <div style="height:56px;background:#212529;display:flex;align-items:center;padding:0 12px">
+          <div style="display:flex;align-items:center;color:#fff;font-size:20px;font-weight:600;margin-right:16px"><svg width="26" height="26" viewBox="0 0 26 26" style="margin-right:8px"><rect x="1" y="1" width="24" height="24" rx="6" fill="#2563eb"></rect><rect x="5" y="7" width="10" height="3" rx="1.5" fill="#fff"></rect><rect x="9" y="12" width="12" height="3" rx="1.5" fill="#93c5fd"></rect><rect x="5" y="17" width="7" height="3" rx="1.5" fill="#fff"></rect></svg>FactoryOps</div>
+          <div style="display:flex"><span style="padding:8px;color:#fff">Plan</span><span style="padding:8px;color:rgba(255,255,255,0.55)">Lista zleceń</span><span style="padding:8px;color:rgba(255,255,255,0.55)">Obciążenie</span><span style="padding:8px;color:rgba(255,255,255,0.55)">Maszyny</span></div>
+          <button style="margin-left:auto;font:inherit;font-size:14px;padding:4px 8px;border:1px solid #f8f9fa;background:transparent;color:#f8f9fa;border-radius:4px">Resetuj demo</button>
+        </div>
+        <div style="padding:16px 12px">
+          <div style="background:#fff;border-radius:6px;box-shadow:0 1px 3px rgba(15,23,42,0.08);padding:16px">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:16px">
+              <button style="font:inherit;font-size:14px;padding:4px 8px;border:1px solid #0d6efd;background:#0d6efd;color:#fff;border-radius:4px">+ Dodaj zlecenie</button>
+              <button style="font:inherit;font-size:14px;padding:4px 8px;border:1px solid #dc3545;background:transparent;color:#dc3545;border-radius:4px">Zgłoś awarię</button>
+              <button style="font:inherit;font-size:14px;padding:4px 8px;border:1px solid #6c757d;background:transparent;color:#6c757d;border-radius:4px;opacity:0.65">Cofnij</button>
+              <div style="width:1px;align-self:stretch;background:#212529;opacity:0.25;margin:0 4px"></div>
+              <div style="display:flex"><button style="font:inherit;font-size:14px;padding:4px 8px;border:1px solid #6c757d;background:transparent;color:#6c757d;border-radius:4px 0 0 4px">Dzień</button><button style="font:inherit;font-size:14px;padding:4px 8px;border:1px solid #6c757d;margin-left:-1px;background:#6c757d;color:#fff">Tydzień</button><button style="font:inherit;font-size:14px;padding:4px 8px;border:1px solid #6c757d;margin-left:-1px;background:transparent;color:#6c757d;border-radius:0 4px 4px 0">Miesiąc</button></div>
+              <div style="display:flex"><button style="font:inherit;font-size:14px;padding:4px 8px;border:1px solid #6c757d;background:transparent;color:#6c757d;border-radius:4px 0 0 4px">‹</button><button style="font:inherit;font-size:14px;padding:4px 8px;border:1px solid #6c757d;margin-left:-1px;background:transparent;color:#6c757d">Dziś</button><button style="font:inherit;font-size:14px;padding:4px 8px;border:1px solid #6c757d;margin-left:-1px;background:transparent;color:#6c757d;border-radius:0 4px 4px 0">›</button></div>
+              <div style="display:flex;align-items:center;gap:7px;margin-left:4px;font-size:14px"><span style="width:28px;height:14px;border-radius:7px;border:1px solid rgba(0,0,0,0.25);display:flex;align-items:center;padding:0 2px"><span style="width:8px;height:8px;border-radius:50%;background:rgba(0,0,0,0.25)"></span></span>Pokaż maszyny linii</div>
+              <div style="width:1px;align-self:stretch;background:#212529;opacity:0.25;margin:0 4px"></div>
+              <div style="width:340px;height:31px;border:1px solid #dee2e6;border-radius:4px;padding:4px 8px;font-size:14px;color:rgba(33,37,41,0.75)">Szukaj: stopień, projekt, zamówienie</div>
+              <div style="margin-left:auto;font-size:14px;color:rgba(33,37,41,0.75);display:flex;align-items:center;gap:4px"><span style="width:14px;height:14px;border-radius:2px;background:repeating-linear-gradient(-45deg,#eceef1,#eceef1 6px,#d9dde3 6px,#d9dde3 12px)"></span> czas wolny <span style="width:14px;height:14px;border-radius:2px;margin-left:8px;background:repeating-linear-gradient(45deg,rgba(220,38,38,0.55) 0 5px,rgba(220,38,38,0.2) 5px 10px)"></span> awaria · kliknij dzień w nagłówku: pracujący / wolny</div>
+            </div>
+            <div style="height:780px;overflow:hidden">
+              <div style="display:flex;background:#1e293b;border-bottom:1px solid #0f172a">
+                <div style="width:210px;flex:none;display:flex;align-items:center;padding:0 12px;font-weight:600;color:#e2e8f0">Linia / maszyna</div>
+                <div style="width:1174px;border:1px solid #bbb;border-right:none;display:flex;flex-direction:column">
+                  <div style="height:30px;display:flex;align-items:center;justify-content:center;font-size:12.8px;font-weight:600;color:#e2e8f0;border-left:1px solid #334155">{{ cur.month }}</div>
+                  <div style="height:30px;position:relative">
+                    <sc-for list="{{ cur.days }}" as="d" hint-placeholder-count="8">
+                      <div style="position:absolute;top:0;bottom:0;left:{{ d.left }};width:{{ d.width }};display:flex;align-items:center;justify-content:center;background:#f1f5f9;color:#334155;border-left:1px solid #e2e8f0;border-bottom:1px solid #cbd5e1;font-size:12.8px;white-space:nowrap;overflow:hidden">{{ d.label }}</div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+              <sc-for list="{{ cur.rows }}" as="r" hint-placeholder-count="14">
+                <div style="display:flex;height:{{ r.h }}">
+                  <div style="width:210px;flex:none;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:0 4px 0 {{ r.pad }};display:flex;align-items:center;justify-content:space-between;gap:4px;background:{{ r.sbg }};overflow:hidden;white-space:nowrap">
+                    <sc-if value="{{ r.isHdr }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:center;gap:6px;font-weight:600;font-size:13.6px;color:#1e293b"><span style="width:16px;color:#64748b">▾</span>{{ r.title }}<span style="color:rgba(33,37,41,0.75);font-weight:400;margin-left:4px">({{ r.count }})</span></span></sc-if>
+                    <sc-if value="{{ r.isRes }}" hint-placeholder-val="{{ true }}">
+                      <span style="display:flex;align-items:center;gap:4px;font-size:{{ r.fs }};color:{{ r.nameInk }};overflow:hidden;text-overflow:ellipsis"><sc-if value="{{ r.isLine }}" hint-placeholder-val="{{ false }}"><span style="width:16px;color:#64748b">{{ r.chev }}</span></sc-if>{{ r.title }}</span>
+                      <span style="display:flex;gap:4px">
+                        <sc-if value="{{ r.lineDown }}" hint-placeholder-val="{{ false }}"><span style="display:inline-block;padding:0.35em 0.65em;font-size:12px;font-weight:700;line-height:1;color:#fff;background:#dc3545;border-radius:50rem">!</span></sc-if>
+                        <sc-if value="{{ r.mDown }}" hint-placeholder-val="{{ false }}"><span style="display:inline-block;padding:0.35em 0.65em;font-size:12px;font-weight:700;line-height:1;color:#fff;background:#dc3545;border-radius:50rem">awaria</span></sc-if>
+                        <sc-if value="{{ r.isLine }}" hint-placeholder-val="{{ false }}"><span style="display:inline-block;padding:0.35em 0.65em;font-size:12px;font-weight:700;line-height:1;color:#fff;background:#0d6efd;border-radius:50rem">{{ r.units }}×</span><span style="display:inline-block;padding:0.35em 0.65em;font-size:12px;font-weight:700;line-height:1;color:#fff;background:#198754;border-radius:50rem">24/7</span></sc-if>
+                      </span>
+                    </sc-if>
+                  </div>
+                  <div style="width:1174px;position:relative;border-bottom:1px solid #e2e8f0;background:{{ r.cbg }};overflow:hidden">
+                    <sc-for list="{{ r.offs }}" as="o" hint-placeholder-count="0"><div style="position:absolute;top:0;bottom:0;left:{{ o.left }};width:{{ o.width }};background:repeating-linear-gradient(-45deg,#eceef1,#eceef1 6px,#d9dde3 6px,#d9dde3 12px)"></div></sc-for>
+                    <sc-for list="{{ cur.vlines }}" as="v" hint-placeholder-count="0"><div style="position:absolute;top:0;bottom:0;left:{{ v }};border-left:1px solid #e2e8f0"></div></sc-for>
+                    <sc-for list="{{ r.downs }}" as="k" hint-placeholder-count="0"><div style="position:absolute;top:{{ k.top }};height:{{ k.hh }};left:{{ k.left }};width:{{ k.width }};border:1px dashed #b91c1c;z-index:3;overflow:hidden"><div style="position:absolute;left:0;right:0;bottom:0;height:{{ k.fill }};border-top:2px solid #b91c1c;background:repeating-linear-gradient(45deg,rgba(220,38,38,0.55) 0 5px,rgba(220,38,38,0.2) 5px 10px)"></div><span style="position:absolute;top:1px;left:3px;padding:0 4px;border-radius:3px;background:#b91c1c;color:#fff;font-size:10.4px;line-height:1.4;white-space:nowrap">{{ k.label }}</span></div></sc-for>
+                    <sc-for list="{{ r.items }}" as="it" hint-placeholder-count="0">
+                      <div onClick="{{ it.onClick }}" style="position:absolute;left:{{ it.left }};width:{{ it.width }};top:{{ it.top }};height:{{ it.ih }};background:{{ it.bg }};border:1px solid {{ it.edge }};box-shadow:{{ it.ring }};opacity:{{ it.op }};border-radius:4px;color:#fff;font-size:12.8px;line-height:{{ it.lh }};padding:0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 0 3px rgba(0,0,0,0.55);cursor:pointer;z-index:2">{{ it.label }}</div>
+                    </sc-for>
+                    <div style="position:absolute;top:0;bottom:0;left:{{ cur.nowX }};width:2px;background:red;z-index:4"></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <sc-if value="{{ p0.show }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;top:0;right:0;bottom:0;width:360px;background:#fff;border-left:1px solid rgba(0,0,0,0.175);box-shadow:-8px 0 24px rgba(15,23,42,0.12);z-index:10;display:flex;flex-direction:column">
+            <div style="padding:16px;display:flex;align-items:center;gap:8px">
+              <div style="font-size:20px;font-weight:500;line-height:1.5;flex:1">{{ p0.title }} <span style="display:inline-block;padding:0.35em 0.65em;font-size:16px;font-weight:400;line-height:1;color:#fff;background:{{ p0.stBg }};border-radius:6px;vertical-align:middle;margin-left:8px">{{ p0.status }}</span></div>
+              <span onClick="{{ closeP0 }}" style="font-size:22px;line-height:1;color:#000;opacity:0.5;cursor:pointer;padding:4px">×</span>
+            </div>
+            <div style="padding:16px;padding-top:0;display:flex;flex-direction:column;gap:16px;flex:1">
+              <div style="display:grid;grid-template-columns:max-content 1fr;gap:6px 16px">
+                <span style="font-weight:500;color:#64748b">Projekt</span><span>{{ p0.project }}</span>
+                <span style="font-weight:500;color:#64748b">Operacja</span><span>{{ p0.op }}</span>
+                <span style="font-weight:500;color:#64748b">Zamówienie</span><span>{{ p0.orderNo }}</span>
+                <span style="font-weight:500;color:#64748b">{{ p0.resLabel }}</span><span>{{ p0.res }}<span style="color:rgba(33,37,41,0.75)">{{ p0.resExtra }}</span></span>
+                <span style="font-weight:500;color:#64748b">Czas pracy</span><span>{{ p0.hours }}<span style="color:rgba(33,37,41,0.75)">{{ p0.hoursExtra }}</span></span>
+                <span style="font-weight:500;color:#64748b">Start</span><span>{{ p0.start }}</span>
+                <span style="font-weight:500;color:#64748b">Koniec</span><span>{{ p0.end }}</span>
+              </div>
+              <sc-if value="{{ p0.hasDown }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#f8d7da;border:1px solid #f1aeb5;color:#58151c;border-radius:6px;padding:8px 16px;font-size:14px"><div style="font-weight:600">Awarie w trakcie zlecenia</div><div>{{ p0.downText }}</div></div>
+              </sc-if>
+              <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:14px;color:rgba(33,37,41,0.75)">Programista</span><div style="height:31px;border:1px solid #dee2e6;border-radius:4px;padding:4px 8px;font-size:14px;display:flex;align-items:center;justify-content:space-between"><span>{{ p0.prog }}</span><span style="width:7px;height:7px;border-right:1.5px solid #343a40;border-bottom:1.5px solid #343a40;transform:rotate(45deg);margin:-4px 4px 0 0"></span></div></div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:auto">
+                <button style="font:inherit;font-size:14px;padding:4px 8px;border:1px solid #0d6efd;background:#0d6efd;color:#fff;border-radius:4px">Edytuj</button>
+                <button style="font:inherit;font-size:14px;padding:4px 8px;border:1px solid #6c757d;background:transparent;color:#6c757d;border-radius:4px">Pokaż na planie</button>
+                <button style="font:inherit;font-size:14px;padding:4px 8px;border:1px solid #dc3545;background:transparent;color:#dc3545;border-radius:4px;margin-left:auto">Usuń</button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <div id="0b" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;background:oklch(0.45 0.02 260);color:#fff;padding:3px 9px;border-radius:4px">0b</span><span style="font-size:18px;font-weight:600">Lista zleceń</span></div>
+      <div style="width:1440px;height:1000px;background:#f3f4f6;overflow:hidden;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.08);font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#212529;font-size:16px;line-height:1.5">
+        <div style="height:56px;background:#212529;display:flex;align-items:center;padding:0 12px">
+          <div style="display:flex;align-items:center;color:#fff;font-size:20px;font-weight:600;margin-right:16px"><svg width="26" height="26" viewBox="0 0 26 26" style="margin-right:8px"><rect x="1" y="1" width="24" height="24" rx="6" fill="#2563eb"></rect><rect x="5" y="7" width="10" height="3" rx="1.5" fill="#fff"></rect><rect x="9" y="12" width="12" height="3" rx="1.5" fill="#93c5fd"></rect><rect x="5" y="17" width="7" height="3" rx="1.5" fill="#fff"></rect></svg>FactoryOps</div>
+          <div style="display:flex"><span style="padding:8px;color:rgba(255,255,255,0.55)">Plan</span><span style="padding:8px;color:#fff">Lista zleceń</span><span style="padding:8px;color:rgba(255,255,255,0.55)">Obciążenie</span><span style="padding:8px;color:rgba(255,255,255,0.55)">Maszyny</span></div>
+          <button style="margin-left:auto;font:inherit;font-size:14px;padding:4px 8px;border:1px solid #f8f9fa;background:transparent;color:#f8f9fa;border-radius:4px">Resetuj demo</button>
+        </div>
+        <div style="padding:16px 12px">
+          <div style="background:#fff;border-radius:6px;box-shadow:0 1px 3px rgba(15,23,42,0.08);padding:16px">
+            <div style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;align-items:end;margin-bottom:16px">
+              <div style="height:38px;border:1px solid #dee2e6;border-radius:6px;padding:6px 12px;color:rgba(33,37,41,0.75);white-space:nowrap;overflow:hidden">Szukaj: nr, projekt, operacja</div>
+              <sc-for list="{{ listFilters }}" as="f" hint-placeholder-count="4">
+                <div style="height:38px;border:1px solid #6c757d;border-radius:6px;padding:6px 12px;color:#6c757d;display:flex;align-items:center;justify-content:space-between;white-space:nowrap;overflow:hidden"><span>{{ f }}</span><span style="border-top:5px solid #6c757d;border-left:5px solid transparent;border-right:5px solid transparent"></span></div>
+              </sc-for>
+              <div style="display:flex;justify-content:flex-end"><button style="font:inherit;padding:6px 12px;border:1px solid #198754;background:transparent;color:#198754;border-radius:6px;white-space:nowrap">Eksport do Excela</button></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <span style="font-size:14px;color:rgba(33,37,41,0.75)">3214 z 3214 zleceń · na ekranie pierwsze 200</span>
+              <span style="display:flex;align-items:center;gap:8px"><span style="width:32px;height:16px;border-radius:8px;border:1px solid rgba(0,0,0,0.25);display:flex;align-items:center;padding:0 2px"><span style="width:10px;height:10px;border-radius:50%;background:rgba(0,0,0,0.25)"></span></span>Archiwum (287) · zakończone ponad 30 dni temu</span>
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-size:16px">
+              <thead>
+                <tr>
+                  <sc-for list="{{ listCols }}" as="c" hint-placeholder-count="10"><th style="text-align:left;padding:8px;border-bottom:1px solid #dee2e6;white-space:nowrap">{{ c.label }}<span style="display:inline-block;width:1em;margin-left:2px;font-size:0.7em;color:#64748b">{{ c.arrow }}</span></th></sc-for>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ listRows }}" as="r" hint-placeholder-count="14">
+                  <tr>
+                    <td style="padding:8px;border-bottom:1px solid #dee2e6;white-space:nowrap">{{ r.start }}</td>
+                    <td style="padding:8px;border-bottom:1px solid #dee2e6;white-space:nowrap">{{ r.end }}</td>
+                    <td style="padding:8px;border-bottom:1px solid #dee2e6">{{ r.op }}</td>
+                    <td style="padding:8px;border-bottom:1px solid #dee2e6;white-space:nowrap">{{ r.pno }}</td>
+                    <td style="padding:8px;border-bottom:1px solid #dee2e6">{{ r.pname }}</td>
+                    <td style="padding:8px;border-bottom:1px solid #dee2e6;white-space:nowrap">{{ r.orderNo }}</td>
+                    <td style="padding:8px;border-bottom:1px solid #dee2e6">{{ r.res }}</td>
+                    <td style="padding:8px;border-bottom:1px solid #dee2e6;white-space:nowrap">{{ r.hours }}</td>
+                    <td style="padding:8px;border-bottom:1px solid #dee2e6"><span style="display:inline-block;padding:0.35em 0.65em;font-size:12px;font-weight:700;line-height:1;color:#fff;background:{{ r.stBg }};border-radius:6px">{{ r.status }}</span></td>
+                    <td style="padding:8px;border-bottom:1px solid #dee2e6"><div style="height:31px;border:1px solid #dee2e6;border-radius:4px;padding:4px 8px;font-size:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;white-space:nowrap"><span>{{ r.prog }}</span><span style="width:7px;height:7px;border-right:1.5px solid #343a40;border-bottom:1.5px solid #343a40;transform:rotate(45deg);margin-top:-4px"></span></div></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="0c" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;background:oklch(0.45 0.02 260);color:#fff;padding:3px 9px;border-radius:4px">0c</span><span style="font-size:18px;font-weight:600">Obciążenie</span></div>
+      <div style="width:1440px;height:1240px;background:#f3f4f6;overflow:hidden;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.08);font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#212529;font-size:16px;line-height:1.5">
+        <div style="height:56px;background:#212529;display:flex;align-items:center;padding:0 12px">
+          <div style="display:flex;align-items:center;color:#fff;font-size:20px;font-weight:600;margin-right:16px"><svg width="26" height="26" viewBox="0 0 26 26" style="margin-right:8px"><rect x="1" y="1" width="24" height="24" rx="6" fill="#2563eb"></rect><rect x="5" y="7" width="10" height="3" rx="1.5" fill="#fff"></rect><rect x="9" y="12" width="12" height="3" rx="1.5" fill="#93c5fd"></rect><rect x="5" y="17" width="7" height="3" rx="1.5" fill="#fff"></rect></svg>FactoryOps</div>
+          <div style="display:flex"><span style="padding:8px;color:rgba(255,255,255,0.55)">Plan</span><span style="padding:8px;color:rgba(255,255,255,0.55)">Lista zleceń</span><span style="padding:8px;color:#fff">Obciążenie</span><span style="padding:8px;color:rgba(255,255,255,0.55)">Maszyny</span></div>
+          <button style="margin-left:auto;font:inherit;font-size:14px;padding:4px 8px;border:1px solid #f8f9fa;background:transparent;color:#f8f9fa;border-radius:4px">Resetuj demo</button>
+        </div>
+        <div style="padding:16px 12px">
+          <div style="background:#fff;border-radius:6px;box-shadow:0 1px 3px rgba(15,23,42,0.08);padding:16px;display:flex;flex-direction:column;gap:24px">
+            <div style="display:flex;flex-wrap:wrap;gap:16px">
+              <div style="min-width:200px;padding:12px 16px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0"><div style="font-size:12.8px;color:#64748b">Linie · zajętość 7 dni</div><div style="font-size:28px;font-weight:600;line-height:1.2">{{ load.avgLines }}%</div></div>
+              <div style="min-width:200px;padding:12px 16px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0"><div style="font-size:12.8px;color:#64748b">Maszyny · zajętość 7 dni</div><div style="font-size:28px;font-weight:600;line-height:1.2">{{ load.avgMachines }}%</div></div>
+              <div style="min-width:200px;padding:12px 16px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0"><div style="font-size:12.8px;color:#64748b">Awarie trwające teraz</div><div style="font-size:28px;font-weight:600;line-height:1.2;color:#dc3545">2</div></div>
+            </div>
+            <div>
+              <div style="font-size:20px;font-weight:500;margin-bottom:8px">Obciążenie</div>
+              <div style="font-size:14px;color:rgba(33,37,41,0.75);margin-bottom:8px">Procent dostępnych maszyno-godzin zajętych przez zlecenia w danej dobie (6:00–6:00). Dostępny czas uwzględnia dni wolne, godziny pracy i awarie.</div>
+              <table style="width:100%;border-collapse:collapse;font-size:16px">
+                <thead><tr>
+                  <th style="text-align:left;padding:4px;border:1px solid #dee2e6">Maszyna / linia</th>
+                  <sc-for list="{{ load.days }}" as="d" hint-placeholder-count="7"><th style="text-align:center;padding:4px;border:1px solid #dee2e6;white-space:nowrap">{{ d }}</th></sc-for>
+                  <th style="text-align:left;padding:4px;border:1px solid #dee2e6">Wolna od</th>
+                  <th style="text-align:center;padding:4px;border:1px solid #dee2e6">W kolejce</th>
+                </tr></thead>
+                <tbody>
+                  <sc-for list="{{ load.rows }}" as="r" hint-placeholder-count="16">
+                    <sc-if value="{{ r.isGroup }}" hint-placeholder-val="{{ false }}"><tr><th colspan="10" style="text-align:left;padding:4px;border:1px solid #dee2e6;background:#f1f5f9">{{ r.title }} <span style="font-weight:400;color:rgba(33,37,41,0.75)">· średnio {{ r.avg }}% przez 7 dni</span></th></tr></sc-if>
+                    <sc-if value="{{ r.isRow }}" hint-placeholder-val="{{ true }}"><tr>
+                      <td style="padding:4px;border:1px solid #dee2e6;font-weight:500;white-space:nowrap">{{ r.name }}<sc-if value="{{ r.units }}" hint-placeholder-val="{{ false }}"><span style="display:inline-block;padding:0.35em 0.65em;font-size:12px;font-weight:700;line-height:1;color:#fff;background:#0d6efd;border-radius:50rem;margin-left:8px">{{ r.units }}×</span></sc-if></td>
+                      <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="7"><td style="padding:4px;border:1px solid #dee2e6;text-align:center;min-width:72px;font-variant-numeric:tabular-nums;background:{{ c.bg }};color:{{ c.ink }};font-size:{{ c.fs }}">{{ c.text }}</td></sc-for>
+                      <td style="padding:4px;border:1px solid #dee2e6;white-space:nowrap">{{ r.free }}</td>
+                      <td style="padding:4px;border:1px solid #dee2e6;text-align:center">{{ r.queued }}</td>
+                    </tr></sc-if>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <div style="font-size:20px;font-weight:500">Awarie</div>
+                <div style="display:flex;align-items:center;gap:16px"><span style="display:flex;align-items:center;gap:8px"><span style="width:32px;height:16px;border-radius:8px;border:1px solid rgba(0,0,0,0.25);display:flex;align-items:center;padding:0 2px"><span style="width:10px;height:10px;border-radius:50%;background:rgba(0,0,0,0.25)"></span></span>Pokaż zakończone</span><button style="font:inherit;font-size:14px;padding:4px 8px;border:1px solid #dc3545;background:transparent;color:#dc3545;border-radius:4px">Zgłoś awarię</button></div>
+              </div>
+              <table style="width:100%;border-collapse:collapse;font-size:16px">
+                <thead><tr><th style="text-align:left;padding:4px;border-bottom:1px solid #dee2e6">Maszyna</th><th style="text-align:left;padding:4px;border-bottom:1px solid #dee2e6">Linia</th><th style="text-align:left;padding:4px;border-bottom:1px solid #dee2e6">Od</th><th style="text-align:left;padding:4px;border-bottom:1px solid #dee2e6">Do</th><th style="text-align:left;padding:4px;border-bottom:1px solid #dee2e6">Czas</th><th style="text-align:left;padding:4px;border-bottom:1px solid #dee2e6">Status</th><th style="padding:4px;border-bottom:1px solid #dee2e6"></th></tr></thead>
+                <tbody>
+                  <sc-for list="{{ load.breakdowns }}" as="k" hint-placeholder-count="2">
+                    <tr>
+                      <td style="padding:4px;border-bottom:1px solid #dee2e6;font-weight:500">{{ k.name }}</td>
+                      <td style="padding:4px;border-bottom:1px solid #dee2e6;color:{{ k.lineInk }}">{{ k.line }}</td>
+                      <td style="padding:4px;border-bottom:1px solid #dee2e6;white-space:nowrap">{{ k.from }}</td>
+                      <td style="padding:4px;border-bottom:1px solid #dee2e6;color:#dc3545">trwa</td>
+                      <td style="padding:4px;border-bottom:1px solid #dee2e6">{{ k.dur }}</td>
+                      <td style="padding:4px;border-bottom:1px solid #dee2e6"><span style="display:inline-block;padding:0.35em 0.65em;font-size:12px;font-weight:700;line-height:1;color:#fff;background:#dc3545;border-radius:6px">Trwa</span></td>
+                      <td style="padding:4px;border-bottom:1px solid #dee2e6;text-align:right;white-space:nowrap"><button style="font:inherit;font-size:14px;padding:4px 8px;border:1px solid #dc3545;background:#dc3545;color:#fff;border-radius:4px;margin-right:8px">Zakończ teraz</button><button style="font:inherit;font-size:14px;padding:4px 8px;border:1px solid #6c757d;background:transparent;color:#6c757d;border-radius:4px">Usuń</button></td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="0d" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;background:oklch(0.45 0.02 260);color:#fff;padding:3px 9px;border-radius:4px">0d</span><span style="font-size:18px;font-weight:600">Maszyny</span></div>
+      <div style="width:1440px;height:1000px;background:#f3f4f6;overflow:hidden;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.08);font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#212529;font-size:16px;line-height:1.5">
+        <div style="height:56px;background:#212529;display:flex;align-items:center;padding:0 12px">
+          <div style="display:flex;align-items:center;color:#fff;font-size:20px;font-weight:600;margin-right:16px"><svg width="26" height="26" viewBox="0 0 26 26" style="margin-right:8px"><rect x="1" y="1" width="24" height="24" rx="6" fill="#2563eb"></rect><rect x="5" y="7" width="10" height="3" rx="1.5" fill="#fff"></rect><rect x="9" y="12" width="12" height="3" rx="1.5" fill="#93c5fd"></rect><rect x="5" y="17" width="7" height="3" rx="1.5" fill="#fff"></rect></svg>FactoryOps</div>
+          <div style="display:flex"><span style="padding:8px;color:rgba(255,255,255,0.55)">Plan</span><span style="padding:8px;color:rgba(255,255,255,0.55)">Lista zleceń</span><span style="padding:8px;color:rgba(255,255,255,0.55)">Obciążenie</span><span style="padding:8px;color:#fff">Maszyny</span></div>
+          <button style="margin-left:auto;font:inherit;font-size:14px;padding:4px 8px;border:1px solid #f8f9fa;background:transparent;color:#f8f9fa;border-radius:4px">Resetuj demo</button>
+        </div>
+        <div style="padding:16px 12px">
+          <div style="background:#fff;border-radius:6px;box-shadow:0 1px 3px rgba(15,23,42,0.08);padding:16px;display:flex;flex-direction:column;gap:24px">
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <div><div style="font-size:20px;font-weight:500">Linie produkcyjne</div><div style="font-size:14px;color:rgba(33,37,41,0.75)">Linia to grupa maszyn pracujących równolegle. Zlecenie można dać na całą linię albo na jedną jej maszynę.</div></div>
+                <button style="font:inherit;padding:6px 12px;border:1px solid #0d6efd;background:#0d6efd;color:#fff;border-radius:6px">+ Dodaj linię</button>
+              </div>
+              <table style="width:100%;border-collapse:collapse">
+                <thead><tr><th style="text-align:left;padding:8px;border-bottom:1px solid #dee2e6">Nazwa</th><th style="text-align:left;padding:8px;border-bottom:1px solid #dee2e6">Maszyny</th><th style="text-align:left;padding:8px;border-bottom:1px solid #dee2e6">System pracy</th><th style="text-align:left;padding:8px;border-bottom:1px solid #dee2e6">Zlecenia linii</th><th style="padding:8px;border-bottom:1px solid #dee2e6"></th></tr></thead>
+                <tbody>
+                  <sc-for list="{{ mach.lines }}" as="l" hint-placeholder-count="9">
+                    <tr>
+                      <td style="padding:8px;border-bottom:1px solid #dee2e6;font-weight:500">{{ l.name }}</td>
+                      <td style="padding:8px;border-bottom:1px solid #dee2e6"><span style="display:flex;flex-wrap:wrap;gap:4px"><sc-for list="{{ l.members }}" as="m" hint-placeholder-count="3"><span style="display:inline-block;padding:0.35em 0.65em;font-size:12px;font-weight:700;line-height:1;color:{{ m.ink }};background:{{ m.bg }};border:1px solid #dee2e6;border-radius:6px">{{ m.name }}</span></sc-for></span></td>
+                      <td style="padding:8px;border-bottom:1px solid #dee2e6">4-brygadowy, 24/7</td>
+                      <td style="padding:8px;border-bottom:1px solid #dee2e6">{{ l.count }}<span style="font-size:14px;color:rgba(33,37,41,0.75)">{{ l.extra }}</span></td>
+                      <td style="padding:8px;border-bottom:1px solid #dee2e6;text-align:right;white-space:nowrap"><button style="font:inherit;font-size:14px;padding:4px 8px;border:1px solid #0d6efd;background:transparent;color:#0d6efd;border-radius:4px;margin-right:8px">Edytuj</button><button style="font:inherit;font-size:14px;padding:4px 8px;border:1px solid #6c757d;background:transparent;color:#6c757d;border-radius:4px;margin-right:8px;opacity:{{ l.compactOp }}">Domknij przerwy</button><button style="font:inherit;font-size:14px;padding:4px 8px;border:1px solid #dc3545;background:transparent;color:#dc3545;border-radius:4px">Usuń</button></td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <div><div style="font-size:20px;font-weight:500">Maszyny</div><div style="font-size:14px;color:rgba(33,37,41,0.75)">60 maszyn, w tym 29 w liniach</div></div>
+                <button style="font:inherit;padding:6px 12px;border:1px solid #0d6efd;background:#0d6efd;color:#fff;border-radius:6px">+ Dodaj maszynę</button>
+              </div>
+              <table style="width:100%;border-collapse:collapse">
+                <thead><tr><th style="text-align:left;padding:8px;border-bottom:1px solid #dee2e6">Nazwa</th><th style="text-align:left;padding:8px;border-bottom:1px solid #dee2e6">Linia</th><th style="text-align:left;padding:8px;border-bottom:1px solid #dee2e6">System pracy</th><th style="text-align:left;padding:8px;border-bottom:1px solid #dee2e6">Zlecenia</th><th style="padding:8px;border-bottom:1px solid #dee2e6"></th></tr></thead>
+                <tbody>
+                  <sc-for list="{{ mach.machines }}" as="m" hint-placeholder-count="6">
+                    <tr>
+                      <td style="padding:8px;border-bottom:1px solid #dee2e6;font-weight:500">{{ m.name }}<sc-if value="{{ m.down }}" hint-placeholder-val="{{ false }}"><span style="display:inline-block;padding:0.35em 0.65em;font-size:12px;font-weight:700;line-height:1;color:#fff;background:#dc3545;border-radius:50rem;margin-left:8px">awaria</span></sc-if></td>
+                      <td style="padding:8px;border-bottom:1px solid #dee2e6">{{ m.line }}</td>
+                      <td style="padding:8px;border-bottom:1px solid #dee2e6">4-brygadowy, 24/7</td>
+                      <td style="padding:8px;border-bottom:1px solid #dee2e6">0</td>
+                      <td style="padding:8px;border-bottom:1px solid #dee2e6;text-align:right;white-space:nowrap"><button style="font:inherit;font-size:14px;padding:4px 8px;border:1px solid #0d6efd;background:transparent;color:#0d6efd;border-radius:4px;margin-right:8px">Edytuj</button><button style="font:inherit;font-size:14px;padding:4px 8px;border:1px solid #6c757d;background:transparent;color:#6c757d;border-radius:4px;margin-right:8px;opacity:0.65">Domknij przerwy</button><button style="font:inherit;font-size:14px;padding:4px 8px;border:1px solid #dc3545;background:transparent;color:#dc3545;border-radius:4px">Usuń</button></td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const H0 = new Date(2026, 9, 7, 0, 0).getTime(), HR = 3600000;
+const NOW = 31.4, W0 = NOW - 24, SPAN = 168, W1 = W0 + SPAN;
+const at = h => new Date(H0 + h * HR);
+const I = o => new Intl.DateTimeFormat('pl-PL', o);
+const fDT = I({ weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+const dt = h => fDT.format(at(h));
+const fHM = I({ hour: '2-digit', minute: '2-digit' });
+const PCOL = ['#2563eb', '#0d9488', '#d97706', '#7c3aed', '#db2777', '#059669', '#dc2626', '#4f46e5'];
+const PCOL2 = ['#2563eb', '#0d9488', '#d97706', '#7c3aed', '#db2777', '#65a30d', '#0891b2', '#4f46e5'];
+const hashIdx = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h) % 8; };
+const PROJECTS = [{ no: 'IMR-6000', name: 'Huanyon' }, { no: 'IMR-6001', name: 'Manzanillo' }, { no: 'IMR-6002', name: 'Kosovo' }, { no: 'IMR-6003', name: 'Bergen' }, { no: 'IMR-6004', name: 'Rotterdam' }, { no: 'IMR-6005', name: 'Gdańsk Port' }];
+const OPS = ['Stopień 1', 'Stopień 2', 'Stopień 3', 'Wirnik', 'Korpus', 'Wał', 'Pokrywa'];
+const PROGS = ['Jan Kowalski', 'Anna Nowak', 'Piotr Wiśniewski', 'Katarzyna Wójcik'];
+const isWork = h => { const d = Math.floor((h - 6) / 24); const dow = (((3 + d) % 7) + 7) % 7; return dow !== 6 && dow !== 0; };
+function rng(seed) { let a = seed; return () => { a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+
+const RES = [];
+for (let i = 1; i <= 8; i++) RES.push({ id: 'l' + i, name: 'Linia ' + i, kind: 'line', units: 3, cont: true, div: 3 });
+for (let u = 1; u <= 5; u++) RES.push({ id: 'l9m' + u, name: 'L9-M' + u, kind: 'lm', cont: true, div: 1, line: 'Linia 9' });
+['HSTM 301', 'HSTM 302', 'HSTM 303', 'HSTM 305', 'HSTM 306', 'HSTM 308'].forEach((n, i) => RES.push({ id: 'm' + (i + 1), name: n, kind: 'm', cont: false, div: 1 }));
+const RES_BY = Object.fromEntries(RES.map(r => [r.id, r]));
+
+const BLOCKS = (() => {
+  const rnd = rng(2026); let ord = 412, bid = 0; const out = [];
+  RES.forEach(r => {
+    const work = h => r.cont || isWork(h);
+    let cur = -720 - Math.floor(rnd() * 60), first = true;
+    while (cur < W1 + 24) {
+      if (!first && rnd() < 0.15) cur += 8 + Math.floor(rnd() * 16);
+      first = false;
+      while (!work(cur)) cur++;
+      const hours = 30 + Math.floor(rnd() * 91);
+      let need = Math.ceil(hours / r.div), h = cur;
+      while (need > 0) { if (work(h)) need--; h++; }
+      const p = PROJECTS[Math.floor(rnd() * PROJECTS.length)];
+      out.push({ id: 'b' + (++bid), res: r.id, start: cur, end: h, hours, op: OPS[Math.floor(rnd() * OPS.length)], pno: p.no, pname: p.name,
+        orderNo: `ZAM/${at(cur).getFullYear()}/${String(ord++).padStart(5, '0')}`, prog: rnd() < 0.7 ? PROGS[Math.floor(rnd() * 4)] : '' });
+      cur = h;
+    }
+  });
+  return out;
+})();
+
+const DOWNS = { l2: { start: 28, end: 32, frac: 1 / 3, names: 'L2-M2' }, l5: { start: 10, end: 18, frac: 1 / 3, names: 'L5-M1' } };
+const ROWS = [
+  { kind: 'hdr', title: 'Linie produkcyjne', count: 9 },
+  ...RES.filter(r => r.kind === 'line').map(r => ({ ...r })),
+  { kind: 'line', id: 'l9', name: 'Linia 9', units: 5, expanded: true },
+  ...RES.filter(r => r.kind === 'lm').map(r => ({ ...r })),
+  { kind: 'hdr', title: 'Maszyny', count: 31 },
+  ...RES.filter(r => r.kind === 'm').map(r => ({ ...r }))
+];
+const status = b => b.end <= NOW ? 'done' : b.start <= NOW ? 'prog' : 'plan';
+const ST_LABEL = { done: 'Zakończone', prog: 'W toku', plan: 'Zaplanowane' };
+const ST_BG = { done: '#6c757d', prog: '#198754', plan: '#0d6efd' };
+const weekends = (s, e) => { const out = []; for (let k = -6; k <= 2; k++) { const a = Math.max(s, 78 + 168 * k), b = Math.min(e, 126 + 168 * k); if (a < b) out.push([a, b]); } return out; };
+const offSegs = (resId, s, e) => (RES_BY[resId] && !RES_BY[resId].cont) ? weekends(s, e) : [];
+const labelsOf = b => [`${b.op} · ${b.pno} · ${b.pname}`, `${b.op} · ${b.pno}`, b.op];
+const fit = (ls, w, cw) => ls.find(l => l.length * cw + 14 <= w) || '';
+const resName = id => RES_BY[id]?.name || '';
+function loadOf(row) {
+  const ids = row.id === 'l9' ? ['l9m1', 'l9m2', 'l9m3', 'l9m4', 'l9m5'] : [row.id];
+  const cont = row.kind !== 'm';
+  let busy = 0, avail = 0;
+  for (let h = 30; h < 198; h++) { const w = cont || isWork(h); if (!w) continue; avail += ids.length; busy += BLOCKS.filter(b => ids.includes(b.res) && b.start <= h && h < b.end).length; }
+  return avail ? Math.round(busy / avail * 100) : 0;
+}
+const LOADS = Object.fromEntries(ROWS.filter(r => r.id).map(r => [r.id, loadOf(r)]));
+
+function stripedBg(base, a1, a2, s, e, offs) {
+  if (!offs.length) return `linear-gradient(${base},${base})`;
+  const pct = ms => `${((ms - s) / (e - s) * 100).toFixed(3)}%`;
+  const stops = offs.flatMap(([f, t]) => [`${base} ${pct(f)}`, `transparent ${pct(f)}`, `transparent ${pct(t)}`, `${base} ${pct(t)}`]);
+  return `linear-gradient(to right, ${base} 0%, ${stops.join(', ')}, ${base} 100%), repeating-linear-gradient(-45deg, ${a1} 0 6px, ${a2} 6px 12px)`;
+}
+
+class Component extends DCLogic {
+  state = { sel0: null, sel1: null, sel2: null };
+
+  defaultSel() { return (BLOCKS.find(b => b.res === 'l2' && b.start <= NOW && NOW < b.end) || BLOCKS[0]).id; }
+
+  build(c) {
+    const x = h => (h - W0) / SPAN * c.W;
+    return ROWS.map(row => {
+      const h = c.h[row.kind], isHdr = row.kind === 'hdr';
+      const r = {
+        h: h + 'px', isHdr, isRes: !isHdr, isLine: row.kind === 'line', title: row.title || row.name, count: row.count,
+        units: row.units, chev: row.kind === 'line' ? (row.expanded ? '▾ ' : '▸ ') : '',
+        pad: row.kind === 'lm' ? c.lmPad : c.pad, fs: row.kind === 'lm' ? c.lmFs : c.fs, nameInk: row.kind === 'lm' ? c.lmInk : c.ink,
+        sbg: isHdr ? c.hdrBg : row.kind === 'lm' ? c.lmBg : '#fff', cbg: isHdr ? c.hdrBg : row.kind === 'lm' ? c.lmBg : '#fff',
+        line: isHdr ? c.hdrLine : '#eef2f6',
+        lineDown: row.id === 'l2', mDown: false, down: row.id === 'l2',
+        meta: row.kind === 'line' ? `${row.units}× · 24/7` : row.kind === 'lm' ? '' : 'pon–pt',
+        dot: row.id === 'l2' ? '#dc2626' : 'oklch(0.85 0.01 255)',
+        load: (LOADS[row.id] ?? 0) + '%', loadC: (LOADS[row.id] ?? 0) > 90 ? '#d97706' : '#64748b',
+        offs: [], downs: [], items: []
+      };
+      if (isHdr) return r;
+      if (row.kind === 'm') r.offs = weekends(W0, W1).map(([a, b]) => ({ left: x(a) + 'px', width: x(b) - x(a) + 'px' }));
+      const dn = DOWNS[row.id];
+      if (dn) {
+        const w = x(dn.end) - x(dn.start);
+        r.downs = [{ left: x(dn.start) + 'px', width: w + 'px', fill: dn.frac * 100 + '%', top: h * 0.1 + 'px', hh: h * 0.8 + 'px', label: fit([`Awaria ${dn.names}`, dn.names, '!'], w, 6) }];
+      }
+      const ih = h * c.ratio;
+      r.items = BLOCKS.filter(b => b.res === row.id && b.end > W0 && b.start < W1).map(b => {
+        const w = x(b.end) - x(b.start) - c.gap, st = status(b), sel = b.id === c.sel;
+        const offs = offSegs(b.res, b.start, b.end), prog = st === 'prog' ? ((NOW - b.start) / (b.end - b.start) * 100).toFixed(2) : null;
+        let bg, edge, ink = '#fff', op = 1;
+        if (c.style === 'cur') {
+          const col = PCOL[hashIdx(b.pno)];
+          bg = stripedBg(col, col + '59', col + 'a6', b.start, b.end, offs); edge = col; op = st === 'done' ? 0.55 : 1;
+        } else if (c.style === 'a') {
+          const col = PCOL2[hashIdx(b.pno)];
+          if (st === 'done') { bg = stripedBg('#cbd5e1', '#e2e8f0', '#cbd5e1', b.start, b.end, offs); edge = '#94a3b8'; ink = '#334155'; }
+          else { bg = stripedBg(col, col + '59', col + 'a6', b.start, b.end, offs); edge = col; }
+          if (prog) bg = `linear-gradient(to right, rgba(0,0,0,0.28) 0 ${prog}%, transparent ${prog}% 100%), ` + bg;
+        } else {
+          const col = PCOL2[hashIdx(b.pno)];
+          const tint = `color-mix(in oklch, ${col} 14%, white)`;
+          bg = stripedBg(tint, 'oklch(0.975 0.004 255)', `color-mix(in oklch, ${col} 10%, white)`, b.start, b.end, offs);
+          if (prog) bg = `linear-gradient(to right, color-mix(in oklch, ${col} 34%, white) 0 ${prog}%, transparent ${prog}% 100%), ` + bg;
+          edge = `color-mix(in oklch, ${col} 50%, white)`; ink = `color-mix(in oklch, ${col} 72%, black)`; op = st === 'done' ? 0.5 : 1;
+        }
+        return {
+          left: x(b.start) + c.gap / 2 + 'px', width: Math.max(2, w) + 'px', top: (h - ih) / 2 + 'px', ih: ih + 'px', lh: ih - 2 + 'px',
+          bg, edge, ink, op, ring: sel ? c.ring : 'none', label: fit(labelsOf(b).slice(c.style === 'b' ? 1 : 0), w, 7),
+          onClick: () => this.setState({ [c.key]: b.id })
+        };
+      });
+      return r;
+    });
+  }
+
+  renderVals() {
+    const def = this.defaultSel();
+    const sel0 = this.state.sel0 === undefined ? null : (this.state.sel0 ?? def);
+    const sel1 = this.state.sel1 ?? def, sel2 = this.state.sel2 ?? def;
+    const xs = (W, h) => (h - W0) / SPAN * W;
+
+    const midn = [24, 48, 72, 96, 120, 144, 168];
+    const curDays = [W0, ...midn, W1].slice(0, -1).map((s, i, a) => {
+      const e = i + 1 < a.length ? a[i + 1] : W1, w = xs(1174, e) - xs(1174, s);
+      const f = w >= 150 ? I({ weekday: 'long', day: 'numeric', month: 'short' }) : w >= 50 ? I({ weekday: 'short', day: 'numeric' }) : I({ day: 'numeric' });
+      return { left: xs(1174, s) + 'px', width: w + 'px', label: f.format(at(s)) };
+    });
+    const cur = {
+      month: I({ month: 'long', year: 'numeric' }).format(at(NOW)),
+      days: curDays, vlines: midn.map(h => xs(1174, h) + 'px'), nowX: xs(1174, NOW) + 'px',
+      rows: this.build({ style: 'cur', W: 1174, h: { hdr: 30, line: 38, lm: 30, m: 38 }, ratio: 0.8, gap: 0, pad: '4px', lmPad: '22px', fs: '16px', lmFs: '12.8px', ink: '#212529', lmInk: '#475569', hdrBg: '#e2e8f0', lmBg: '#f8fafc', hdrLine: '#e2e8f0', ring: '0 0 0 2px #111827', sel: sel0, key: 'sel0' })
+    };
+
+    const shiftB = [30, 54, 78, 102, 126, 150, 174];
+    const shiftDays = (W, todayBg, todayInk) => [W0, ...shiftB].map((s, i, a) => {
+      const e = i + 1 < a.length ? a[i + 1] : W1, d = at(Math.max(s, 6 + 24 * Math.floor((s - 6) / 24)) + 1);
+      const today = s === 30, wk = !isWork(s + 1);
+      return {
+        left: xs(W, s) + 'px', width: xs(W, e) - xs(W, s) + 'px',
+        label: xs(W, e) - xs(W, s) < 30 ? '' : `${I({ weekday: 'short' }).format(at(s === W0 ? 7.4 : s + 1)).replace('.', '')} ${at(s === W0 ? 7.4 : s + 1).getDate()}.${at(s + 1).getMonth() + 1}`,
+        sub: today ? 'dziś · od 6:00' : wk ? 'wolne pon–pt' : '',
+        bg: today ? todayBg : 'transparent', ink: today ? todayInk : wk ? '#94a3b8' : '#334155', fw: today ? 600 : 400,
+        subInk: today ? '#dc2626' : 'oklch(0.6 0.02 260)', pl: today ? '36px' : '8px'
+      };
+    });
+    const a = {
+      days: shiftDays(1220, '#dbeafe', '#1d4ed8'), vlines: shiftB.map(h => xs(1220, h) + 'px'), nowX: xs(1220, NOW) + 'px',
+      rows: this.build({ style: 'a', W: 1220, h: { hdr: 30, line: 38, lm: 30, m: 38 }, ratio: 0.78, gap: 2, pad: '12px', lmPad: '28px', fs: '15px', lmFs: '13px', ink: '#1e293b', lmInk: '#475569', hdrBg: '#f1f5f9', lmBg: '#fbfcfd', hdrLine: '#e2e8f0', ring: '0 0 0 2px #111827', sel: sel1, key: 'sel1' })
+    };
+    const b = {
+      days: shiftDays(830, 'transparent', '#1e293b'), vlines: shiftB.map(h => xs(830, h) + 'px'), nowX: xs(830, NOW) + 'px',
+      rows: this.build({ style: 'b', W: 830, h: { hdr: 30, line: 40, lm: 32, m: 40 }, ratio: 0.72, gap: 2, pad: '14px', lmPad: '30px', fs: '13px', lmFs: '12px', ink: 'oklch(0.25 0.02 260)', lmInk: 'oklch(0.45 0.02 260)', hdrBg: 'oklch(0.975 0.004 255)', lmBg: 'oklch(0.99 0.002 255)', hdrLine: 'oklch(0.92 0.006 255)', ring: '0 0 0 2px #1e293b', sel: sel2, key: 'sel2' })
+    };
+
+    const blk0 = BLOCKS.find(x => x.id === sel0);
+    const panel = blk => {
+      if (!blk) return { show: false };
+      const r = RES_BY[blk.res], isLine = r.kind === 'line', st = status(blk), dn = DOWNS[blk.res];
+      const hasDown = !!dn && dn.start < blk.end && dn.end > blk.start;
+      return {
+        show: true, title: `${blk.op} · ${blk.pno}`, status: ST_LABEL[st], stBg: ST_BG[st],
+        project: `${blk.pno} · ${blk.pname}`, op: blk.op, orderNo: blk.orderNo, pname: blk.pname, pno: blk.pno,
+        resLabel: isLine ? 'Linia' : 'Maszyna', res: r.name, resExtra: isLine ? ` · ${r.units} maszyny` : r.line ? ` · z ${r.line}` : '',
+        hours: `${blk.hours} h`, hoursExtra: isLine ? ` jednej maszyny · na planie ${blk.end - blk.start} h` : '',
+        start: dt(blk.start), end: dt(blk.end), prog: blk.prog || '— nie przypisano —',
+        hasDown, downText: hasDown ? `${dn.names} · ${dt(dn.start)} → trwa` : ''
+      };
+    };
+    const p0 = panel(blk0);
+
+    const blk2 = BLOCKS.find(x => x.id === sel2), pb = panel(blk2), st2 = status(blk2), col2 = PCOL2[hashIdx(blk2.pno)];
+    const q = BLOCKS.filter(x => x.res === blk2.res).sort((m, n) => m.start - n.start), qi = q.findIndex(x => x.id === blk2.id);
+    const insp = {
+      ...pb, op: blk2.op, status: ST_LABEL[st2],
+      stBg: st2 === 'prog' ? '#dcfce7' : st2 === 'done' ? '#f1f5f9' : '#dbeafe', stInk: st2 === 'prog' ? '#166534' : st2 === 'done' ? '#475569' : '#1d4ed8',
+      tint: `color-mix(in oklch, ${col2} 14%, white)`, ink: `color-mix(in oklch, ${col2} 72%, black)`,
+      inProg: st2 === 'prog', pct: Math.round((NOW - blk2.start) / (blk2.end - blk2.start) * 100) + '%',
+      hours: pb.hours + pb.hoursExtra, res: pb.res, downText: pb.hasDown ? `${DOWNS[blk2.res].names} stoi od ${fHM.format(at(DOWNS[blk2.res].start))} — zlecenie wydłuża się co godzinę.` : '',
+      progInk: blk2.prog ? 'inherit' : 'oklch(0.55 0.12 60)', prog: blk2.prog || 'Nie przypisano',
+      queue: q.slice(Math.max(0, qi - 1), qi + 3).map(x => ({
+        title: `${x.op} · ${x.pno} · ${x.pname}`, when: `${dt(x.start)} → ${fHM.format(at(x.end))}`,
+        color: `color-mix(in oklch, ${PCOL2[hashIdx(x.pno)]} 60%, white)`, bg: x.id === blk2.id ? 'oklch(0.96 0.008 255)' : 'transparent',
+        op: status(x) === 'done' ? 0.55 : 1, onClick: () => this.setState({ sel2: x.id })
+      }))
+    };
+
+    const listRows = [...BLOCKS].sort((m, n) => m.start - n.start).slice(0, 15).map(x => ({
+      start: dt(x.start), end: dt(x.end), op: x.op, pno: x.pno, pname: x.pname, orderNo: x.orderNo, res: resName(x.res),
+      hours: `${x.hours} h`, status: ST_LABEL[status(x)], stBg: ST_BG[status(x)], prog: x.prog || '— nie przypisano —'
+    }));
+
+    const dayF = I({ weekday: 'short', day: 'numeric', month: 'numeric' });
+    const loadRow = (row, i) => {
+      const ids = row.id === 'l9' ? ['l9m1', 'l9m2', 'l9m3', 'l9m4', 'l9m5'] : [row.id], cont = row.kind !== 'm';
+      const cells = Array.from({ length: 7 }, (_, d) => {
+        const s = 30 + 24 * d;
+        if (!cont && !isWork(s + 1)) return { text: 'wolne', bg: 'transparent', ink: 'rgba(33,37,41,0.75)', fs: '14px', pct: null };
+        let busy = 0; for (let h = s; h < s + 24; h++) busy += BLOCKS.filter(x => ids.includes(x.res) && x.start <= h && h < x.end).length;
+        const pct = Math.round(busy / (24 * ids.length) * 100), al = 0.08 + pct / 100 * 0.82;
+        return { text: pct + '%', bg: `rgba(37, 99, 235, ${al.toFixed(2)})`, ink: pct > 55 ? '#fff' : '#1e293b', fs: '16px', pct };
+      });
+      return { isRow: true, name: row.name, units: row.kind === 'line' ? row.units : 0, cells,
+        free: fDT.format(new Date(2027, 11, 20 + (i * 3) % 11, 6 + (i * 5) % 16)), queued: cont ? 160 + (i * 37) % 90 : 90 + (i * 13) % 40 };
+    };
+    const lr = ROWS.filter(r => r.kind === 'line').map(loadRow), mr = ROWS.filter(r => r.kind === 'm').map((r, i) => loadRow(r, i + 9));
+    const avg = rows => { const v = rows.flatMap(r => r.cells).filter(c => c.pct !== null); return Math.round(v.reduce((s, c) => s + c.pct, 0) / v.length); };
+    const load = {
+      days: Array.from({ length: 7 }, (_, d) => dayF.format(at(30 + 24 * d + 1))),
+      rows: [{ isGroup: true, title: 'Linie produkcyjne', avg: avg(lr) }, ...lr, { isGroup: true, title: 'Maszyny', avg: avg(mr) }, ...mr],
+      avgLines: avg(lr), avgMachines: avg(mr),
+      breakdowns: [
+        { name: 'L2-M2', line: 'Linia 2', lineInk: 'inherit', from: dt(28), dur: '3 h' },
+        { name: 'DMU 85', line: '—', lineInk: 'rgba(33,37,41,0.75)', from: dt(26), dur: '5 h' }
+      ]
+    };
+
+    const mach = {
+      lines: Array.from({ length: 9 }, (_, i) => {
+        const n = i + 1, units = n === 9 ? 5 : 3;
+        return { name: `Linia ${n}`, members: Array.from({ length: units }, (_, u) => { const dn = n === 2 && u === 1; return { name: `L${n}-M${u + 1}`, bg: dn ? '#dc3545' : '#f8f9fa', ink: dn ? '#fff' : '#212529' }; }),
+          count: n === 9 ? 0 : 230 + (n * 17) % 40, extra: n === 9 ? ' + 640 na maszynach' : '', compactOp: n === 9 ? 0.65 : 1 };
+      }),
+      machines: Array.from({ length: 12 }, (_, i) => { const n = Math.floor(i / 3) + 1, u = i % 3 + 1; return { name: `L${n}-M${u}`, line: `Linia ${n}`, down: n === 2 && u === 2 }; })
+    };
+
+    const upcoming = BLOCKS.filter(x => x.end > NOW).sort((m, n) => m.start - n.start);
+    const defChk = upcoming.filter(x => !x.prog).slice(0, 2).map(x => x.id);
+    const chk = this.state.chk ?? defChk;
+    const short = I({ day: '2-digit', month: '2-digit' });
+    const inits = n => n.split(' ').map(s => s[0]).join('');
+    const l2 = {
+      total: upcoming.length, archived: 287, noProg: upcoming.filter(x => !x.prog).length,
+      tabs: [['Wszystkie', upcoming.length, true], ['W toku', upcoming.filter(x => status(x) === 'prog').length], ['Zaplanowane', upcoming.filter(x => status(x) === 'plan').length], ['Zakończone', BLOCKS.length - upcoming.length]]
+        .map(([label, n, on]) => ({ label, n, bg: on ? '#fff' : 'transparent', fw: on ? 500 : 400, sh: on ? '0 1px 2px rgba(15,23,42,0.08)' : 'none', ink: on ? 'inherit' : 'oklch(0.45 0.02 260)' })),
+      rows: upcoming.slice(0, 15).map(x => {
+        const on = chk.includes(x.id), st = status(x), col = PCOL2[hashIdx(x.pno)];
+        return {
+          bg: on ? 'oklch(0.97 0.015 255)' : '#fff', tick: on ? '✓' : '', cbBg: on ? '#1e293b' : '#fff', cbBorder: on ? '#1e293b' : 'oklch(0.75 0.01 255)',
+          status: st === 'prog' ? 'W toku' : 'Zaplanowane', stDot: st === 'prog' ? '#16a34a' : '#2563eb', stInk: st === 'prog' ? '#166534' : 'oklch(0.35 0.02 260)',
+          title: `${x.op} · ${x.pno}`, orderNo: x.orderNo, pno: x.pno, pname: x.pname,
+          tint: `color-mix(in oklch, ${col} 14%, white)`, ink: `color-mix(in oklch, ${col} 72%, black)`,
+          res: resName(x.res), start: dt(x.start), end: dt(x.end), hours: `${x.hours} h`,
+          hasProg: !!x.prog, noProg: !x.prog, prog: x.prog, init: x.prog ? inits(x.prog) : '',
+          onToggle: () => this.setState({ chk: on ? chk.filter(i => i !== x.id) : [...chk, x.id] })
+        };
+      }),
+      hasSel: chk.length > 0, noSel: chk.length === 0, selCount: chk.length,
+      barBg: chk.length ? '#1e293b' : 'oklch(0.96 0.006 255)', barInk: chk.length ? '#fff' : 'oklch(0.45 0.02 260)',
+      clear: e => { e.stopPropagation(); this.setState({ chk: [] }); }
+    };
+
+    const heat = pct => ({ bg: `color-mix(in oklch, #2563eb ${Math.round(8 + pct * 0.82)}%, oklch(0.975 0.004 255))`, ink: pct > 55 ? '#fff' : 'oklch(0.3 0.02 260)' });
+    const l3rows = load.rows.map((r, i) => {
+      if (r.isGroup) return r;
+      const row = ROWS.find(x => x.name === r.name), isM = row.kind === 'm', downRow = row.id === 'l2';
+      return {
+        ...r, meta: isM ? 'pon–pt' : `${r.units}× · 24/7`, dot: downRow ? '#dc2626' : 'oklch(0.85 0.01 255)', free: r.free.replace(/\./g, '.'),
+        cells: r.cells.map((c, d) => c.pct === null
+          ? { text: 'wolne', bg: 'repeating-linear-gradient(-45deg,oklch(0.975 0.004 255) 0 4px,oklch(0.94 0.006 255) 4px 8px)', ink: 'oklch(0.6 0.02 260)', ring: 'none' }
+          : { text: c.pct + '%', ...heat(c.pct), ring: d === 0 && downRow ? 'inset 0 0 0 2px #dc2626' : d === 0 ? 'inset 0 0 0 1px oklch(0.25 0.02 260 / 0.25)' : 'none' })
+      };
+    });
+    const l3 = {
+      avgLinesW: load.avgLines + '%', avgMachW: load.avgMachines + '%',
+      days: Array.from({ length: 7 }, (_, d) => { const t = at(30 + 24 * d + 1), wk = !isWork(30 + 24 * d + 1);
+        return { sub: d === 0 ? 'dziś' : I({ weekday: 'short' }).format(t).replace('.', ''), label: short.format(t), ink: wk ? 'oklch(0.6 0.02 260)' : 'oklch(0.25 0.02 260)', subInk: d === 0 ? '#dc2626' : 'oklch(0.55 0.02 260)' }; }),
+      rows: l3rows,
+      brk: [
+        { name: 'L2-M2', line: 'Linia 2', from: dt(28), to: 'trwa', toInk: '#dc2626', dur: '3 h · rośnie', impact: 'Linia 2 pracuje na 2 z 3 maszyn', status: 'Trwa', stBg: 'oklch(0.95 0.03 25)', stInk: 'oklch(0.45 0.15 25)', dot: '#dc2626', border: 'oklch(0.88 0.05 25)', op: 1, ongoing: true },
+        { name: 'DMU 85', line: 'maszyna', from: dt(26), to: 'trwa', toInk: '#dc2626', dur: '5 h · rośnie', impact: 'kolejka przesunięta o 5 h', status: 'Trwa', stBg: 'oklch(0.95 0.03 25)', stInk: 'oklch(0.45 0.15 25)', dot: '#dc2626', border: 'oklch(0.88 0.05 25)', op: 1, ongoing: true },
+        { name: 'L5-M1', line: 'Linia 5', from: dt(10), to: dt(18), toInk: 'inherit', dur: '8 h', impact: '—', status: 'Zakończona', stBg: 'oklch(0.95 0.006 255)', stInk: 'oklch(0.45 0.02 260)', dot: 'oklch(0.75 0.01 255)', border: 'oklch(0.91 0.008 255)', op: 0.75, ongoing: false }
+      ],
+      scale: [0, 20, 40, 60, 80, 100].map(p => ({ t: p + '%', ...heat(p) }))
+    };
+
+    const ldC = v => v > 90 ? '#d97706' : '#64748b';
+    const m3 = {
+      lines: mach.lines.map((l, i) => { const v = LOADS['l' + (i + 1)] ?? 0, down = i === 1;
+        return { name: l.name, units: l.members.length, down, border: down ? 'oklch(0.88 0.05 25)' : 'oklch(0.91 0.008 255)', load: v + '%', loadC: ldC(v),
+          count: i === 8 ? '640 zleceń na maszynach' : `${l.count} zleceń`,
+          members: l.members.map(m => { const dn = m.bg === '#dc3545'; return { name: m.name, bg: dn ? 'oklch(0.95 0.03 25)' : 'oklch(0.97 0.004 255)', ink: dn ? 'oklch(0.45 0.15 25)' : 'oklch(0.35 0.02 260)', bd: dn ? 'oklch(0.85 0.06 25)' : 'oklch(0.92 0.006 255)' }; }) }; }),
+      machines: ['HSTM 301', 'HSTM 302', 'HSTM 303', 'HSTM 305', 'HSTM 306', 'HSTM 308', 'HSTM 502', 'HSTM 505', 'DMU 65', 'DMU 85'].map((n, i) => {
+        const v = i < 6 ? LOADS['m' + (i + 1)] : 62 + (i * 11) % 33, down = n === 'DMU 85';
+        return { name: n, load: v + '%', loadC: ldC(v), count: 95 + (i * 13) % 40, st: down ? 'Awaria · 5 h' : 'Pracuje', stDot: down ? '#dc2626' : '#16a34a', stInk: down ? 'oklch(0.45 0.15 25)' : 'oklch(0.35 0.02 260)' };
+      })
+    };
+
+    const manual = this.state.startMode === 'manual', kind = this.state.plantKind ?? 'inherit', wm = this.state.wm ?? 'weekdays';
+    const seg = on => ({ bg: on ? '#fff' : 'transparent', fw: on ? 500 : 400, sh: on ? '0 1px 2px rgba(15,23,42,0.08)' : 'none' });
+    const KINDS = [['inherit', 'Normalnie'], ['on', 'Pracujemy'], ['off', 'Wolne (np. święto)'], ['hours', 'Tylko w godzinach']];
+    const KIND_TEXT = {
+      inherit: 'Każda maszyna pracuje wg swojego systemu: pon–pt w dni robocze, 4-brygadowe codziennie.',
+      on: 'Wszystkie maszyny pracują cały dzień (np. pracująca sobota), chyba że niżej ustawisz inaczej.',
+      off: 'Żadna maszyna nie pracuje, chyba że niżej ustawisz wyjątek.',
+      hours: 'Wszystkie maszyny pracują w godzinach'
+    };
+    const plantRes = { inherit: null, on: ['pracuje', '#15803d'], off: ['wolne', '#b91c1c'], hours: ['6:00–18:00', '#a16207'] }[kind];
+    const lineRes = plantRes || ['pracuje', '#15803d'];
+    const wkRes = plantRes || ['wolne', '#b91c1c'];
+    const dRow = (name, mode, choice, res, o = {}) => ({ name, mode, choice, result: res[0], resInk: res[1], h: '40px', pad: '14px', bg: '#fff', fw: 400, exc: false, selBd: 'oklch(0.88 0.008 255)', ...o });
+    const working = { inherit: 31, on: 60, off: 2, hours: 60 }[kind];
+    const f3 = {
+      manual, setQueue: () => this.setState({ startMode: 'queue' }), setManual: () => this.setState({ startMode: 'manual' }),
+      qBg: seg(!manual).bg, qFw: seg(!manual).fw, qSh: seg(!manual).sh, mBg: seg(manual).bg, mFw: seg(manual).fw, mSh: seg(manual).sh,
+      preview: manual ? 'Linia 1 · czw., 08.10, 14:00 → pt., 09.10, 10:00 · wstawi się z przerwą przed ZAM/2026/00449' : 'Linia 1 · po ZAM/2026/00448 · start pt., 09.10, 02:00 → koniec pt., 09.10, 22:00',
+      ops: ['Stopień 1', 'Stopień 3', 'Wirnik', 'Korpus', 'Wał'],
+      since: ['teraz', '−1 h', '−2 h', '−4 h', '−8 h'].map((t, i) => ({ t, bg: i === 0 ? '#1e293b' : '#fff', ink: i === 0 ? '#fff' : 'oklch(0.35 0.02 260)', bd: i === 0 ? '#1e293b' : 'oklch(0.88 0.008 255)' })),
+      kinds: KINDS.map(([k, label]) => ({ label, ...seg(k === kind), onClick: () => this.setState({ plantKind: k }) })),
+      kindText: KIND_TEXT[kind], isHours: kind === 'hours', working,
+      dayRows: [
+        dRow('Linia 1', '', 'Jak cały zakład', ['cała linia', 'oklch(0.5 0.02 260)'], { bg: 'oklch(0.975 0.004 255)', fw: 600, h: '36px' }),
+        dRow('L1-M1', '4-brygadowy, 24/7', 'Jak cały zakład', lineRes, { pad: '30px' }),
+        dRow('L1-M2', '4-brygadowy, 24/7', 'Jak cały zakład', lineRes, { pad: '30px' }),
+        dRow('L1-M3', '4-brygadowy, 24/7', 'Jak cały zakład', lineRes, { pad: '30px' }),
+        dRow('▸ Linia 2 … Linia 9', '26 maszyn', 'Jak cały zakład', ['cała linia', 'oklch(0.5 0.02 260)'], { bg: 'oklch(0.975 0.004 255)', fw: 600, h: '36px' }),
+        dRow('Maszyny', '', '', ['', 'inherit'], { bg: 'oklch(0.975 0.004 255)', fw: 600, h: '32px', selBd: 'transparent', choice: '' }),
+        dRow('HSTM 301', 'pon–pt, 3 zmiany', 'Pracuje', ['pracuje', '#15803d'], { exc: true, selBd: '#f59e0b' }),
+        dRow('HSTM 302', 'pon–pt, 3 zmiany', 'Jak cały zakład', wkRes),
+        dRow('HSTM 303', 'pon–pt, 3 zmiany', 'Tylko w godzinach…  6:00–14:00', ['6:00–14:00', '#a16207'], { exc: true, selBd: '#f59e0b' })
+      ],
+      members: [
+        { n: '1.', name: 'L10-M1', isNew: true, note: '', noteInk: 'inherit' },
+        { n: '2.', name: 'L10-M2', isNew: true, note: '', noteInk: 'inherit' },
+        { n: '3.', name: 'DMU 65', isNew: false, note: 'samodzielna → przejdzie do linii', noteInk: '#a16207' }
+      ],
+      modes: [['weekdays', 'Pon–pt, 3 zmiany', 'weekend wolny, chyba że wyjątek'], ['continuous', '4-brygadowy, 24/7', 'pracuje codziennie']].map(([k, label, sub]) => ({
+        label, sub, bd: k === wm ? '#1e293b' : 'oklch(0.9 0.008 255)', bg: k === wm ? 'oklch(0.975 0.006 255)' : '#fff', onClick: () => this.setState({ wm: k })
+      })),
+      ms: [
+        { isHead: true, label: 'Linie produkcyjne' },
+        ...[['Linia 1 (cała linia)', true, false], ['L1-M1', false, true], ['L1-M2', false, true], ['Linia 2 (cała linia)', true, false], ['L2-M2', false, true]].map(([label, on, ind]) => ({ isOpt: true, label, pad: ind ? '32px' : '12px', font: ind ? "'IBM Plex Mono',monospace" : 'inherit' , tick: on ? '✓' : '', bg: on ? '#1e293b' : '#fff', bd: on ? '#1e293b' : 'oklch(0.75 0.01 255)' })),
+        { isHead: true, label: 'Maszyny' },
+        ...[['HSTM 301', true], ['HSTM 302', false], ['DMU 85', false]].map(([label, on]) => ({ isOpt: true, label, pad: '12px', font: "'IBM Plex Mono',monospace", tick: on ? '✓' : '', bg: on ? '#1e293b' : '#fff', bd: on ? '#1e293b' : 'oklch(0.75 0.01 255)' }))
+      ]
+    };
+
+    return {
+      f3, l2, l3, m3,
+      cur, a, b, p0, insp, load, mach, listRows,
+      closeP0: () => this.setState({ sel0: undefined }),
+      listFilters: ['Wszystkie statusy', 'Wszystkie maszyny', 'Wszystkie projekty', 'Wszyscy programiści'],
+      listCols: ['Start', 'Koniec', 'Operacja', 'Nr projektu', 'Projekt', 'Nr zamówienia', 'Linia / maszyna', 'Czas', 'Status', 'Programista'].map((l, i) => ({ label: l, arrow: i === 0 ? '▲' : '' })),
+      downList: [{ name: 'L2-M2', where: 'Linia 2', since: 'od 04:00 · 3 h · wydłuża 2 zlecenia' }, { name: 'DMU 85', where: 'maszyna', since: 'od 02:00 · 5 h' }]
+    };
+  }
+}
+</script>
+</body>
+</html>
