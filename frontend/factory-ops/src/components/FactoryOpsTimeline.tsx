@@ -38,6 +38,7 @@ import BlockHoverCard, { HoverAnchor } from './BlockHoverCard';
 import ConfirmModal from './ConfirmModal';
 import DayCalendarModal from './DayCalendarModal';
 import PageHeader from './PageHeader';
+import PlanScrollbar from './PlanScrollbar';
 import { loadByDay, removalImpact, totalPercent } from './planSelectors';
 import { PlanNavigationState } from './planNavigation';
 import { projectColor } from './projectColor';
@@ -351,8 +352,20 @@ const FactoryOpsTimeline = () => {
 	};
 	useEffect(() => () => clearTimeout(hoverTimer.current), []);
 	const searchRef = useRef<HTMLInputElement>(null);
-	// przeciąganie pustego planu nie przesuwa widoku - myliło się z przeciąganiem zleceń
-	const panBlocked = useRef(false);
+	// przeciąganie planu myszką nie przesuwa widoku (ani na pustym miejscu, ani na zleceniu) - myliło się z przenoszeniem zleceń;
+	// widok przesuwa Shift + kółko, pasek pod planem i przenoszony bloczek przy krawędzi planu
+	const mousePress = useRef(false);
+	useEffect(() => {
+		const release = () => {
+			mousePress.current = false;
+		};
+		window.addEventListener('pointerup', release, true);
+		window.addEventListener('pointercancel', release, true);
+		return () => {
+			window.removeEventListener('pointerup', release, true);
+			window.removeEventListener('pointercancel', release, true);
+		};
+	}, []);
 
 	// upuszczenie bez zmiany miejsca nie wywołuje onItemMove - podgląd chowamy po puszczeniu przycisku
 	const dragging = drag !== undefined;
@@ -762,6 +775,17 @@ const FactoryOpsTimeline = () => {
 		return starts;
 	}, [windowFrom, windowTo]);
 
+	/** Zakres paska przewijania: od najwcześniejszego do najpóźniejszego zlecenia (i zawsze z dzisiejszym dniem), z tygodniem zapasu. */
+	const scrollExtent = useMemo(() => {
+		let start = Date.now();
+		let end = start;
+		for (const b of state.blocks) {
+			if (b.start < start) start = b.start;
+			if (b.end > end) end = b.end;
+		}
+		return { start: start - WINDOW_STEP, end: end + WINDOW_STEP };
+	}, [state.blocks]);
+
 	const machineExceptionDays = useMemo(() => new Set(state.machines.flatMap((m) => Object.keys(m.overrides ?? {}))), [state.machines]);
 
 	/** Komórka doby w nagłówku: kliknięcie otwiera kalendarz dnia; podpis pokazuje dziś, dzień wolny lub wyjątek zakładu. */
@@ -918,20 +942,14 @@ const FactoryOpsTimeline = () => {
 						className={`plan-timeline ${span > HOUR_HEADER_MAX_SPAN ? 'zoom-wide' : 'zoom-hours'}`}
 						onPointerDownCapture={(e) => {
 							rightPress.current = e.button === 2;
-							panBlocked.current = e.pointerType === 'mouse' && !(e.target as HTMLElement).closest('.rct-item');
-						}}
-						onPointerMoveCapture={(e) => {
-							if (panBlocked.current && e.buttons !== 0) e.stopPropagation();
-						}}
-						onPointerUpCapture={() => {
-							panBlocked.current = false;
+							mousePress.current = e.pointerType === 'mouse' && !!(e.target as HTMLElement).closest('.rct-scroll');
 						}}>
 						<Timeline<PlanItem, PlanGroup>
 							groups={groups}
 							items={items}
 							visibleTimeStart={range.start}
 							visibleTimeEnd={range.end}
-							onTimeChange={(start, end) => setRange({ start, end })}
+							onTimeChange={(start, end) => !mousePress.current && setRange({ start, end })}
 							minZoom={12 * HOUR}
 							maxZoom={90 * DAY}
 							dragSnap={HOUR}
@@ -1108,6 +1126,7 @@ const FactoryOpsTimeline = () => {
 						</Timeline>
 					</div>
 
+					<PlanScrollbar range={range} extent={scrollExtent} onChange={setRange} sidebarWidth={SIDEBAR_WIDTH} />
 					<footer className={`plan-footer ${dropInfo ? 'is-dropping' : ''}`}>
 						{dropInfo ? (
 							<span className="drop-info">
@@ -1140,6 +1159,7 @@ const FactoryOpsTimeline = () => {
 									<span className="legend-swatch swatch-breakdown" /> awaria
 								</span>
 								<span className="legend-hints mono">
+									<span>Shift + kółko · przewiń</span>
 									<span>dwuklik · nowe zlecenie</span>
 									<span>prawy klik · awaria / dzień</span>
 									<span>klik w dzień · kalendarz</span>

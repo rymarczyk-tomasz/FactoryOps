@@ -673,6 +673,59 @@
 	box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
 }
 
+/* ---- pasek przewijania pod planem (przeciąganie planu myszką jest wyłączone) ---- */
+
+.plan-scrollbar {
+	flex: none;
+	padding: 3px 12px 3px 0;
+	border-top: 1px solid var(--line);
+	background: var(--surface);
+}
+
+.plan-scrollbar-track {
+	position: relative;
+	height: 10px;
+	border-radius: 5px;
+	background: var(--subtle);
+	cursor: pointer;
+}
+
+/* początki miesięcy; początek roku wyraźniej */
+.plan-scrollbar-tick {
+	position: absolute;
+	top: 3px;
+	bottom: 3px;
+	width: 1px;
+	background: var(--line);
+	pointer-events: none;
+}
+
+.plan-scrollbar-tick.is-year {
+	top: 0;
+	bottom: 0;
+	background: var(--input-border);
+}
+
+.plan-scrollbar-thumb {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	border-radius: 5px;
+	background: color-mix(in oklch, var(--ink) 22%, transparent);
+	cursor: grab;
+	touch-action: none;
+	transition: background 0.12s;
+}
+
+.plan-scrollbar-thumb:hover {
+	background: color-mix(in oklch, var(--ink) 34%, transparent);
+}
+
+.plan-scrollbar-thumb.is-dragging {
+	background: color-mix(in oklch, var(--ink) 42%, transparent);
+	cursor: grabbing;
+}
+
 /* ---- stopka: legenda albo miejsce upuszczenia ---- */
 
 .plan-footer {
