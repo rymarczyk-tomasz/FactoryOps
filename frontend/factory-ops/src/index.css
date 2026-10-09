@@ -302,9 +302,9 @@
 	right: var(--notice-right) !important;
 }
 
-/* plan: nad stopką z legendą; przy otwartym panelu zlecenia - obok niego */
+/* plan: nad stopką z legendą i paskiem przewijania; przy otwartym panelu zlecenia - obok niego */
 .app-main:has(.plan-footer) .notice-container {
-	--notice-bottom: calc(32px + 16px);
+	--notice-bottom: calc(32px + 17px + 16px);
 }
 
 .app-main:has(.details-panel) .notice-container {
