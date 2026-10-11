@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { layoutLanes } from './lanes';
+import { layoutLanes, overflowByDay } from './lanes';
 
 const span = (id: string, start: number, end: number) => ({ id, start, end });
 
@@ -25,5 +25,16 @@ describe('podwiersze zleceń bez maszyny', () => {
 		expect(Object.fromEntries(layout.lanes)).toEqual({ c: 0, a: 1, e: 0 });
 		expect(layout.overflow).toEqual([{ ids: ['b', 'd'], start: 0, end: 10 }]);
 		expect(layout.laneCount).toBe(3);
+	});
+});
+
+describe('nadmiar po dobach', () => {
+	const at = (day: number, hour: number) => new Date(2026, 9, day, hour).getTime();
+
+	it('zlecenie liczy się w każdej dobie (od 6:00), w którą wchodzi', () => {
+		expect(overflowByDay([span('a', at(12, 8), at(13, 10)), span('b', at(13, 7), at(13, 9)), span('c', at(14, 3), at(14, 5))])).toEqual([
+			{ day: at(12, 6), ids: ['a'] },
+			{ day: at(13, 6), ids: ['a', 'b', 'c'] }
+		]);
 	});
 });

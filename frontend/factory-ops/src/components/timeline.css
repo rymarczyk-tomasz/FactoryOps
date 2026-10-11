@@ -628,26 +628,30 @@
 	box-shadow: 0 0 0 3px var(--primary);
 }
 
-/* „+N” - nakładające się zlecenia bez maszyny, które nie zmieściły się w podwierszach */
+/* „+N” - nadmiarowe zlecenia bez maszyny tej doby: mały chip na środku kolumny dnia, klikalny tylko on */
 .plan-timeline .react-calendar-timeline .rct-item.more-item {
-	background: transparent !important;
-	border-width: 0 !important;
-	cursor: pointer;
-}
-
-.more-body {
-	position: absolute;
-	inset: 0 1px;
 	display: flex;
 	align-items: center;
-	padding: 0 8px;
-	border: 1px dashed var(--danger);
-	border-radius: 4px;
-	background: var(--surface);
-	font-family: var(--font-mono);
-	font-size: 12px;
+	justify-content: center;
+	background: transparent !important;
+	border-width: 0 !important;
+	pointer-events: none;
+}
+
+.more-chip {
+	padding: 1px 6px;
+	border-radius: 999px;
+	background: var(--danger-tint);
+	font-size: 11.5px;
 	font-weight: 600;
+	line-height: 1.4;
 	color: var(--danger-ink);
+	cursor: pointer;
+	pointer-events: auto;
+}
+
+.more-chip:hover {
+	background: color-mix(in oklch, var(--danger-tint), var(--danger) 12%);
 }
 
 /* konflikt: zlecenie linii i własne zlecenie jej maszyny w tym samym czasie */

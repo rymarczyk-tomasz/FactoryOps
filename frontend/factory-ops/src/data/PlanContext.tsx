@@ -7,7 +7,7 @@ import { newId } from '../domain/ids';
 import { applyLineDraft, applyMachineDraft, pendingBlocks, removeLine, removeMachine } from '../domain/machines';
 import { projectKey, withProjectColor } from '../domain/projects';
 import { addHours, nearestHourStart } from '../domain/shifts';
-import { Block, BlockDraft, DayOverride, Id, LineDraft, MachineDraft, PlanState } from '../domain/types';
+import { Block, BlockDraft, DayOverride, Id, LineDraft, MachineDraft, PlanState, ReadinessFlag } from '../domain/types';
 import { LocalStoragePlanRepository, PlanRepository } from './PlanRepository';
 import { useHourClock } from './useHourClock';
 
@@ -32,6 +32,16 @@ const orderName = (s: PlanState, id: Id) => {
 };
 /** „zlecenia” / „zleceń” po liczbie (2-4 zlecenia, 5 zleceń, 22 zlecenia, 12 zleceń). */
 const ordersWord = (n: number) => (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'zlecenia' : 'zleceń');
+
+/** Co zmieniła zmiana gotowości: „materiał gotowy”, „brak programu”; `undefined` - zmiana nie dotyczy gotowości. */
+const READINESS_TEXT: Record<ReadinessFlag, [string, string]> = {
+	materialReady: ['materiał gotowy', 'brak materiału'],
+	programReady: ['program gotowy', 'brak programu']
+};
+function readinessChange(patch: Partial<Block>): string | undefined {
+	const flags = (Object.keys(READINESS_TEXT) as ReadinessFlag[]).filter((flag) => patch[flag] !== undefined);
+	return flags.length ? flags.map((flag) => READINESS_TEXT[flag][patch[flag] ? 0 : 1]).join(' · ') : undefined;
+}
 
 /** Dopisek do komunikatu o usunięciu zasobu: ile zleceń trafiło do grupy „Bez maszyny”. */
 const detachedNotice = (s: PlanState, id: Id) => {
@@ -202,7 +212,10 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 						const block = blocks.find((b) => b.id === id);
 						return withProjectColor(sameBlocks(s.blocks, blocks) ? s : { ...s, blocks }, block ? projectKey(block) : '', color);
 					},
-					(before) => `Zapisano ${orderName(before, id)}`
+					(before) => {
+						const change = readinessChange(patch);
+						return change ? `${orderName(before, id)} · ${change}` : `Zapisano ${orderName(before, id)}`;
+					}
 				),
 			setProjectColor: (key, color) =>
 				apply(
@@ -212,7 +225,13 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 			updateBlocks: (ids, patch) =>
 				withBlocks(
 					(s) => ids.reduce((blocks, id) => schedule.updateBlock(blocks, id, patch, s, Date.now()), s.blocks),
-					() => (ids.length === 1 ? 'Zapisano 1 zlecenie' : `Zapisano ${ids.length} ${ordersWord(ids.length)}`)
+					(before) => {
+						const change = readinessChange(patch);
+						if (change && ids.length === 1) return `${orderName(before, ids[0])} · ${change}`;
+						const count = ids.length === 1 ? '1 zlecenie' : `${ids.length} ${ordersWord(ids.length)}`;
+						// „Materiał gotowy · 3 zlecenia”
+						return change ? `${change.charAt(0).toUpperCase()}${change.slice(1)} · ${count}` : `Zapisano ${count}`;
+					}
 				),
 			moveBlock: (id, start, machineId) =>
 				withBlocks(

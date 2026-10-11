@@ -181,17 +181,21 @@ const ListPage = () => {
 
 	const startBounds = useMemo(() => startRangeBounds(startRange, now), [startRange, now]);
 	// wszystkie filtry poza statusem i programistą - z tego liczymy liczniki zakładek i „Bez programisty”
-	const filtered = useMemo(() => {
+	// filtry poza maszyną - z tego liczy się też pigułka „Bez maszyny” (z pominięciem własnego filtra)
+	const filteredAnyMachine = useMemo(() => {
 		const q = query.trim().toLowerCase();
 		return source.filter(
 			(b) =>
 				(!q || [b.orderNo ?? '', b.projectNo, b.project, b.operation, orderLabel(b)].some((f) => f.toLowerCase().includes(q))) &&
-				(machineIds.length === 0 || machineIds.includes(b.machineId ?? NO_MACHINE)) &&
 				(projectNos.length === 0 || projectNos.includes(b.projectNo)) &&
 				(readiness.length === 0 || readiness.some((r) => matchesReadiness(b, r))) &&
 				(!startBounds || (b.start >= startBounds[0] && b.start < startBounds[1]))
 		);
-	}, [source, query, machineIds, projectNos, readiness, startBounds]);
+	}, [source, query, projectNos, readiness, startBounds]);
+	const filtered = useMemo(
+		() => (machineIds.length === 0 ? filteredAnyMachine : filteredAnyMachine.filter((b) => machineIds.includes(b.machineId ?? NO_MACHINE))),
+		[filteredAnyMachine, machineIds]
+	);
 
 	const statuses = useMemo(() => new Map(filtered.map((b) => [b.id, statusOf(b)])), [filtered, archived, now]); // eslint-disable-line react-hooks/exhaustive-deps
 	const tabCounts = useMemo(() => {
@@ -310,7 +314,18 @@ const ListPage = () => {
 
 	const unassignedOnly = programmerIds.length === 1 && programmerIds[0] === UNASSIGNED;
 	const noMachineOnly = machineIds.length === 1 && machineIds[0] === NO_MACHINE;
-	const noMachineCount = useMemo(() => state.blocks.filter((b) => b.machineId === null).length, [state.blocks]);
+	// w ramach bieżących filtrów (status, programista, projekt…), bez filtra maszyn - jak „Bez programisty”
+	const noMachineCount = useMemo(
+		() =>
+			filteredAnyMachine.filter(
+				(b) =>
+					b.machineId === null &&
+					(archived || inTab(statusTab, statusOf(b))) &&
+					(programmerIds.length === 0 || programmerIds.includes(b.programmerId ?? UNASSIGNED))
+			).length,
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[filteredAnyMachine, archived, statusTab, programmerIds, now]
+	);
 	const showOnPlan = (id: Id) => navigate('/', { state: { showBlock: id } satisfies PlanNavigationState });
 	// kilka zleceń: plan wyróżnia je jak wyniki wyszukiwania i przeskakuje między nimi strzałkami
 	const showManyOnPlan = (ids: Id[]) => navigate('/', { state: (ids.length === 1 ? { showBlock: ids[0] } : { showBlocks: ids }) satisfies PlanNavigationState });

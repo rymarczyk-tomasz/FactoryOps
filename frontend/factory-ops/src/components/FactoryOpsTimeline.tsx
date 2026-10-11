@@ -30,7 +30,7 @@ import {
 } from '../domain/calendar';
 import { formatDateTime, formatHours, orderLabel, programmerName, timelineLabel } from '../domain/format';
 import { subtractIntervals } from '../domain/conflicts';
-import { layoutLanes } from '../domain/lanes';
+import { layoutLanes, overflowByDay } from '../domain/lanes';
 import { blockStatus, previewMove } from '../domain/schedule';
 import { addHours, dayKey, isWeekend, nearestHourStart, shiftDayStart } from '../domain/shifts';
 import { Block, Breakdown, Id, Line, Machine, ReadinessFlag } from '../domain/types';
@@ -167,8 +167,8 @@ function renderItem({ item, itemContext, timelineContext, getItemProps }: ItemRe
 			return <div {...props} ref={ref} key={key} />;
 		case 'more':
 			return (
-				<div {...props} ref={ref} key={key} title={String(item.title ?? '')}>
-					<span className="more-body" style={labelStyle}>
+				<div {...props} ref={ref} key={key}>
+					<span className="more-chip mono" title={String(item.title ?? '')}>
 						{item.labels?.[0]}
 					</span>
 				</div>
@@ -522,8 +522,8 @@ const FactoryOpsTimeline = () => {
 	const select = (itemId: Id, e?: React.SyntheticEvent) => {
 		const id = String(itemId);
 		if (id.startsWith(MORE_PREFIX)) {
-			// „+N”: ukryte zlecenia trafiają na listę wyników po prawej
-			const more = unassignedLayout.overflow.find((o) => `${MORE_PREFIX}${o.start}` === id);
+			// „+N”: ukryte zlecenia tej doby trafiają na listę wyników po prawej
+			const more = overflowDays.find((o) => `${MORE_PREFIX}${o.day}` === id);
 			if (more) {
 				setQuery('');
 				setListPick(more.ids);
@@ -577,6 +577,10 @@ const FactoryOpsTimeline = () => {
 	const unassignedCount = unassignedBlocks.length;
 	// zlecenia bez maszyny trzymają ostatnie zaplanowane daty - nakładające się idą do podwierszy
 	const unassignedLayout = useMemo(() => layoutLanes(unassignedBlocks, UNASSIGNED_LANES), [unassignedBlocks]);
+	const overflowDays = useMemo(() => {
+		const hidden = new Set(unassignedLayout.overflow.flatMap((o) => o.ids));
+		return overflowByDay(unassignedBlocks.filter((b) => hidden.has(b.id)));
+	}, [unassignedLayout, unassignedBlocks]);
 	const conflicts = useLineConflicts();
 	const conflictIds = useMemo(() => new Set(conflicts.flatMap((c) => [c.lineBlockId, c.machineBlockId])), [conflicts]);
 	const conflictsByLine = useMemo(() => {
@@ -927,24 +931,25 @@ const FactoryOpsTimeline = () => {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [state.blocks, blockLooks, now, draggedId, selectedId, searching, matchIds, windowFrom, windowTo, visibleIds, conflictIds, monthView, pulseId, unassignedLayout]);
 
+	// jeden chip „+N” na dobę, na środku kolumny dnia w ostatnim podwierszu
 	const moreItems = useMemo<PlanItem[]>(
 		() =>
-			unassignedLayout.overflow.map(
+			overflowDays.map(
 				(more): PlanItem => ({
-					id: `${MORE_PREFIX}${more.start}`,
+					id: `${MORE_PREFIX}${more.day}`,
 					kind: 'more',
 					group: unassignedLaneRow(UNASSIGNED_LANES - 1),
-					title: `Jeszcze ${ordersLabel(more.ids.length)} w tym czasie - kliknij, żeby zobaczyć listę`,
+					title: `Jeszcze ${ordersLabel(more.ids.length)} tej doby - kliknij, żeby zobaczyć listę`,
 					labels: [`+${more.ids.length}`],
-					start_time: more.start,
-					end_time: more.end,
+					start_time: more.day,
+					end_time: addHours(more.day, 24),
 					canMove: false,
 					canResize: false,
 					canChangeGroup: false,
 					className: 'more-item'
 				})
 			),
-		[unassignedLayout]
+		[overflowDays]
 	);
 
 	// rozwinięta linia: na wierszach jej maszyn wyszarzone fragmenty zleceń linii - tam, gdzie maszyna nie ma
@@ -1144,7 +1149,7 @@ const FactoryOpsTimeline = () => {
 				<div className="search-field plan-search">
 					{picking ? (
 						<span className="pick-label" title="Zlecenia zaznaczone na liście - strzałki przechodzą między nimi">
-							{listPick.length} wybranych z listy
+							{listPick.length} z listy
 						</span>
 					) : (
 						<input

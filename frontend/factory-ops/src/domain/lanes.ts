@@ -1,3 +1,4 @@
+import { addHours, shiftDayStart } from './shifts';
 import { Id } from './types';
 
 interface Span {
@@ -60,4 +61,23 @@ export function layoutLanes(spans: Span[], maxLanes = 3): LaneLayout {
 	}
 	flush();
 	return { lanes, overflow, laneCount: Math.min(maxLanes, laneEnds.length) };
+}
+
+/** Nadmiarowe zlecenia jednej doby zakładu (od 6:00) - jeden chip „+N” na dobę. */
+export interface DayOverflow {
+	day: number;
+	ids: Id[];
+}
+
+/** Grupuje zlecenia po dobach, w które wchodzą (zlecenie przez kilka dób liczy się w każdej z nich). */
+export function overflowByDay(spans: Span[]): DayOverflow[] {
+	const days = new Map<number, Id[]>();
+	for (const span of spans) {
+		for (let day = shiftDayStart(span.start); day < span.end; day = addHours(day, 24)) {
+			const ids = days.get(day);
+			if (ids) ids.push(span.id);
+			else days.set(day, [span.id]);
+		}
+	}
+	return [...days].sort(([a], [b]) => a - b).map(([day, ids]) => ({ day, ids }));
 }
