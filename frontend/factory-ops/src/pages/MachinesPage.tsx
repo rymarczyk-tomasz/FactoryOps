@@ -8,7 +8,7 @@ import { loadByDay, ordersLabel, totalPercent } from '../components/planSelector
 import { usePlan } from '../data/PlanContext';
 import { isOngoing, lineMachines, lineOfMachine, standaloneMachines, workMode, WORK_MODE_LABELS } from '../domain/calendar';
 import { pendingBlocks } from '../domain/machines';
-import { shiftDayStart } from '../domain/shifts';
+import { hourStartAtOrBefore } from '../domain/shifts';
 import { Id, Line, Machine } from '../domain/types';
 import './MachinesPage.css';
 
@@ -22,7 +22,7 @@ type LineForm = { show: boolean; line?: Line };
 
 /** Mini-pasek obciążenia z procentem - neutralny; kolor ostrzegawczy jest tylko na mapie cieplnej Obciążenia. */
 const LoadBar = ({ percent, wide }: { percent: number | undefined; wide?: boolean }) => (
-	<span className={`machine-load ${wide ? 'is-wide' : ''}`} title={percent === undefined ? 'Brak czasu pracy w najbliższych dobach' : `Obciążenie ${LOAD_DAYS} dni od dziś 6:00`}>
+	<span className={`machine-load ${wide ? 'is-wide' : ''}`} title={percent === undefined ? 'Brak czasu pracy w najbliższych dobach' : `Obciążenie ${LOAD_DAYS} dni od teraz`}>
 		<span className="machine-load-bar">
 			<span style={{ width: `${percent ?? 0}%` }} />
 		</span>
@@ -86,7 +86,7 @@ const MachinesPage = () => {
 	}, [state.blocks]);
 	const blockCount = (id: Id) => counts.get(id) ?? 0;
 	const loads = useMemo(() => {
-		const days = loadByDay(state, now, shiftDayStart(now), LOAD_DAYS);
+		const days = loadByDay(state, now, hourStartAtOrBefore(now), LOAD_DAYS);
 		return new Map([...days].map(([id, d]) => [id, totalPercent(d)]));
 	}, [state, now]);
 	const downSince = useMemo(() => new Map(state.breakdowns.filter(isOngoing).map((b) => [b.machineId, b.start])), [state.breakdowns]);

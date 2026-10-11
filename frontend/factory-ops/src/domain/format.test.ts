@@ -18,6 +18,10 @@ describe('orderLabel', () => {
 		// bez numeru - nazwa projektu
 		expect(orderLabel({ projectNo: '', project: 'Huanyon', operation: 'Wirnik' })).toBe('Huanyon · Wirnik');
 	});
+
+	it('część podzielonego zlecenia ma numer części', () => {
+		expect(orderLabel({ projectNo: 'IMR-6001', project: 'Huanyon', operation: 'Wirnik', part: 2 })).toBe('IMR-6001 · Wirnik · cz. 2');
+	});
 });
 
 describe('formatClockSpan', () => {

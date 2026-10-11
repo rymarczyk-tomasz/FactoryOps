@@ -158,6 +158,14 @@ describe('linie i awarie', () => {
 		expect(removeBlock(withOwn, 'own', resources(), at(5, 6))[0].end).toBe(at(5, 16));
 	});
 
+	it('z rozpoczętego zlecenia linii zostaje tyle godzin, ile zrobiły jej maszyny', () => {
+		const planned = addBlock([], { ...draft(30, 'l1'), start: at(5, 6) }, 'line', resources(), at(5, 6));
+		// o 8:30 zrobione jest 6-9 na 3 maszynach = 9 h, na M1 przechodzi reszta: 21 h
+		const blocks = moveBlock(planned, 'line', at(6, 6), 'm1', resources(), at(5, 8, 30));
+		expect(blocks.find((b) => b.machineId === 'l1')).toMatchObject({ hours: 9, start: at(5, 6), end: at(5, 9), part: 1 });
+		expect(blocks.find((b) => b.machineId === 'm1')).toMatchObject({ hours: 21, start: at(6, 6), part: 2 });
+	});
+
 	it('podgląd przeniesienia na linię uwzględnia zlecenia jej maszyn', () => {
 		const blocks = [
 			...addBlock([], { ...draft(6, 'a'), start: at(5, 6) }, 'own', resources(), at(5, 6)),
@@ -261,6 +269,68 @@ describe('harmonogram', () => {
 	it('przypisanie do innej maszyny i zmiana maszyny w formularzu też zostawiają przerwę', () => {
 		expect(byId(assignBlock(plan(8, 8, 8), 'b1', 'm2', capacities, now), 'b2').start).toBe(at(5, 23));
 		expect(byId(updateBlock(plan(8, 8, 8), 'b1', { machineId: 'm2' }, capacities, now), 'b2').start).toBe(at(5, 23));
+	});
+
+	describe('przeniesienie rozpoczętego zlecenia', () => {
+		// o 10:20 b0 (7-15, 8 h) jest w toku - zrobione do 11:00 to 4 h
+		const during = at(5, 10, 20);
+		const parts = (blocks: Block[]) =>
+			blocks
+				.filter((b) => b.id.startsWith('b0'))
+				.sort((a, b) => (a.part ?? 0) - (b.part ?? 0))
+				.map(({ id, machineId, hours, start, end, part }) => ({ id, machineId, hours, start, end, part }));
+
+		it('zrobiona część zostaje na maszynie, przenosi się tylko reszta godzin', () => {
+			const blocks = moveBlock(plan(8, 8), 'b0', at(6, 7), 'm2', capacities, during);
+			expect(parts(blocks)).toEqual([
+				{ id: `b0@${at(5, 11)}`, machineId: 'm1', hours: 4, start: at(5, 7), end: at(5, 11), part: 1 },
+				{ id: 'b0', machineId: 'm2', hours: 4, start: at(6, 7), end: at(6, 11), part: 2 }
+			]);
+			// po zrobionej części zostaje przerwa, jak po każdym przeniesionym zleceniu
+			expect(byId(blocks, 'b1')).toMatchObject({ start: at(5, 15), pinnedStart: at(5, 15) });
+		});
+
+		it('na tej samej maszynie też - reszta idzie od nowego miejsca', () => {
+			const blocks = moveBlock(plan(8, 8), 'b0', at(6, 7), 'm1', capacities, during);
+			expect(parts(blocks).map((b) => [b.part, b.hours, b.start, b.end])).toEqual([
+				[1, 4, at(5, 7), at(5, 11)],
+				[2, 4, at(6, 7), at(6, 11)]
+			]);
+		});
+
+		it('kolejny podział dostaje następny numer części', () => {
+			const once = moveBlock(plan(8, 8), 'b0', at(5, 11), 'm2', capacities, during);
+			// o 12:30 z 4 h na M2 (11-15) zrobione są 2 h
+			const twice = moveBlock(once, 'b0', at(6, 7), 'm1', capacities, at(5, 12, 30));
+			expect(parts(twice).map((b) => [b.machineId, b.part, b.hours])).toEqual([
+				['m1', 1, 4],
+				['m2', 2, 2],
+				['m1', 3, 2]
+			]);
+		});
+
+		it('przypisanie do innej maszyny i formularz też dzielą zlecenie', () => {
+			expect(byId(assignBlock(plan(8, 8), 'b0', 'm2', capacities, during), 'b0')).toMatchObject({ machineId: 'm2', hours: 4, part: 2 });
+			// godziny z formularza to całe zlecenie - zrobione 4 h z 10 zostają, przenosi się 6 h
+			const edited = updateBlock(plan(8, 8), 'b0', { machineId: 'm2', hours: 10 }, capacities, during);
+			expect(parts(edited).map((b) => [b.machineId, b.hours])).toEqual([
+				['m1', 4],
+				['m2', 6]
+			]);
+		});
+
+		it('zlecenie, które się jeszcze nie zaczęło, przenosi się w całości', () => {
+			const blocks = moveBlock(plan(8, 8), 'b1', at(6, 7), 'm2', capacities, during);
+			expect(blocks).toHaveLength(2);
+			expect(byId(blocks, 'b1')).toMatchObject({ hours: 8, start: at(6, 7), end: at(6, 15) });
+			expect(byId(blocks, 'b1').part).toBeUndefined();
+		});
+
+		it('zmiana opisu rozpoczętego zlecenia go nie dzieli', () => {
+			const blocks = updateBlock(plan(8, 8), 'b0', { note: 'x', hours: 9 }, capacities, during);
+			expect(byId(blocks, 'b0')).toMatchObject({ hours: 9, start: at(5, 7), end: at(5, 16) });
+			expect(blocks).toHaveLength(2);
+		});
 	});
 
 	it('przerwa przed pierwszym zleceniem maszyny się nie liczy', () => {
