@@ -132,9 +132,8 @@ const AppRail = ({ onReset }: AppRailProps) => {
 										<span className="rail-breakdown-name mono">{machine}</span>
 										<span className="rail-breakdown-where">{line}</span>
 									</span>
-									<span className="rail-conflict-pair">
-										{blockName(conflict.lineBlockId)} ↔ {blockName(conflict.machineBlockId)}
-									</span>
+									<span className="rail-conflict-pair">{blockName(conflict.lineBlockId)}</span>
+									<span className="rail-conflict-pair">↔ {blockName(conflict.machineBlockId)}</span>
 									<span className="rail-breakdown-since">
 										{dateTimeFormat.format(conflict.from)} · {Math.round((conflict.to - conflict.from) / HOUR)} h
 									</span>
