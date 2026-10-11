@@ -6,8 +6,8 @@ const MOUSE: [ReactNode, string][] = [
 	['klik', 'szczegóły zlecenia w panelu obok planu'],
 	['Ctrl / Shift + klik', 'dołóż zlecenie do zaznaczenia - prawy klik na nim ustawia materiał i program dla wszystkich zaznaczonych'],
 	['dwuklik', 'na pustym miejscu - nowe zlecenie od tej godziny; na zleceniu - edycja'],
-	['przeciąganie', 'przeniesienie zlecenia w czasie lub na inny wiersz; zlecenie „Bez maszyny” upuść na wiersz, żeby je przypisać'],
-	['prawy klik na wierszu', 'nowe zlecenie od tej godziny, awaria maszyny, dzień pracujący / wolny'],
+	['przeciąganie', 'przeniesienie zlecenia w czasie lub na inny wiersz (w starym miejscu zostaje przerwa); zlecenie „Bez maszyny” upuść na wiersz, żeby je przypisać'],
+	['prawy klik na wierszu', 'nowe zlecenie od tej godziny, domknięcie przerwy, awaria maszyny, dzień pracujący / wolny'],
 	['prawy klik na zleceniu', 'to samo oraz „Materiał gotowy” i „Program gotowy”'],
 	['klik w dzień', 'w nagłówku planu - kalendarz dnia dla zakładu, linii i maszyn'],
 	['Shift + kółko', 'przewijanie planu w czasie (albo pasek pod planem)']

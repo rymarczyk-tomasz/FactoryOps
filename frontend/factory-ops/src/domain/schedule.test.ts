@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { capacityLookup, machineCalendar, machineDays, nonWorkingPeriods, nonWorkingSegments } from './calendar';
 import { CapacityAt, endAfterWork, firstProductiveHourFrom, IsWorkingHour, nearestHourStart, nextHourStart, roundUpHours, shiftDayStart } from './shifts';
-import { addBlock, assignBlock, blockStatus, compactMachine, moveBlock, previewMove, reflow, removeBlock, updateBlock } from './schedule';
+import { addBlock, assignBlock, blockStatus, closeGap, compactMachine, gapBefore, moveBlock, previewMove, reflow, removeBlock, updateBlock } from './schedule';
 import { Block, BlockDraft, Breakdown, Line, Machine, WorkCalendar } from './types';
 
 // 2026-10-05 to poniedziałek, 2026-10-10/11 to weekend
 const at = (day: number, hour: number, minute = 0) => new Date(2026, 9, day, hour, minute).getTime();
+const HOUR = 3600_000;
 const plant: WorkCalendar = { overrides: {} };
 const weekdays = machineCalendar(plant, { id: 'm1', name: 'M1' });
 const weekdayDays = machineDays(plant, { id: 'm1', name: 'M1' });
@@ -223,15 +224,48 @@ describe('harmonogram', () => {
 		expect(addBlock([], { ...draft(8), start: at(6, 10, 20) }, 'n', capacities, now)[0].start).toBe(at(6, 10));
 	});
 
-	it('usunięcie zlecenia cofa następne na jego miejsce', () => {
-		const blocks = removeBlock(plan(8, 8, 8), 'b1', capacities);
-		expect(startsById(blocks)).toEqual({ b0: at(5, 7), b2: at(5, 15) });
+	it('usunięcie zlecenia zostawia przerwę - następne trzymają swoje miejsce', () => {
+		const blocks = removeBlock(plan(8, 8, 8, 8), 'b1', capacities);
+		expect(startsById(blocks)).toEqual({ b0: at(5, 7), b2: at(5, 23), b3: at(6, 7) });
+		expect(byId(blocks, 'b2').pinnedStart).toBe(at(5, 23));
+		expect(gapBefore(blocks, 'b2')).toBe(8 * HOUR);
+		// kolejne zlecenia jadą dalej za b2, bez własnego terminu
+		expect(byId(blocks, 'b3').pinnedStart).toBeUndefined();
 	});
 
-	it('cofające się zlecenie nie trafia w przeszłość', () => {
-		// o 16:00 usuwamy b1 (15-23) - b2 nie może cofnąć się na 15:00, bo ta godzina już minęła
-		const blocks = removeBlock(plan(8, 8, 8), 'b1', capacities, at(5, 16));
-		expect(byId(blocks, 'b2').start).toBe(at(5, 16));
+	it('domknięcie przerwy dosuwa zlecenie i kolejne do poprzedniego', () => {
+		const blocks = closeGap(removeBlock(plan(8, 8, 8, 8), 'b1', capacities), 'b2', capacities);
+		expect(startsById(blocks)).toEqual({ b0: at(5, 7), b2: at(5, 15), b3: at(5, 23) });
+		expect(byId(blocks, 'b2').pinnedStart).toBeUndefined();
+		expect(gapBefore(blocks, 'b2')).toBe(0);
+	});
+
+	it('domykane zlecenie nie trafia w przeszłość', () => {
+		// o 16:00 domykamy przerwę po b1 (15-23) - b2 nie może cofnąć się na 15:00, bo ta godzina już minęła
+		const gap = removeBlock(plan(8, 8, 8), 'b1', capacities, at(5, 16));
+		expect(byId(gap, 'b2').start).toBe(at(5, 23));
+		expect(byId(closeGap(gap, 'b2', capacities, at(5, 16)), 'b2').start).toBe(at(5, 16));
+	});
+
+	it('przeniesienie na inną maszynę zostawia przerwę po zleceniu', () => {
+		const blocks = moveBlock(plan(8, 8, 8), 'b1', at(5, 7), 'm2', capacities);
+		expect(startsById(blocks.filter((b) => b.machineId === 'm1'))).toEqual({ b0: at(5, 7), b2: at(5, 23) });
+		expect(gapBefore(blocks, 'b2')).toBe(8 * HOUR);
+	});
+
+	it('przeniesienie na koniec kolejki zostawia przerwę w starym miejscu', () => {
+		const blocks = moveBlock(plan(8, 8, 8), 'b0', at(6, 7), 'm1', capacities);
+		expect(startsById(blocks)).toEqual({ b1: at(5, 15), b2: at(5, 23), b0: at(6, 7) });
+	});
+
+	it('przypisanie do innej maszyny i zmiana maszyny w formularzu też zostawiają przerwę', () => {
+		expect(byId(assignBlock(plan(8, 8, 8), 'b1', 'm2', capacities, now), 'b2').start).toBe(at(5, 23));
+		expect(byId(updateBlock(plan(8, 8, 8), 'b1', { machineId: 'm2' }, capacities, now), 'b2').start).toBe(at(5, 23));
+	});
+
+	it('przerwa przed pierwszym zleceniem maszyny się nie liczy', () => {
+		expect(gapBefore(plan(8), 'b0')).toBe(0);
+		expect(gapBefore(plan(8, 8), 'b1')).toBe(0);
 	});
 
 	it('rozpoczęte zlecenie nie cofa się po skróceniu poprzedniego', () => {

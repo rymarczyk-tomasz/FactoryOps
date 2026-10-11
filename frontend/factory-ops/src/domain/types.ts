@@ -100,7 +100,8 @@ export interface Block {
 	end: number;
 	/**
 	 * Termin, przed którym zlecenie nie startuje - ustawiany, gdy zlecenie postawiono celowo z przerwą
-	 * (np. czeka na materiał). Bez niego zlecenie „przykleja się” do poprzedniego i cofa się razem z kolejką.
+	 * (np. czeka na materiał) albo gdy poprzednie zlecenie usunięto lub przeniesiono - wtedy zostaje przerwa.
+	 * Bez niego zlecenie „przykleja się” do poprzedniego i cofa się razem z kolejką.
 	 */
 	pinnedStart?: number;
 	programmerId?: Id;

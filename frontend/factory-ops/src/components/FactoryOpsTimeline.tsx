@@ -1545,7 +1545,7 @@ const FactoryOpsTimeline = () => {
 				undoable
 				impact={
 					toDelete &&
-					(deleteImpact.length ? deleteImpact.map((line) => <div key={line}>{line}</div>) : 'Kolejne zlecenia nie przesuną się - nie ma ich albo mają terminy')
+					(deleteImpact.length ? deleteImpact.map((line) => <div key={line}>{line}</div>) : 'Kolejne zlecenia zostaną na swoich miejscach')
 				}
 				onConfirm={() => {
 					if (!toDelete) return;
@@ -1557,8 +1557,8 @@ const FactoryOpsTimeline = () => {
 					<>
 						Zlecenie <strong className="fw-medium">
 							<OrderName block={toDelete} />
-						</strong> ({toDelete.project}) zostanie usunięte z planu. Następne zlecenia na
-						maszynie cofną się na jego miejsce.
+						</strong> ({toDelete.project}) zostanie usunięte z planu. Na jego miejscu zostanie
+						przerwa - domkniesz ją przyciskiem „Domknij przerwę” w komunikacie, panelu zlecenia albo menu prawego przycisku.
 					</>
 				)}
 			</ConfirmModal>

@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { usePlan } from '../data/PlanContext';
 import { breakdownEnd, describeDay, effectiveDay, findLine, isOngoing, lineMachines, workMode, WORK_MODE_LABELS } from '../domain/calendar';
-import { formatDateTime } from '../domain/format';
+import { formatClockDuration, formatDateTime } from '../domain/format';
+import { gapBefore } from '../domain/schedule';
 import { addHours } from '../domain/shifts';
 import { Id } from '../domain/types';
 import { BreakdownModalTarget } from './BreakdownModal';
@@ -35,10 +36,12 @@ const hourFormat = new Intl.DateTimeFormat('pl-PL', { hour: '2-digit', minute: '
 const weekdayFormat = new Intl.DateTimeFormat('pl-PL', { weekday: 'short' });
 const HOUR = 3600_000;
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+/** „przerwy” / „przerw” po liczbie (2-4 przerwy, 5 przerw). */
+const gapsWord = (n: number) => (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'przerwy' : 'przerw');
 
 /** Menu prawego przycisku na wierszu planu: dodanie zlecenia, awarie maszyn wiersza i kalendarz dnia. */
 const RowContextMenu = ({ target, onAddBlock, onReportBreakdown, onOpenDay, onClose }: RowContextMenuProps) => {
-	const { state, now, endBreakdown, removeBreakdown, updateBlocks } = usePlan();
+	const { state, now, endBreakdown, removeBreakdown, updateBlocks, closeGap, compactMachine } = usePlan();
 	const ref = useRef<HTMLDivElement>(null);
 	const [position, setPosition] = useState({ left: target.x, top: target.y });
 
@@ -80,6 +83,13 @@ const RowContextMenu = ({ target, onAddBlock, onReportBreakdown, onOpenDay, onCl
 		.filter((b) => names.has(b.machineId) && (isOngoing(b) || (b.start < dayEnd && breakdownEnd(b, now) > target.day)))
 		.sort((a, b) => a.start - b.start);
 	const machineDown = machine !== undefined && breakdowns.some((b) => isOngoing(b));
+	// przerwy, które da się domknąć: przed zleceniem z terminem, które się jeszcze nie zaczęło
+	const rowBlocks = target.resourceId === null ? [] : state.blocks.filter((b) => b.machineId === target.resourceId).sort((a, b) => a.start - b.start);
+	const gaps = rowBlocks
+		.map((b) => ({ block: b, gap: b.pinnedStart !== undefined && b.start > now ? gapBefore(rowBlocks, b.id) : 0 }))
+		.filter((g) => g.gap > 0);
+	// kliknięto w przerwę - między końcem poprzedniego zlecenia a startem następnego
+	const clickedGap = gaps.find((g) => g.block.start > target.hour && g.block.start - g.gap <= target.hour);
 
 	const run = (action: () => void) => () => {
 		action();
@@ -138,6 +148,18 @@ const RowContextMenu = ({ target, onAddBlock, onReportBreakdown, onOpenDay, onCl
 					Dodaj zlecenie od {hourFormat.format(target.hour)}
 						<span className="row-menu-hint">dwuklik</span>
 					</button>
+					{clickedGap && (
+						<button type="button" role="menuitem" className="row-menu-item" onClick={run(() => closeGap(clickedGap.block.id))}>
+							Domknij tę przerwę
+							<span className="row-menu-hint">{formatClockDuration(clickedGap.gap)}</span>
+						</button>
+					)}
+					{gaps.length > (clickedGap ? 1 : 0) && (
+						<button type="button" role="menuitem" className="row-menu-item" onClick={run(() => compactMachine(target.resourceId!))}>
+							Domknij wszystkie przerwy
+							<span className="row-menu-hint">{gaps.length === 1 ? '1 przerwa' : `${gaps.length} ${gapsWord(gaps.length)}`}</span>
+						</button>
+					)}
 					{breakdowns.map((breakdown) => (
 						<div key={breakdown.id} className="row-menu-breakdown">
 							<span>
