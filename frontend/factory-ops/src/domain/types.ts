@@ -132,6 +132,12 @@ export interface WorkCalendar {
 	overrides: Record<string, DayOverride>;
 }
 
+/** Ustawienia projektu (klucz: numer projektu, np. IMR-6001). */
+export interface ProjectInfo {
+	/** Kolor wybrany przez planistę; brak - kolor z numeru projektu. */
+	color?: string;
+}
+
 export interface PlanState {
 	machines: Machine[];
 	lines: Line[];
@@ -141,4 +147,6 @@ export interface PlanState {
 	archive: ArchivedBlock[];
 	calendar: WorkCalendar;
 	breakdowns: Breakdown[];
+	/** Brak - dane zapisane przed dodaniem kolorów projektów. */
+	projects?: Record<string, ProjectInfo>;
 }

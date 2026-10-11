@@ -46,7 +46,7 @@ const BlockHoverCard = ({ block, anchor }: { block: Block; anchor: HoverAnchor }
 	return (
 		<div ref={ref} className={`hover-card ${position.visible ? 'is-visible' : ''}`} role="tooltip" style={{ left: position.left, top: position.top }}>
 			<div className="hover-card-head">
-				<span className="project-chip mono" style={projectColorVar(block.projectNo || block.project)}>
+				<span className="project-chip mono" style={projectColorVar(block, state.projects)}>
 					{block.projectNo}
 				</span>
 				<span className="hover-card-title">

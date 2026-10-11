@@ -4,7 +4,9 @@ import { breakdownEnd, findLine, isOngoing, lineMachines, lineOfMachine, resourc
 import { formatClockDuration, formatDateTime, formatHours, programmerName, STATUS_LABELS } from '../domain/format';
 import { blockStatus } from '../domain/schedule';
 import { Block, BlockStatus, Id } from '../domain/types';
-import { projectColorVar } from './projectColor';
+import { projectKey } from '../domain/projects';
+import ColorSwatches from './ColorSwatches';
+import { projectColor, projectColorVar } from './projectColor';
 import { READINESS } from './Readiness';
 
 /** Warianty Badge dla listy zleceń (do etapu 4 redesignu). */
@@ -33,7 +35,7 @@ interface BlockDetailsPanelProps {
 
 /** Panel zaznaczonego zlecenia - kolumna obok planu: szczegóły, awarie, programista, kolejka zasobu i akcje. */
 const BlockDetailsPanel = ({ block, onSelect, onEdit, onDelete, onShow, onClose }: BlockDetailsPanelProps) => {
-	const { state, now, updateBlock, assignBlock } = usePlan();
+	const { state, now, updateBlock, assignBlock, setProjectColor } = usePlan();
 	const line = findLine(state.lines, block.machineId);
 	const machine = state.machines.find((m) => m.id === block.machineId);
 	const unassigned = block.machineId === null;
@@ -54,7 +56,7 @@ const BlockDetailsPanel = ({ block, onSelect, onEdit, onDelete, onShow, onClose 
 		<aside className="details-panel" aria-label="Szczegóły zlecenia">
 			<header className="details-header">
 				<div className="details-header-row">
-					<span className="project-chip mono" style={projectColorVar(block.projectNo || block.project)}>
+					<span className="project-chip mono" style={projectColorVar(block, state.projects)}>
 						{block.projectNo}
 					</span>
 					<span className={`pill ${STATUS_PILLS[status]}`}>{STATUS_LABELS[status]}</span>
@@ -162,6 +164,15 @@ const BlockDetailsPanel = ({ block, onSelect, onEdit, onDelete, onShow, onClose 
 							))}
 						</Form.Select>
 					</dd>
+					<dt>Kolor</dt>
+					<dd>
+						<ColorSwatches
+							label={`Kolor projektu ${projectKey(block)}`}
+							value={projectColor(block, state.projects)}
+							onChange={(color) => setProjectColor(projectKey(block), color)}
+							size="sm"
+						/>
+					</dd>
 					<dt>Gotowość</dt>
 					<dd className="readiness-toggles">
 						{READINESS.map(({ flag, label, Icon }) => (
@@ -194,7 +205,7 @@ const BlockDetailsPanel = ({ block, onSelect, onEdit, onDelete, onShow, onClose 
 								key={b.id}
 								type="button"
 								className={`queue-item ${b.id === block.id ? 'is-current' : ''} ${blockStatus(b, now) === 'done' ? 'is-done' : ''}`}
-								style={projectColorVar(b.projectNo || b.project)}
+								style={projectColorVar(b, state.projects)}
 								aria-current={b.id === block.id}
 								onClick={() => onSelect(b.id)}>
 								<span className="queue-bar" />

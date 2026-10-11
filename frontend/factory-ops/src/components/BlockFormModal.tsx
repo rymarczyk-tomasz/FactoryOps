@@ -8,6 +8,8 @@ import { nearestHourStart } from '../domain/shifts';
 import { Block, BlockDraft, Id } from '../domain/types';
 import { machinesLabel, previewPlacement } from './planSelectors';
 import './modals.css';
+import ColorSwatches from './ColorSwatches';
+import { projectColor } from './projectColor';
 import Segmented from './Segmented';
 
 export interface BlockFormDefaults {
@@ -51,6 +53,8 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 	const [addedCount, setAddedCount] = useState(0);
 	/** Numer projektu, z którego uzupełniono nazwę - do czasu ręcznej zmiany nazwy. */
 	const [filledFrom, setFilledFrom] = useState<string>();
+	/** Kolor wybrany w formularzu; brak - kolor projektu (zapisany albo z numeru). */
+	const [pickedColor, setPickedColor] = useState<string>();
 	const {
 		register,
 		handleSubmit,
@@ -93,6 +97,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 		});
 		setAddedCount(0);
 		setFilledFrom(undefined);
+		setPickedColor(undefined);
 		// formularz ustawiamy tylko przy otwarciu, nie przy każdej zmianie planu
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [show]);
@@ -103,6 +108,10 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 	const start = watch('start');
 	const programmerId = watch('programmerId');
 	const operation = watch('operation');
+	const projectNo = watch('projectNo') ?? '';
+	const projectName = watch('project') ?? '';
+	// wpisany istniejący numer projektu od razu pokazuje jego kolor
+	const color = pickedColor ?? projectColor({ projectNo, project: projectName }, state.projects);
 	const line = findLine(state.lines, machineId);
 
 	/** Wybrany zasób w polu: nazwa mono + opis szary. */
@@ -220,6 +229,8 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 
 	/** Znany numer projektu od razu podpowiada jego nazwę. */
 	const fillProjectName = (projectNo: string) => {
+		// inny projekt - kolor znowu wynika z projektu, a nie z poprzedniego wyboru
+		setPickedColor(undefined);
 		const name = projectNames.get(projectNo.trim().toLowerCase());
 		if (!name) return;
 		if (getValues('project') !== name) setValue('project', name, { shouldValidate: true });
@@ -240,12 +251,14 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 				note: form.note.trim() || undefined,
 				start: form.startMode === 'manual' ? fromLocalInputValue(form.start) : undefined
 			};
+			// kolor zapisujemy na projekcie tylko wtedy, gdy planista go zmienił
+			const chosen = pickedColor !== undefined && pickedColor !== projectColor(draft, state.projects) ? pickedColor : undefined;
 			if (isEdit) {
-				updateBlock(block.id, { ...draft, start: draft.start ?? block.start });
+				updateBlock(block.id, { ...draft, start: draft.start ?? block.start }, chosen);
 				onHide();
 				return;
 			}
-			addBlock(draft);
+			addBlock(draft, chosen);
 			lastMachineId = draft.machineId;
 			if (!again) {
 				onHide();
@@ -253,6 +266,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 			}
 			// zostają: zamówienie, numer i nazwa projektu, maszyna, programista; czyścimy to, co dotyczy jednej operacji
 			reset({ ...form, operation: '', hours: '', note: '', startMode: 'queue', start: '' });
+			setPickedColor(undefined);
 			setAddedCount((n) => n + 1);
 			setTimeout(() => setFocus('operation'));
 		});
@@ -292,6 +306,10 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 							))}
 						</datalist>
 						<Form.Control.Feedback type="invalid">{errors.projectNo?.message}</Form.Control.Feedback>
+						<div className="form-swatches">
+							<span className="form-swatches-label">Kolor projektu</span>
+							<ColorSwatches label="Kolor projektu" value={color} onChange={setPickedColor} size="sm" />
+						</div>
 					</Form.Group>
 					<Form.Group controlId="project">
 						<Form.Label>Nazwa projektu</Form.Label>

@@ -761,9 +761,12 @@ const FactoryOpsTimeline = () => {
 	const draggedId = drag?.id;
 	const searching = query.trim() !== '' || listPick.length > 0;
 	// tło (z zakreskowanym czasem wolnym) i podpowiedź liczymy raz na zlecenie - przy przewijaniu tysięcy zleceń
-	// liczyłyby się od nowa; nowa pamięć po zmianie kalendarzy, linii lub programistów
-	// eslint-disable-next-line react-hooks/exhaustive-deps
-	const blockLooks = useMemo(() => new WeakMap<Block, { background: string; tooltip: string }>(), [state.calendar, state.machines, state.lines, state.programmers]);
+	// liczyłyby się od nowa; nowa pamięć po zmianie kalendarzy, linii, programistów lub kolorów projektów
+	const blockLooks = useMemo(
+		() => new WeakMap<Block, { background: string; tooltip: string }>(),
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[state.calendar, state.machines, state.lines, state.programmers, state.projects]
+	);
 	const blockItems = useMemo<PlanItem[]>(() => {
 		const calendars = calendarLookup(state);
 		const lines = new Map(state.lines.map((l) => [l.id, l]));
@@ -793,7 +796,7 @@ const FactoryOpsTimeline = () => {
 			(b) => (b.end > windowFrom && b.start < windowTo && (b.machineId === null || visibleIds.has(b.machineId))) || b.id === draggedId || b.id === selectedId
 		);
 		return shown.map((block) => {
-			const color = projectColor(block.projectNo || block.project);
+			const color = projectColor(block, state.projects);
 			const { tooltip, background } = look(block, color);
 			const status = blockStatus(block, now);
 			const progress = status === 'in_progress' ? Math.min(100, ((now - block.start) / (block.end - block.start)) * 100) : 0;

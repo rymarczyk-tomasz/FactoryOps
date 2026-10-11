@@ -424,7 +424,7 @@ const ListPage = () => {
 									)}
 								</span>
 								<span className="list-project">
-									<span className="project-chip mono" style={projectColorVar(block.projectNo || block.project)}>
+									<span className="project-chip mono" style={projectColorVar(block, state.projects)}>
 										{block.projectNo}
 									</span>
 									<span className="list-ellipsis">{block.project}</span>

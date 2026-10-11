@@ -5,6 +5,7 @@ import { formatDateTime } from '../domain/format';
 import * as schedule from '../domain/schedule';
 import { newId } from '../domain/ids';
 import { applyLineDraft, applyMachineDraft, pendingBlocks, removeLine, removeMachine } from '../domain/machines';
+import { projectKey, withProjectColor } from '../domain/projects';
 import { addHours, nearestHourStart } from '../domain/shifts';
 import { Block, BlockDraft, DayOverride, Id, LineDraft, MachineDraft, PlanState } from '../domain/types';
 import { LocalStoragePlanRepository, PlanRepository } from './PlanRepository';
@@ -66,8 +67,11 @@ export interface Notice {
 }
 
 interface PlanActions {
-	addBlock(draft: BlockDraft): Id;
-	updateBlock(id: Id, patch: Partial<Omit<Block, 'id' | 'end'>>): void;
+	/** `color` - kolor projektu wybrany w formularzu (zapisywany na projekcie, w tym samym kroku cofania). */
+	addBlock(draft: BlockDraft, color?: string): Id;
+	updateBlock(id: Id, patch: Partial<Omit<Block, 'id' | 'end'>>, color?: string): void;
+	/** Kolor projektu - zmienia wszystkie jego zlecenia. */
+	setProjectColor(key: string, color: string): void;
 	/** Ta sama zmiana dla kilku zleceń (np. przypisanie programisty) - jeden krok cofania. */
 	updateBlocks(ids: Id[], patch: Partial<Omit<Block, 'id' | 'end'>>): void;
 	moveBlock(id: Id, start: number, machineId: Id): void;
@@ -180,18 +184,27 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 
 	const actions = useMemo<Omit<PlanActions, 'undo'>>(
 		() => ({
-			addBlock(draft) {
+			addBlock(draft, color) {
 				const id = newId();
-				withBlocks(
-					(s) => schedule.addBlock(s.blocks, draft, id, s, Date.now()),
+				apply(
+					(s) => withProjectColor({ ...s, blocks: schedule.addBlock(s.blocks, draft, id, s, Date.now()) }, projectKey(draft), color),
 					(_, after) => `Dodano ${draft.orderNo} na ${machineName(after, draft.machineId)}`
 				);
 				return id;
 			},
-			updateBlock: (id, patch) =>
-				withBlocks(
-					(s) => schedule.updateBlock(s.blocks, id, patch, s, Date.now()),
+			updateBlock: (id, patch, color) =>
+				apply(
+					(s) => {
+						const blocks = schedule.updateBlock(s.blocks, id, patch, s, Date.now());
+						const block = blocks.find((b) => b.id === id);
+						return withProjectColor(sameBlocks(s.blocks, blocks) ? s : { ...s, blocks }, block ? projectKey(block) : '', color);
+					},
 					(before) => `Zapisano ${orderNo(before, id)}`
+				),
+			setProjectColor: (key, color) =>
+				apply(
+					(s) => withProjectColor(s, key, color),
+					() => `Zmieniono kolor projektu ${key}`
 				),
 			updateBlocks: (ids, patch) =>
 				withBlocks(

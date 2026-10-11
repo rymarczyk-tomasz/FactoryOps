@@ -137,6 +137,18 @@
 	gap: 16px 18px;
 }
 
+.form-swatches {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.form-swatches-label {
+	font-size: 12px;
+	color: var(--ink-3);
+}
+
 .form-grid .span-2 {
 	grid-column: 1 / -1;
 }
