@@ -1,4 +1,5 @@
 import React, { CSSProperties, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { List } from 'lucide-react';
 import { Button } from 'react-bootstrap';
 import Timeline, {
 	CustomHeader,
@@ -37,6 +38,7 @@ import BlockFormModal, { BlockFormDefaults } from './BlockFormModal';
 import BreakdownModal, { BreakdownModalTarget } from './BreakdownModal';
 import BlockHoverCard, { HoverAnchor } from './BlockHoverCard';
 import ConfirmModal from './ConfirmModal';
+import SearchResultsPanel from './SearchResultsPanel';
 import DayCalendarModal from './DayCalendarModal';
 import HelpModal from './HelpModal';
 import PageHeader from './PageHeader';
@@ -83,6 +85,8 @@ const FOOTER_HINTS: [string, string][] = [
 	['Shift + kółko', 'przewiń'],
 	['klik w dzień', 'kalendarz']
 ];
+/** Pulsowanie zlecenia klikniętego na liście wyników: 2 × 0,6 s. */
+const PULSE_MS = 1200;
 /** Obciążenie w wierszu planu: tyle dób od bieżącej. */
 const LOAD_DAYS = 7;
 /** Jak długo podświetla się wiersz po kliknięciu awarii w menu bocznym (z wygaszaniem). */
@@ -362,6 +366,15 @@ const FactoryOpsTimeline = () => {
 	const [dayForm, setDayForm] = useState<DayFormState>({ show: false });
 	const [toDelete, setToDelete] = useState<Block>();
 	const [helpOpen, setHelpOpen] = useState(false);
+	/** Lista wyników wyszukiwania w kolumnie po prawej (zamiast panelu zlecenia). */
+	const [resultsOpen, setResultsOpen] = useState(false);
+	/** Zlecenie kliknięte na liście wyników - mocniej podświetlone i pulsuje. */
+	const [pulseId, setPulseId] = useState<Id>();
+	useEffect(() => {
+		if (!pulseId) return;
+		const timer = setTimeout(() => setPulseId(undefined), PULSE_MS);
+		return () => clearTimeout(timer);
+	}, [pulseId]);
 	// liczone raz przy otwarciu potwierdzenia - przeliczenie planu bez zlecenia
 	const deleteImpact = useMemo(() => (toDelete ? removalImpact(state, toDelete.id, now) : []), [toDelete]); // eslint-disable-line react-hooks/exhaustive-deps
 	const [rowMenu, setRowMenu] = useState<RowMenuTarget>();
@@ -496,8 +509,9 @@ const FactoryOpsTimeline = () => {
 	};
 	const selectedIds = useMemo(() => [...multiSelected, ...(selectedId ? [selectedId] : [])], [multiSelected, selectedId]);
 
-	// panel zlecenia zwęża plan - biblioteka przelicza szerokość tylko przy zmianie rozmiaru okna
-	const panelOpen = selected !== undefined;
+	// panel zlecenia (albo lista wyników) zwęża plan - biblioteka przelicza szerokość tylko przy zmianie rozmiaru okna
+	const showResults = resultsOpen && (query.trim() !== '' || listPick.length > 0);
+	const panelOpen = selected !== undefined || showResults;
 	useLayoutEffect(() => {
 		window.dispatchEvent(new Event('resize'));
 	}, [panelOpen]);
@@ -825,6 +839,7 @@ const FactoryOpsTimeline = () => {
 				status === 'done' && 'is-done',
 				status === 'unassigned' && 'is-unassigned',
 				conflictIds.has(block.id) && 'is-conflict',
+				block.id === pulseId && 'is-pulse',
 				block.id === draggedId && 'dragging-block',
 				searching && (matchIds.has(block.id) ? 'search-match' : 'dimmed')
 			].filter(Boolean);
@@ -854,7 +869,7 @@ const FactoryOpsTimeline = () => {
 			};
 		});
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [state.blocks, blockLooks, now, draggedId, selectedId, searching, matchIds, windowFrom, windowTo, visibleIds, conflictIds, monthView]);
+	}, [state.blocks, blockLooks, now, draggedId, selectedId, searching, matchIds, windowFrom, windowTo, visibleIds, conflictIds, monthView, pulseId]);
 
 	// rozwinięta linia: na wierszach jej maszyn wyszarzone fragmenty zleceń linii - tam, gdzie maszyna nie ma
 	// własnego zlecenia, awarii ani czasu wolnego, czyli faktycznie pracuje na linię
@@ -1084,6 +1099,15 @@ const FactoryOpsTimeline = () => {
 							</button>
 							<button type="button" className="search-step" disabled={!matches.length} onClick={() => jumpToMatch(matchIndex + 1)} aria-label="Następne">
 								›
+							</button>
+							<button
+								type="button"
+								className={`search-step ${resultsOpen ? 'active' : ''}`}
+								aria-pressed={resultsOpen}
+								aria-label="Lista wyników"
+								title="Lista wyników"
+								onClick={() => setResultsOpen((open) => !open)}>
+								<List size={14} aria-hidden="true" />
 							</button>
 							{picking && (
 								<button type="button" className="search-step" onClick={() => setListPick([])} aria-label="Zakończ wyróżnianie zleceń z listy" title="Zakończ">
@@ -1379,7 +1403,22 @@ const FactoryOpsTimeline = () => {
 					</footer>
 				</div>
 
-				{selected && (
+				{showResults && (
+					<SearchResultsPanel
+						title={picking ? 'Wybrane z listy' : 'Wyniki'}
+						results={matches}
+						activeId={selectedId}
+						onPick={(block, index) => {
+							setMatchIndex(index);
+							setSelectedId(block.id);
+							showBlock(block);
+							setScrollToRow(block.machineId ?? UNASSIGNED_ROW);
+							setPulseId(block.id);
+						}}
+						onClose={() => setResultsOpen(false)}
+					/>
+				)}
+				{selected && !showResults && (
 					<BlockDetailsPanel
 						block={selected}
 						onSelect={setSelectedId}

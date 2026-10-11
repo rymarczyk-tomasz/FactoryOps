@@ -146,6 +146,16 @@
 	color: var(--ink-2);
 }
 
+.search-step {
+	display: inline-grid;
+	place-items: center;
+}
+
+.search-step.active {
+	background: var(--seg-bg);
+	color: var(--ink);
+}
+
 .search-step:hover:not(:disabled) {
 	background: var(--hover);
 }
@@ -1176,4 +1186,58 @@
 	--bs-btn-color: oklch(0.48 0.16 25);
 	--bs-btn-hover-color: var(--danger-ink);
 	--bs-btn-hover-bg: var(--danger-tint);
+}
+
+/* lista wyników wyszukiwania - w miejscu panelu zlecenia, węższa */
+.details-panel.results-panel {
+	width: 300px;
+}
+
+.results-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 16px 16px 12px 20px;
+	border-bottom: 1px solid oklch(0.93 0.006 255);
+}
+
+.results-title {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--ink);
+}
+
+.results-list {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 8px 10px;
+	overflow-y: auto;
+	scrollbar-width: thin;
+}
+
+.results-more {
+	margin: 8px;
+	font-size: 12px;
+	color: var(--ink-3);
+}
+
+/* zlecenie kliknięte na liście wyników: ramka 2 px i dwa pulsy */
+@keyframes block-pulse {
+	0%,
+	100% {
+		box-shadow: 0 0 0 2px var(--primary);
+	}
+	50% {
+		box-shadow:
+			0 0 0 2px var(--primary),
+			0 0 0 7px color-mix(in oklch, var(--primary) 25%, transparent);
+	}
+}
+
+.plan-timeline .rct-item.plan-block.is-pulse .plan-block-body {
+	box-shadow: 0 0 0 2px var(--primary);
+	animation: block-pulse 0.6s ease-in-out 2;
 }
