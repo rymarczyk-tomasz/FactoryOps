@@ -39,9 +39,9 @@ export function formatClockSpan(start: number, end: number): string {
 	return `${label(start)} → ${label(end)}`;
 }
 
-/** Nazwa zlecenia na planie, liście i w komunikatach: „IMR-6001 · Stopień 3”. */
-export function orderLabel(block: Pick<Block, 'projectNo' | 'project' | 'operation'>): string {
-	return [projectKey(block), block.operation.trim()].filter(Boolean).join(' · ');
+/** Nazwa zlecenia na planie, liście i w komunikatach: „IMR-6001 · Stopień 3”, część podzielonego: „IMR-6001 · Stopień 3 · cz. 2”. */
+export function orderLabel(block: Pick<Block, 'projectNo' | 'project' | 'operation' | 'part'>): string {
+	return [projectKey(block), block.operation.trim(), block.part ? `cz. ${block.part}` : ''].filter(Boolean).join(' · ');
 }
 
 export function programmerName(programmer: Programmer | undefined): string {

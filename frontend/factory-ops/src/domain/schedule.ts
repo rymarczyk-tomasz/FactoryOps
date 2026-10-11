@@ -1,5 +1,5 @@
 import { capacityLookup, CapacityLookup, PlanResources } from './calendar';
-import { CapacityAt, endAfterWork, firstProductiveHourFrom, nearestHourStart } from './shifts';
+import { addHours, CapacityAt, endAfterWork, firstProductiveHourFrom, hourStartAtOrBefore, nearestHourStart } from './shifts';
 import { Block, BlockDraft, BlockStatus, Id } from './types';
 
 const HOUR = 3600_000;
@@ -112,6 +112,28 @@ function keepGapAfter(blocks: Block[], id: Id, now?: number): Block[] {
 	return blocks.map((b) => (b === next ? { ...b, pinnedStart: b.start } : b));
 }
 
+/**
+ * Rozpoczęte zlecenie `id` schodzi ze swojego miejsca: zrobiona część (do najbliższej pełnej godziny od `now`)
+ * zostaje na maszynie jako osobne zlecenie, a dalej idzie tylko reszta godzin - z następnym numerem części.
+ * Zlecenie, które się jeszcze nie zaczęło albo już się kończy, zostaje bez zmian.
+ */
+function splitStarted(blocks: Block[], id: Id, resources: PlanResources, now?: number): Block[] {
+	const block = blocks.find((b) => b.id === id);
+	if (!block || block.machineId === null || now === undefined) return blocks;
+	const floor = hourStartAtOrBefore(now);
+	const cut = floor < now ? addHours(floor, 1) : floor;
+	if (block.start >= cut || block.end <= cut) return blocks;
+	const others = blocks.filter((b) => b.id !== id);
+	const capacityAt = capacityLookup(resources, now, others)(block.machineId);
+	let done = 0;
+	for (let h = block.start; h < cut; h = addHours(h, 1)) done += capacityAt(h);
+	if (done <= 0 || done >= block.hours) return blocks;
+	const part = block.part ?? 1;
+	// id zrobionej części jest stałe dla danej godziny podziału - podgląd przeciągania i zapis dają to samo
+	const donePart: Block = { ...block, id: `${block.id}@${cut}`, hours: done, end: cut, part };
+	return [...blocks.map((b) => (b === block ? { ...b, hours: block.hours - done, part: part + 1 } : b)), donePart];
+}
+
 /** Przerwa (ms) przed zleceniem - od końca poprzedniego zlecenia tej samej maszyny lub linii; 0 - brak przerwy albo pierwsze w kolejce. */
 export function gapBefore(blocks: Block[], id: Id): number {
 	const block = blocks.find((b) => b.id === id);
@@ -145,15 +167,17 @@ export function updateBlock(
 	const start = patch.start !== undefined ? nearestHourStart(patch.start) : undefined;
 	// nowe miejsce tylko przy zmianie startu lub maszyny - sama zmiana godzin czy opisu nie rusza terminu
 	const moved = current && ((start !== undefined && start !== current.start) || (patch.machineId !== undefined && patch.machineId !== current.machineId));
-	// miejsce po przeniesionym zleceniu zostaje puste
-	const updated = (moved ? keepGapAfter(blocks, id, now) : blocks).map((b) => (b.id === id ? { ...b, ...patch, start: start ?? b.start } : b));
+	// miejsce po przeniesionym zleceniu zostaje puste; z rozpoczętego przenosi się tylko reszta godzin
+	const withHours = patch.hours === undefined ? blocks : blocks.map((b) => (b.id === id ? { ...b, hours: patch.hours! } : b));
+	const prepared = moved ? keepGapAfter(splitStarted(withHours, id, resources, now), id, now) : blocks;
+	const updated = prepared.map((b) => (b.id === id ? { ...b, ...patch, hours: moved ? b.hours : (patch.hours ?? b.hours), start: start ?? b.start } : b));
 	const scope = [current?.machineId, patch.machineId].filter((m): m is Id => typeof m === 'string');
 	return reflow(updated, resources, moved ? { id } : undefined, now, scope);
 }
 
 export function moveBlock(blocks: Block[], id: Id, start: number, machineId: Id, resources: PlanResources, now?: number): Block[] {
 	const from = blocks.find((b) => b.id === id)?.machineId;
-	const updated = keepGapAfter(blocks, id, now).map((b) => (b.id === id ? { ...b, start: nearestHourStart(start), machineId } : b));
+	const updated = keepGapAfter(splitStarted(blocks, id, resources, now), id, now).map((b) => (b.id === id ? { ...b, start: nearestHourStart(start), machineId } : b));
 	// zlecenie bez maszyny upuszczone na wiersz dostaje maszynę
 	return reflow(updated, resources, { id, attachWithin: ATTACH_WITHIN_HOURS }, now, from ? [from, machineId] : [machineId]);
 }
@@ -164,7 +188,7 @@ export function assignBlock(blocks: Block[], id: Id, machineId: Id, resources: P
 	if (!current || current.machineId === machineId) return blocks;
 	const others = blocks.filter((b) => b.id !== id);
 	const start = queueEnd(others, machineId, resources, now);
-	const updated = keepGapAfter(blocks, id, now).map((b) => (b.id === id ? { ...b, machineId, start } : b));
+	const updated = keepGapAfter(splitStarted(blocks, id, resources, now), id, now).map((b) => (b.id === id ? { ...b, machineId, start } : b));
 	return reflow(updated, resources, { id, attachWithin: Infinity }, now, [current.machineId, machineId].filter((m): m is Id => m !== null));
 }
 

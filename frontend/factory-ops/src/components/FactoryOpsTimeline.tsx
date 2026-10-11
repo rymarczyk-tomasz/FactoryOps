@@ -32,7 +32,7 @@ import { formatDateTime, formatHours, orderLabel, programmerName, timelineLabel 
 import { subtractIntervals } from '../domain/conflicts';
 import { layoutLanes, overflowByDay } from '../domain/lanes';
 import { blockStatus, previewMove } from '../domain/schedule';
-import { addHours, dayKey, isWeekend, nearestHourStart, shiftDayStart } from '../domain/shifts';
+import { addHours, dayKey, hourStartAtOrBefore, isWeekend, nearestHourStart, shiftDayStart } from '../domain/shifts';
 import { Block, Breakdown, Id, Line, Machine, ReadinessFlag } from '../domain/types';
 import BlockDetailsPanel from './BlockDetailsPanel';
 import BlockFormModal, { BlockFormDefaults } from './BlockFormModal';
@@ -768,9 +768,9 @@ const FactoryOpsTimeline = () => {
 		return group?.machine || group?.line ? group.id : undefined;
 	};
 
-	// obciążenie każdego zasobu w najbliższych dobach (od 6:00 bieżącej) - mini-pasek w wierszu planu
+	// obciążenie każdego zasobu w najbliższych dobach od bieżącej godziny (to, co minęło, już się nie zmieni) - mini-pasek w wierszu planu
 	const loadByResource = useMemo(() => {
-		const days = loadByDay(state, now, shiftDayStart(now), LOAD_DAYS);
+		const days = loadByDay(state, now, hourStartAtOrBefore(now), LOAD_DAYS);
 		return new Map([...days].map(([id, loads]) => [id, totalPercent(loads)]));
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [state.blocks, state.lines, state.machines, state.calendar, state.breakdowns, now]);
@@ -1334,7 +1334,7 @@ const FactoryOpsTimeline = () => {
 								}
 								const load = loadByResource.get(group.id);
 								const loadBar = (
-									<span className="row-load" title={load === undefined ? 'Brak czasu pracy w najbliższych dobach' : `Obciążenie ${LOAD_DAYS} dni od dziś 6:00`}>
+									<span className="row-load" title={load === undefined ? 'Brak czasu pracy w najbliższych dobach' : `Obciążenie ${LOAD_DAYS} dni od teraz`}>
 										<span className="row-load-bar">
 											<span style={{ width: `${load ?? 0}%` }} />
 										</span>
