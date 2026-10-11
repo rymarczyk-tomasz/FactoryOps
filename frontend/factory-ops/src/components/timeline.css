@@ -862,19 +862,43 @@
 	background: var(--danger);
 }
 
-/* podpowiedzi w jednym wierszu - gdy brakuje miejsca, ostatnie przechodzą do ukrytego drugiego wiersza */
+/* skróty w jednym wierszu - gdy brakuje miejsca, ostatnie przechodzą do ukrytego drugiego wiersza */
 .legend-hints {
 	flex: 1;
 	min-width: 0;
 	display: flex;
 	flex-wrap: wrap;
 	justify-content: flex-end;
-	column-gap: 18px;
-	height: 16px;
-	line-height: 16px;
+	column-gap: 20px;
+	height: 20px;
+	line-height: 20px;
 	overflow: hidden;
-	font-size: 11.5px;
+	font-size: 12px;
+	color: var(--ink-2);
+}
+
+/* para: klawisz + opis; między parami kropka w połowie odstępu */
+.legend-hint {
+	position: relative;
+	white-space: nowrap;
+}
+
+.legend-hint + .legend-hint::before {
+	content: '·';
+	position: absolute;
+	left: -12px;
 	color: var(--ink-3);
+}
+
+.legend-hint kbd {
+	padding: 1px 5px;
+	border-radius: 4px;
+	background: var(--seg-bg);
+	font-family: var(--font-mono);
+	font-size: 11.5px;
+	font-weight: 500;
+	color: var(--ink);
+	box-shadow: none;
 }
 
 .drop-info {

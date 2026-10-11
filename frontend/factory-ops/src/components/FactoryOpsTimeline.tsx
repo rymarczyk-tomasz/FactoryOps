@@ -70,6 +70,19 @@ const AUTO_SCROLL_EDGE = 70;
 /** Co ile ms i o jaką część widocznego zakresu (przy samej krawędzi) przewija się plan. */
 const AUTO_SCROLL_INTERVAL = 50;
 const AUTO_SCROLL_STEP = 0.02;
+/**
+ * Skróty w stopce, od najważniejszych - gdy brakuje miejsca, znikają od końca (pełna lista jest w ściągawce „?”).
+ */
+const FOOTER_HINTS: [string, string][] = [
+	['dwuklik', 'nowe zlecenie'],
+	['prawy klik', 'menu'],
+	['/', 'szukaj'],
+	['Ctrl+Z', 'cofnij'],
+	['?', 'ściągawka'],
+	['przeciągnij', 'przenieś'],
+	['Shift + kółko', 'przewiń'],
+	['klik w dzień', 'kalendarz']
+];
 /** Obciążenie w wierszu planu: tyle dób od bieżącej. */
 const LOAD_DAYS = 7;
 /** Jak długo podświetla się wiersz po kliknięciu awarii w menu bocznym (z wygaszaniem). */
@@ -1354,12 +1367,12 @@ const FactoryOpsTimeline = () => {
 								<span className="legend-item">
 									<span className="legend-swatch swatch-breakdown" /> awaria
 								</span>
-								<span className="legend-hints mono">
-									<span>dwuklik · nowe zlecenie</span>
-									<span>prawy klik · menu</span>
-									<span>/ · szukaj</span>
-									<span>Ctrl+Z · cofnij</span>
-									<span>? · ściągawka</span>
+								<span className="legend-hints">
+									{FOOTER_HINTS.map(([keys, text]) => (
+										<span key={keys} className="legend-hint">
+											<kbd>{keys}</kbd> {text}
+										</span>
+									))}
 								</span>
 							</>
 						)}
