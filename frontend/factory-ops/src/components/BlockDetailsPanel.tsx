@@ -1,7 +1,7 @@
 import { Button, Form } from 'react-bootstrap';
 import { usePlan } from '../data/PlanContext';
 import { breakdownEnd, findLine, isOngoing, lineOfMachine, resourceName } from '../domain/calendar';
-import { formatDateTime, formatHours, programmerName, STATUS_LABELS } from '../domain/format';
+import { formatClockDuration, formatDateTime, formatHours, programmerName, STATUS_LABELS } from '../domain/format';
 import { blockStatus } from '../domain/schedule';
 import { Block, BlockStatus, Id } from '../domain/types';
 import { projectColorVar } from './projectColor';
@@ -97,10 +97,10 @@ const BlockDetailsPanel = ({ block, onSelect, onEdit, onDelete, onShow, onClose 
 						{line && <span className="text-secondary"> · {line.machineIds.length} maszyny</span>}
 						{parentLine && <span className="text-secondary"> · z {parentLine.name}</span>}
 					</dd>
-					<dt>Czas pracy</dt>
+					<dt>Czas techn.</dt>
 					<dd title={line ? `${formatHours(block.hours)} pracy jednej maszyny; linia dzieli zlecenie między ${line.machineIds.length} maszyny` : undefined}>
 						{formatHours(block.hours)}
-						{line && <span className="text-secondary"> · na planie {Math.round((block.end - block.start) / HOUR)} h</span>}
+						<span className="text-secondary"> · na planie {formatClockDuration(block.end - block.start)}</span>
 					</dd>
 					<dt>Start</dt>
 					<dd className="mono details-time">{formatDateTime(block.start)}</dd>

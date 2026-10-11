@@ -3,7 +3,7 @@ import { Button, Form, Modal } from 'react-bootstrap';
 import { useForm } from 'react-hook-form';
 import { usePlan } from '../data/PlanContext';
 import { findLine, lineMachines, lineOfMachine, resourceName, standaloneMachines } from '../domain/calendar';
-import { formatDateTime, formatHours, fromLocalInputValue, programmerName, toLocalInputValue } from '../domain/format';
+import { formatClockDuration, formatClockSpan, formatDateTime, fromLocalInputValue, programmerName, toLocalInputValue } from '../domain/format';
 import { nearestHourStart } from '../domain/shifts';
 import { Block, BlockDraft, Id } from '../domain/types';
 import { machinesLabel, previewPlacement } from './planSelectors';
@@ -105,18 +105,6 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 	const operation = watch('operation');
 	const line = findLine(state.lines, machineId);
 
-	/** Podpowiedź pod polem godzin: na linii czas dzieli się między maszyny (bez awarii, z dokładnością do godziny). */
-	const hoursHint = (): ReactNode => {
-		if (!(hours > 0)) return ' ';
-		if (!line) return <>Na planie: <b>{formatHours(hours)}</b></>;
-		const units = Math.max(1, line.machineIds.length);
-		return (
-			<>
-				Linia, {machinesLabel(units)}: ok. <b>{Math.ceil(hours / units)} h na planie</b>, gdy pracują wszystkie
-			</>
-		);
-	};
-
 	/** Wybrany zasób w polu: nazwa mono + opis szary. */
 	const resourceValue = () => {
 		if (!machineId) return <span className="select-display-placeholder">— wybierz —</span>;
@@ -130,7 +118,38 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 		);
 	};
 
-	/** Podgląd terminu: ta sama logika co przy zapisie, liczona na szkicu. */
+	/** Gdzie wyląduje zlecenie: ta sama logika co przy zapisie, liczona na szkicu. */
+	const placement = useMemo(() => {
+		if (!show || !machineId || !(hours >= 0.5)) return undefined;
+		const manual = startMode === 'manual';
+		if (manual && !start) return undefined;
+		const draft: BlockDraft = {
+			...(block ?? { orderNo: '', projectNo: '', project: '', operation: '' }),
+			machineId,
+			hours,
+			start: manual ? fromLocalInputValue(start) : undefined
+		};
+		const placed = previewPlacement(state, isEdit ? { ...draft, start: draft.start ?? block.start } : draft, now, block?.id);
+		return placed && { ...placed, requested: draft.start ?? block?.start };
+	}, [show, state, now, block, isEdit, machineId, startMode, start, hours]);
+
+	/**
+	 * Podpowiedź pod polem godzin: godziny technologiczne → czas zegarowy na planie (koniec minus start po ułożeniu
+	 * planu), czyli z czasem wolnym, awariami i - na linii - podziałem między pracujące maszyny.
+	 */
+	const hoursHint = (): ReactNode => {
+		if (!(hours > 0)) return ' ';
+		const work = `${String(hours).replace('.', ',')} h pracy`;
+		const onLine = line ? ` · linia, ${machinesLabel(line.machineIds.length)}` : '';
+		if (!placement) return `${work}${onLine}`;
+		return (
+			<>
+				{work} → na planie <b>{formatClockDuration(placement.end - placement.start)} zegarowo</b> ({formatClockSpan(placement.start, placement.end)}){onLine}
+			</>
+		);
+	};
+
+	/** Podgląd terminu pod formularzem. */
 	const preview = useMemo((): ReactNode => {
 		if (!show || !machineId) return undefined;
 		const name = resourceName(state, machineId);
@@ -146,18 +165,12 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 				`${name} · podaj czas pracy, żeby zobaczyć termin`
 			);
 		}
-		const draft: BlockDraft = {
-			...(block ?? { orderNo: '', projectNo: '', project: '', operation: '' }),
-			machineId,
-			hours,
-			start: manual ? fromLocalInputValue(start) : undefined
-		};
-		const placed = previewPlacement(state, isEdit ? { ...draft, start: draft.start ?? block.start } : draft, now, block?.id);
+		const placed = placement;
 		if (!placed) return name;
 		const { after, before } = placed;
 		if (manual || isEdit) {
 			// wpisana godzina zajęta albo poza czasem pracy - bez wyjaśnienia inny start wyglądałby jak błąd
-			const requested = nearestHourStart(draft.start ?? block!.start);
+			const requested = nearestHourStart(placed.requested!);
 			const sameDay = new Date(requested).toDateString() === new Date(placed.start).toDateString();
 			const at = (ms: number) => (sameDay ? timeFormat.format(ms) : formatDateTime(ms));
 			const busyBy = after && after.end > requested ? after : undefined;
@@ -203,7 +216,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 				start {formatDateTime(placed.start)} → koniec {formatDateTime(placed.end)}
 			</>
 		);
-	}, [show, state, now, block, isEdit, machineId, startMode, start, hours]);
+	}, [show, state, machineId, startMode, start, hours, placement, isEdit]);
 
 	/** Znany numer projektu od razu podpowiada jego nazwę. */
 	const fillProjectName = (projectNo: string) => {
@@ -358,7 +371,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 						{errors.machineId && <Form.Control.Feedback type="invalid" className="d-block">{errors.machineId.message}</Form.Control.Feedback>}
 					</Form.Group>
 					<Form.Group controlId="hours">
-						<Form.Label>Czas pracy jednej maszyny</Form.Label>
+						<Form.Label>Czas technologiczny (h)</Form.Label>
 						<div className="field-addon">
 							<Form.Control
 								type="number"
