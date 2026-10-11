@@ -6,20 +6,25 @@ import BlockFormModal from '../components/BlockFormModal';
 import MultiSelect, { MultiSelectOption } from '../components/MultiSelect';
 import PageHeader from '../components/PageHeader';
 import { READINESS } from '../components/Readiness';
+import SaveViewModal from '../components/SaveViewModal';
+import StartRangeFilter from '../components/StartRangeFilter';
 import { NARROW_SCREEN, useMediaQuery } from '../components/useMediaQuery';
 import { PlanNavigationState } from '../components/planNavigation';
 import { projectColorVar } from '../components/projectColor';
+import { ListFilters, ListView, loadListViews, saveListViews } from '../data/listViews';
 import { usePlan } from '../data/PlanContext';
 import { ARCHIVE_AFTER_DAYS } from '../domain/archive';
 import { lineMachines, resourceName, standaloneMachines } from '../domain/calendar';
 import { formatDateTime, formatHours, orderLabel, programmerName, STATUS_LABELS, toLocalInputValue } from '../domain/format';
+import { compareByLevels, SortLevel, StartRange, startRangeBounds, toggleSortLevel } from '../domain/listView';
 import { blockStatus } from '../domain/schedule';
 import { ArchivedBlock, Block, BlockStatus, Id, Programmer } from '../domain/types';
 import './ListPage.css';
 import Segmented from '../components/Segmented';
 
-type SortKey = 'start' | 'orderNo' | 'projectNo' | 'operation' | 'machine' | 'hours' | 'status';
-type Sort = { key: SortKey; direction: 1 | -1 };
+type SortKey = 'start' | 'projectNo' | 'operation' | 'machine' | 'hours' | 'status';
+const SORT_LABELS: Record<SortKey, string> = { start: 'start', projectNo: 'projekt', operation: 'zlecenie', machine: 'zasób', hours: 'czas', status: 'status' };
+const DEFAULT_SORT: SortLevel<SortKey>[] = [{ key: 'start', direction: 1 }];
 
 /** Tyle wierszy pokazujemy naraz - plan może mieć tysiące zleceń. */
 const PAGE_SIZE = 200;
@@ -38,6 +43,36 @@ const READINESS_FILTERS: MultiSelectOption[] = [
 	{ value: 'noProgram', label: 'Brak programu' },
 	{ value: 'ready', label: 'Materiał i program gotowe' }
 ];
+/** Wbudowany widok: zlecenia bez programisty, które startują w ciągu 14 dni - po maszynach, potem po starcie. */
+const BUILT_IN_VIEWS: ListView[] = [
+	{
+		id: 'builtin:to-program',
+		name: 'Do zaprogramowania · 14 dni',
+		filters: {
+			statusTab: 'planned',
+			machineIds: [],
+			projectNos: [],
+			programmerIds: [UNASSIGNED],
+			readiness: [],
+			startRange: { preset: 'twoWeeks' },
+			sort: [
+				{ key: 'machine', direction: 1 },
+				{ key: 'start', direction: 1 }
+			]
+		}
+	}
+];
+const DEFAULT_FILTERS: ListFilters = {
+	statusTab: 'active',
+	machineIds: [],
+	projectNos: [],
+	programmerIds: [],
+	readiness: [],
+	startRange: { preset: 'all' },
+	sort: DEFAULT_SORT
+};
+const START_LABELS: Record<StartRange['preset'], string> = { all: '', today: 'start dziś', week: 'start +7 dni', twoWeeks: 'start +14 dni', custom: 'start: własny zakres' };
+
 const matchesReadiness = (b: Block, filter: string) =>
 	(filter as ReadinessFilter) === 'noMaterial' ? !b.materialReady : filter === 'noProgram' ? !b.programReady : !!b.materialReady && !!b.programReady;
 
@@ -92,7 +127,10 @@ const ListPage = () => {
 	const [projectNos, setProjectNos] = useState<string[]>([]);
 	const [programmerIds, setProgrammerIds] = useState<string[]>([]);
 	const [readiness, setReadiness] = useState<string[]>([]);
-	const [sort, setSort] = useState<Sort>({ key: 'start', direction: 1 });
+	const [sort, setSort] = useState<SortLevel<SortKey>[]>(DEFAULT_SORT);
+	const [startRange, setStartRange] = useState<StartRange>({ preset: 'all' });
+	const [views, setViews] = useState<ListView[]>(loadListViews);
+	const [savingView, setSavingView] = useState(false);
 	const [archived, setArchived] = useState(false);
 	const [selectedIds, setSelectedIds] = useState<Set<Id>>(() => new Set());
 	const [creating, setCreating] = useState(false);
@@ -141,6 +179,7 @@ const ListPage = () => {
 	const statusOf = (b: Block): BlockStatus => (archived ? 'done' : blockStatus(b, now));
 	const nameOf = (b: ListBlock) => b.machineName ?? (b.machineId === null ? 'Bez maszyny' : (machineNames.get(b.machineId) ?? ''));
 
+	const startBounds = useMemo(() => startRangeBounds(startRange, now), [startRange, now]);
 	// wszystkie filtry poza statusem i programistą - z tego liczymy liczniki zakładek i „Bez programisty”
 	const filtered = useMemo(() => {
 		const q = query.trim().toLowerCase();
@@ -149,9 +188,10 @@ const ListPage = () => {
 				(!q || [b.orderNo ?? '', b.projectNo, b.project, b.operation, orderLabel(b)].some((f) => f.toLowerCase().includes(q))) &&
 				(machineIds.length === 0 || machineIds.includes(b.machineId ?? NO_MACHINE)) &&
 				(projectNos.length === 0 || projectNos.includes(b.projectNo)) &&
-				(readiness.length === 0 || readiness.some((r) => matchesReadiness(b, r)))
+				(readiness.length === 0 || readiness.some((r) => matchesReadiness(b, r))) &&
+				(!startBounds || (b.start >= startBounds[0] && b.start < startBounds[1]))
 		);
-	}, [source, query, machineIds, projectNos, readiness]);
+	}, [source, query, machineIds, projectNos, readiness, startBounds]);
 
 	const statuses = useMemo(() => new Map(filtered.map((b) => [b.id, statusOf(b)])), [filtered, archived, now]); // eslint-disable-line react-hooks/exhaustive-deps
 	const tabCounts = useMemo(() => {
@@ -169,19 +209,15 @@ const ListPage = () => {
 					: key === 'operation'
 						? orderLabel(block)
 						: ((block[key] ?? '') as string | number);
+		const compare = compareByLevels(sort, sortValue);
 		return filtered
 			.filter((b) => (archived || inTab(statusTab, statuses.get(b.id)!)) && (programmerIds.length === 0 || programmerIds.includes(b.programmerId ?? UNASSIGNED)))
-			.sort((a, b) => {
-				const x = sortValue(a, sort.key);
-				const y = sortValue(b, sort.key);
-				const order = typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'pl', { numeric: true });
-				return order * sort.direction || a.start - b.start;
-			});
+			.sort((a, b) => compare(a, b) || a.start - b.start);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [filtered, statuses, archived, statusTab, programmerIds, sort, machineNames]);
 
 	// po zmianie filtrów lub sortowania znowu pokazujemy pierwszą porcję wierszy
-	const pageKey = JSON.stringify([archived, query, statusTab, machineIds, projectNos, programmerIds, readiness, sort]);
+	const pageKey = JSON.stringify([archived, query, statusTab, machineIds, projectNos, programmerIds, readiness, startRange, sort]);
 	const [page, setPage] = useState({ key: pageKey, limit: PAGE_SIZE });
 	const limit = page.key === pageKey ? page.limit : PAGE_SIZE;
 	const shown = rows.slice(0, limit);
@@ -215,17 +251,62 @@ const ListPage = () => {
 		});
 	const clearSelection = () => setSelectedIds(new Set());
 
-	const toggleSort = (key: SortKey) => setSort((s) => (s.key === key ? { key, direction: s.direction === 1 ? -1 : 1 } : { key, direction: 1 }));
-	const sortHeader = (key: SortKey, label: string, className = '') => (
-		<button
-			type="button"
-			className={`list-sort ${sort.key === key ? 'is-sorted' : ''} ${className}`}
-			aria-sort={sort.key === key ? (sort.direction === 1 ? 'ascending' : 'descending') : 'none'}
-			onClick={() => toggleSort(key)}>
-			{label}
-			{sort.key === key && <span className="sort-arrow">{sort.direction === 1 ? '▲' : '▼'}</span>}
-		</button>
-	);
+	// klik - sortowanie po jednej kolumnie, Shift+klik - kolejny poziom (numer poziomu widać przy strzałce)
+	const sortHeader = (key: SortKey, label: string, className = '') => {
+		const index = sort.findIndex((l) => l.key === key);
+		const level = sort[index];
+		return (
+			<button
+				type="button"
+				className={`list-sort ${level ? 'is-sorted' : ''} ${className}`}
+				aria-sort={level ? (level.direction === 1 ? 'ascending' : 'descending') : 'none'}
+				title="Klik: sortuj · Shift+klik: dodaj kolejny poziom sortowania"
+				onMouseDown={(e) => e.shiftKey && e.preventDefault()}
+				onClick={(e) => setSort((current) => toggleSortLevel(current, key, e.shiftKey))}>
+				{label}
+				{level && (
+					<span className="sort-arrow">
+						{sort.length > 1 && <span className="sort-level">{index + 1}</span>}
+						{level.direction === 1 ? '▲' : '▼'}
+					</span>
+				)}
+			</button>
+		);
+	};
+
+	// --- zapisane widoki: filtry i sortowanie pod nazwą, w tej przeglądarce ---
+	const currentFilters: ListFilters = { statusTab, machineIds, projectNos, programmerIds, readiness, startRange, sort };
+	const sameFilters = (a: ListFilters, b: ListFilters) => JSON.stringify(a) === JSON.stringify(b);
+	const allViews = [...BUILT_IN_VIEWS, ...views];
+	const activeView = allViews.find((v) => sameFilters(v.filters, currentFilters));
+	const isDefault = sameFilters(currentFilters, DEFAULT_FILTERS);
+	const applyView = (filters: ListFilters) => {
+		setStatusTab(filters.statusTab as StatusTab);
+		setMachineIds(filters.machineIds);
+		setProjectNos(filters.projectNos);
+		setProgrammerIds(filters.programmerIds);
+		setReadiness(filters.readiness);
+		setStartRange(filters.startRange);
+		setSort(filters.sort as SortLevel<SortKey>[]);
+		clearSelection();
+	};
+	const storeViews = (next: ListView[]) => {
+		setViews(next);
+		saveListViews(next);
+	};
+	/** Opis zapisywanego widoku: „Zaplanowane · bez programisty · start +14 dni · sortuj: zasób, start”. */
+	const filtersSummary = () =>
+		[
+			STATUS_TABS.find((t) => t.key === statusTab)?.label,
+			machineIds.length > 0 && `maszyny: ${machineIds.length}`,
+			projectNos.length > 0 && `projekty: ${projectNos.join(', ')}`,
+			unassignedOnly ? 'bez programisty' : programmerIds.length > 0 && `programiści: ${programmerIds.length}`,
+			readiness.length > 0 && READINESS_FILTERS.filter((r) => readiness.includes(r.value)).map((r) => r.label.toLowerCase()).join(' lub '),
+			START_LABELS[startRange.preset],
+			`sortuj: ${sort.map((l) => SORT_LABELS[l.key]).join(', ')}`
+		]
+			.filter(Boolean)
+			.join(' · ');
 
 	const unassignedOnly = programmerIds.length === 1 && programmerIds[0] === UNASSIGNED;
 	const noMachineOnly = machineIds.length === 1 && machineIds[0] === NO_MACHINE;
@@ -306,6 +387,38 @@ const ListPage = () => {
 				<Button onClick={() => setCreating(true)}>Nowe zlecenie</Button>
 			</PageHeader>
 
+			<div className="list-views" role="group" aria-label="Zapisane widoki">
+				<span className={`view-pill ${isDefault ? 'active' : ''}`}>
+					<button type="button" className="view-pill-name" aria-pressed={isDefault} onClick={() => applyView(DEFAULT_FILTERS)}>
+						Wszystkie zlecenia
+					</button>
+				</span>
+				{allViews.map((view) => {
+					const builtIn = view.id.startsWith('builtin:');
+					const active = view === activeView;
+					return (
+						<span key={view.id} className={`view-pill ${active ? 'active' : ''} ${builtIn ? '' : 'is-removable'}`}>
+							<button type="button" className="view-pill-name" aria-pressed={active} onClick={() => applyView(view.filters)}>
+								{view.name}
+							</button>
+							{!builtIn && (
+								<button
+									type="button"
+									className="view-pill-remove"
+									aria-label={`Usuń widok ${view.name}`}
+									title="Usuń widok"
+									onClick={() => storeViews(views.filter((v) => v.id !== view.id))}>
+									×
+								</button>
+							)}
+						</span>
+					);
+				})}
+				<button type="button" className="view-save" disabled={activeView !== undefined || isDefault} onClick={() => setSavingView(true)}>
+					+ Zapisz widok
+				</button>
+			</div>
+
 			<div className="list-filters">
 				{archived ? (
 					<span className="list-archive-note">Archiwum · zlecenia zakończone ponad {ARCHIVE_AFTER_DAYS} dni temu, tylko do wglądu</span>
@@ -329,6 +442,7 @@ const ListPage = () => {
 				<MultiSelect id="filterProject" label="Projekt" allLabel="wszystkie" options={projectOptions} selected={projectNos} onChange={setProjectNos} />
 				<MultiSelect id="filterProgrammer" label="Programista" allLabel="wszyscy" options={programmerOptions} selected={programmerIds} onChange={setProgrammerIds} />
 				<MultiSelect id="filterReadiness" label="Gotowość" allLabel="wszystkie" options={READINESS_FILTERS} selected={readiness} onChange={setReadiness} />
+				<StartRangeFilter value={startRange} onChange={setStartRange} />
 				<span className="list-filters-extra">
 					{!archived && (noMachineCount > 0 || noMachineOnly) && (
 						<button
@@ -553,6 +667,12 @@ const ListPage = () => {
 			</div>
 
 			<BlockFormModal show={creating} onHide={() => setCreating(false)} />
+			<SaveViewModal
+				show={savingView}
+				summary={filtersSummary()}
+				onSave={(name) => storeViews([...views, { id: `view:${Date.now()}`, name, filters: currentFilters }])}
+				onHide={() => setSavingView(false)}
+			/>
 		</>
 	);
 };

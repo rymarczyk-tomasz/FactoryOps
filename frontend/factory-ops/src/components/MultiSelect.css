@@ -170,3 +170,24 @@
 	font-weight: 500;
 	color: var(--ink);
 }
+
+/* filtr dat startu: presety jak opcje, własny zakres pod nimi */
+.check-box.is-radio {
+	border-radius: 50%;
+	font-size: 8px;
+}
+
+.start-range-custom {
+	display: flex;
+	gap: 8px;
+	padding: 8px 10px 10px;
+	border-top: 1px solid var(--line-2);
+}
+
+.start-range-custom label {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	font-size: 11.5px;
+	color: var(--ink-3);
+}
