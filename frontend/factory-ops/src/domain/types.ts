@@ -73,7 +73,7 @@ export interface Programmer {
 	surname: string;
 }
 
-/** Jeden bloczek pracy na maszynie (np. jeden stopień / operacja zamówienia). */
+/** Jeden bloczek pracy na maszynie (jeden stopień / detal projektu). */
 export interface Block {
 	id: Id;
 	/**
@@ -90,6 +90,7 @@ export interface Block {
 	projectNo: string;
 	/** Nazwa projektu, np. Huanyon. */
 	project: string;
+	/** Stopień / detal, np. „Stopień 3”, „Wirnik” (w UI nie „operacja” - kojarzyła się z procesem). */
 	operation: string;
 	/** Godziny pracy jednej maszyny z przewodnika; linia dzieli je między pracujące maszyny. Plan liczy pełne godziny. */
 	hours: number;

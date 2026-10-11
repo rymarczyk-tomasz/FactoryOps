@@ -158,38 +158,6 @@
 	color: var(--ink-2);
 }
 
-.quick-chips {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 4px;
-	margin-top: 6px;
-}
-
-.quick-chip {
-	padding: 1px 8px;
-	border: none;
-	border-radius: 999px;
-	background: oklch(0.96 0.006 255);
-	font-size: 11.5px;
-	color: oklch(0.4 0.02 260);
-	transition: background var(--transition-fast);
-}
-
-.quick-chip:hover {
-	background: oklch(0.92 0.01 255);
-	color: var(--ink);
-}
-
-.quick-chip.active {
-	background: var(--primary);
-	color: #fff;
-}
-
-.quick-chip:focus-visible {
-	outline: 2px solid var(--accent);
-	outline-offset: 2px;
-}
-
 .form-preview {
 	display: flex;
 	align-items: center;

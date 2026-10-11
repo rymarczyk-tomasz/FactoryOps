@@ -239,7 +239,7 @@ const ListPage = () => {
 		const header = [
 			'Start',
 			'Koniec',
-			'Operacja',
+			'Stopień / detal',
 			'Nr projektu',
 			'Projekt',
 			'Nr zamówienia',

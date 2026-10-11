@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { usePlan } from '../data/PlanContext';
 import { findLine, lineMachines, lineOfMachine, resourceName, standaloneMachines } from '../domain/calendar';
 import { formatClockDuration, formatClockSpan, formatDateTime, fromLocalInputValue, orderLabel, programmerName, toLocalInputValue } from '../domain/format';
+import { projectKey, projectOperations } from '../domain/projects';
 import { nearestHourStart } from '../domain/shifts';
 import { Block, BlockDraft, Id } from '../domain/types';
 import { machinesLabel, previewPlacement } from './planSelectors';
@@ -40,8 +41,6 @@ interface BlockForm {
 
 /** Maszyna z ostatnio dodanego zlecenia - Adam zwykle wpisuje kilka zleceń na tę samą maszynę. */
 let lastMachineId: Id | undefined;
-/** Ile operacji podpowiadać chipami pod polem. */
-const RECENT_OPERATIONS = 5;
 const timeFormat = new Intl.DateTimeFormat('pl-PL', { hour: '2-digit', minute: '2-digit' });
 
 const uniqueSorted = (values: string[]) => [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pl'));
@@ -70,12 +69,6 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 	const projectNos = useMemo(() => uniqueSorted(state.blocks.map((b) => b.projectNo)), [state.blocks]);
 	/** Nazwa projektu po numerze - z ostatniego zlecenia tego projektu. */
 	const projectNames = useMemo(() => new Map(state.blocks.filter((b) => b.projectNo).map((b) => [b.projectNo.toLowerCase(), b.project])), [state.blocks]);
-	const operations = useMemo(() => uniqueSorted(state.blocks.map((b) => b.operation)), [state.blocks]);
-	/** Operacje z najpóźniej zaplanowanych zleceń - zwykle te, które wpisuje się teraz. */
-	const recentOperations = useMemo(
-		() => [...new Set([...state.blocks].sort((a, b) => b.start - a.start).map((b) => b.operation))].filter(Boolean).slice(0, RECENT_OPERATIONS),
-		[state.blocks]
-	);
 
 	useEffect(() => {
 		if (!show) return;
@@ -105,11 +98,12 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 	const machineId = watch('machineId');
 	const start = watch('start');
 	const programmerId = watch('programmerId');
-	const operation = watch('operation');
 	const projectNo = watch('projectNo') ?? '';
 	const projectName = watch('project') ?? '';
 	// wpisany istniejący numer projektu od razu pokazuje jego kolor
 	const color = pickedColor ?? projectColor({ projectNo, project: projectName }, state.projects);
+	/** Stopnie / detale już wpisane w tym projekcie. */
+	const operations = useMemo(() => projectOperations(state.blocks, projectKey({ projectNo, project: projectName })), [state.blocks, projectNo, projectName]);
 	const line = findLine(state.lines, machineId);
 
 	/** Wybrany zasób w polu: nazwa mono + opis szary. */
@@ -235,7 +229,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 		setFilledFrom(projectNo.trim());
 	};
 
-	/** `again` - zapisz i zostań w formularzu, żeby wpisać kolejną operację tego samego zamówienia. */
+	/** `again` - zapisz i zostań w formularzu, żeby wpisać kolejny stopień tego samego projektu. */
 	const submit = (again: boolean) =>
 		handleSubmit((form) => {
 			const draft: BlockDraft = {
@@ -263,7 +257,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 				onHide();
 				return;
 			}
-			// zostają: zamówienie, numer i nazwa projektu, maszyna, programista; czyścimy to, co dotyczy jednej operacji
+			// zostają: numer i nazwa projektu, maszyna, programista; czyścimy to, co dotyczy jednego stopnia
 			reset({ ...form, operation: '', hours: '', note: '', startMode: 'queue', start: '' });
 			setPickedColor(undefined);
 			setAddedCount((n) => n + 1);
@@ -330,28 +324,20 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 						{errors.project && <Form.Control.Feedback type="invalid" className="d-block">{errors.project.message}</Form.Control.Feedback>}
 					</Form.Group>
 					<Form.Group controlId="operation">
-						<Form.Label>Operacja / stopień</Form.Label>
-						<Form.Control list="operationSuggestions" autoComplete="off" {...register('operation', required)} isInvalid={!!errors.operation} />
+						<Form.Label>Stopień / detal</Form.Label>
+						<Form.Control
+							list="operationSuggestions"
+							autoComplete="off"
+							placeholder="np. Stopień 3, Wirnik"
+							{...register('operation', required)}
+							isInvalid={!!errors.operation}
+						/>
 						<datalist id="operationSuggestions">
 							{operations.map((o) => (
 								<option key={o} value={o} />
 							))}
 						</datalist>
 						<Form.Control.Feedback type="invalid">{errors.operation?.message}</Form.Control.Feedback>
-						{recentOperations.length > 0 && (
-							<div className="quick-chips" aria-label="Ostatnio używane operacje">
-								{recentOperations.map((o) => (
-									<button
-										key={o}
-										type="button"
-										className={`quick-chip ${o === operation?.trim() ? 'active' : ''}`}
-										aria-pressed={o === operation?.trim()}
-										title={`Wpisz „${o}”`} onClick={() => setValue('operation', o, { shouldValidate: true })}>
-										{o}
-									</button>
-								))}
-							</div>
-						)}
 					</Form.Group>
 					<Form.Group controlId="machineId">
 						<Form.Label>Linia / maszyna</Form.Label>
