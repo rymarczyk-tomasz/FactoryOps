@@ -60,6 +60,16 @@
 	transition: background var(--transition-fast);
 }
 
+/* „?” w pasku planu - ściągawka */
+.help-button {
+	width: 34px;
+	height: 34px;
+	border-radius: 50%;
+	font-family: var(--font-mono);
+	font-weight: 600;
+	color: var(--ink-2);
+}
+
 .icon-button:hover {
 	background: var(--hover);
 }

@@ -38,6 +38,7 @@ import BreakdownModal, { BreakdownModalTarget } from './BreakdownModal';
 import BlockHoverCard, { HoverAnchor } from './BlockHoverCard';
 import ConfirmModal from './ConfirmModal';
 import DayCalendarModal from './DayCalendarModal';
+import HelpModal from './HelpModal';
 import PageHeader from './PageHeader';
 import PlanScrollbar from './PlanScrollbar';
 import { loadByDay, removalImpact, totalPercent } from './planSelectors';
@@ -347,6 +348,7 @@ const FactoryOpsTimeline = () => {
 	const [breakdownForm, setBreakdownForm] = useState<BreakdownFormState>({ show: false });
 	const [dayForm, setDayForm] = useState<DayFormState>({ show: false });
 	const [toDelete, setToDelete] = useState<Block>();
+	const [helpOpen, setHelpOpen] = useState(false);
 	// liczone raz przy otwarciu potwierdzenia - przeliczenie planu bez zlecenia
 	const deleteImpact = useMemo(() => (toDelete ? removalImpact(state, toDelete.id, now) : []), [toDelete]); // eslint-disable-line react-hooks/exhaustive-deps
 	const [rowMenu, setRowMenu] = useState<RowMenuTarget>();
@@ -606,6 +608,11 @@ const FactoryOpsTimeline = () => {
 			if (isTyping(e.target) || document.querySelector('.modal.show, .row-menu')) return;
 			if (e.key === 'Escape' && document.querySelector('.hover-card')) {
 				hideHover();
+				return;
+			}
+			if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+				e.preventDefault();
+				setHelpOpen(true);
 				return;
 			}
 			if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -1077,6 +1084,9 @@ const FactoryOpsTimeline = () => {
 						</span>
 					)}
 				</div>
+				<button type="button" className="icon-button help-button" aria-label="Jak to działa" title="Jak to działa (?)" onClick={() => setHelpOpen(true)}>
+					?
+				</button>
 				<Button variant="outline-danger" onClick={() => setBreakdownForm({ show: true, target: {} })}>
 					Zgłoś awarię
 				</Button>
@@ -1345,12 +1355,11 @@ const FactoryOpsTimeline = () => {
 									<span className="legend-swatch swatch-breakdown" /> awaria
 								</span>
 								<span className="legend-hints mono">
-									<span>Shift + kółko · przewiń</span>
 									<span>dwuklik · nowe zlecenie</span>
-									<span>prawy klik · awaria / dzień</span>
-									<span>klik w dzień · kalendarz</span>
+									<span>prawy klik · menu</span>
 									<span>/ · szukaj</span>
 									<span>Ctrl+Z · cofnij</span>
+									<span>? · ściągawka</span>
 								</span>
 							</>
 						)}
@@ -1383,6 +1392,7 @@ const FactoryOpsTimeline = () => {
 			)}
 			<BlockFormModal show={form.show} block={form.block} defaults={form.defaults} onHide={() => setForm((f) => ({ ...f, show: false }))} />
 			<BreakdownModal show={breakdownForm.show} target={breakdownForm.target} onHide={() => setBreakdownForm((f) => ({ ...f, show: false }))} />
+			<HelpModal show={helpOpen} onHide={() => setHelpOpen(false)} />
 			<DayCalendarModal show={dayForm.show} day={dayForm.day} onHide={() => setDayForm((f) => ({ ...f, show: false }))} />
 			<ConfirmModal
 				show={toDelete !== undefined}

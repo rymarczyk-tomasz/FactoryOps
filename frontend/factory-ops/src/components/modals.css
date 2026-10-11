@@ -630,3 +630,82 @@
 	background: oklch(0.97 0.006 255);
 	font-size: 13px;
 }
+
+/* ściągawka „Jak to działa” */
+.help-body {
+	display: flex;
+	flex-direction: column;
+	gap: 22px;
+}
+
+.help-body .section-label {
+	display: block;
+	margin: 0 0 10px;
+}
+
+.help-kbd {
+	display: inline-block;
+	padding: 1px 5px;
+	border-radius: 4px;
+	background: var(--seg-bg);
+	font-family: var(--font-mono);
+	font-size: 12px;
+	color: var(--ink);
+	white-space: nowrap;
+	box-shadow: none;
+	font-weight: 500;
+}
+
+.help-list {
+	display: grid;
+	grid-template-columns: max-content minmax(0, 1fr);
+	gap: 8px 16px;
+	margin: 0;
+	font-size: 13.5px;
+}
+
+.help-list > div {
+	display: contents;
+}
+
+.help-list dd {
+	margin: 0;
+	color: var(--ink-2);
+}
+
+.help-table {
+	width: 100%;
+	font-size: 13.5px;
+	border-collapse: collapse;
+}
+
+.help-table th {
+	padding: 0 12px 6px 0;
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--ink-3);
+	text-align: left;
+}
+
+.help-table td {
+	padding: 6px 12px 6px 0;
+	border-top: 1px solid var(--line-2);
+	color: var(--ink-2);
+	vertical-align: top;
+}
+
+.help-lead {
+	margin: 0 0 6px;
+	font-size: 13.5px;
+}
+
+.help-steps {
+	margin: 0 0 12px;
+	padding-left: 20px;
+	font-size: 13.5px;
+	color: var(--ink-2);
+}
+
+.help-steps li + li {
+	margin-top: 4px;
+}
