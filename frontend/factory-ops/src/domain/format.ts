@@ -45,7 +45,8 @@ export function programmerName(programmer: Programmer | undefined): string {
 export const STATUS_LABELS: Record<BlockStatus, string> = {
 	done: 'Zakończone',
 	in_progress: 'W toku',
-	planned: 'Zaplanowane'
+	planned: 'Zaplanowane',
+	unassigned: 'Bez maszyny'
 };
 
 const intlFormat = (options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat('pl-PL', options);

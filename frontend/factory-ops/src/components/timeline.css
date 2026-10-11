@@ -466,6 +466,36 @@
 	gap: 6px;
 }
 
+/* wiersz „Bez maszyny” na górze planu: zlecenia usuniętych zasobów czekają na przypisanie */
+.plan-timeline .react-calendar-timeline .rct-horizontal-lines .unassigned-row {
+	background: var(--danger-tint);
+}
+
+.unassigned-label {
+	border: none;
+	background: var(--danger-tint);
+	text-align: left;
+}
+
+.unassigned-label .row-name {
+	color: var(--danger-ink);
+	font-weight: 600;
+}
+
+.unassigned-marker {
+	flex: none;
+	display: inline-grid;
+	place-items: center;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: var(--danger);
+	color: #fff;
+	font-size: 11px;
+	font-weight: 700;
+	line-height: 1;
+}
+
 .group-chevron {
 	width: 12px;
 	font-size: 11px;

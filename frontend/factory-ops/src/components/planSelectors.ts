@@ -71,7 +71,7 @@ export function removalImpact(state: PlanState, id: Id, now: number): string[] {
 	const shifts = new Map<Id, number[]>();
 	for (const b of state.blocks) {
 		const moved = after.get(b.id);
-		if (!moved || moved.start === b.start) continue;
+		if (!moved || moved.start === b.start || b.machineId === null) continue;
 		shifts.set(b.machineId, [...(shifts.get(b.machineId) ?? []), (b.start - moved.start) / HOUR]);
 	}
 	return [...shifts].map(([resource, hours]) => {
@@ -99,7 +99,7 @@ const PREVIEW_ID = '__preview__';
  */
 export function previewPlacement(state: PlanState, draft: BlockDraft, now: number, editedId?: Id): PlacementPreview | undefined {
 	const affecting = new Set([draft.machineId, ...(findLine(state.lines, draft.machineId)?.machineIds ?? [])]);
-	const subset = state.blocks.filter((b) => affecting.has(b.machineId) || b.id === editedId);
+	const subset = state.blocks.filter((b) => (b.machineId !== null && affecting.has(b.machineId)) || b.id === editedId);
 	const id = editedId ?? PREVIEW_ID;
 	const result = editedId ? updateBlock(subset, editedId, draft, state, now) : addBlock(subset, draft, id, state, now);
 	const placed = result.filter((b) => b.machineId === draft.machineId).sort((a, b) => a.start - b.start);

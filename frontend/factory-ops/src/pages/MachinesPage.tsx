@@ -7,6 +7,7 @@ import PageHeader from '../components/PageHeader';
 import { loadByDay, ordersLabel, totalPercent } from '../components/planSelectors';
 import { usePlan } from '../data/PlanContext';
 import { isOngoing, lineMachines, lineOfMachine, standaloneMachines, workMode, WORK_MODE_LABELS } from '../domain/calendar';
+import { pendingBlocks } from '../domain/machines';
 import { shiftDayStart } from '../domain/shifts';
 import { Id, Line, Machine } from '../domain/types';
 import './MachinesPage.css';
@@ -58,6 +59,18 @@ const MoreMenu = ({ label, canCompact, onEdit, onCompact, onDelete }: MoreMenuPr
 	</Dropdown>
 );
 
+/** Ile zleceń usuwanego zasobu trafi do grupy „Bez maszyny” (zakończone idą do archiwum). */
+const DetachedOrders = ({ count }: { count: number }) => {
+	if (count === 0) return null;
+	// „2 zlecenia stracą”, ale „1 zlecenie straci” i „5 zleceń straci”
+	const few = count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14);
+	return (
+		<div className="mt-2">
+			<strong>{ordersLabel(count)}</strong> {few ? 'stracą przypisanie i trafią' : 'straci przypisanie i trafi'} do grupy <em>Bez maszyny</em>.
+		</div>
+	);
+};
+
 const MachinesPage = () => {
 	const { state, now, deleteMachine, deleteLine, compactMachine } = usePlan();
 	const [machineForm, setMachineForm] = useState<MachineForm>({ show: false });
@@ -68,7 +81,7 @@ const MachinesPage = () => {
 
 	const counts = useMemo(() => {
 		const result = new Map<Id, number>();
-		for (const b of state.blocks) result.set(b.machineId, (result.get(b.machineId) ?? 0) + 1);
+		for (const b of state.blocks) if (b.machineId !== null) result.set(b.machineId, (result.get(b.machineId) ?? 0) + 1);
 		return result;
 	}, [state.blocks]);
 	const blockCount = (id: Id) => counts.get(id) ?? 0;
@@ -206,9 +219,9 @@ const MachinesPage = () => {
 				undoable
 				onConfirm={() => machineToDelete && deleteMachine(machineToDelete.id)}
 				onHide={() => setMachineToDelete(undefined)}>
-				Maszyna <strong className="mono fw-medium">{machineToDelete?.name}</strong> zostanie usunięta razem z jej zleceniami (
-				{machineToDelete ? blockCount(machineToDelete.id) : 0}) i awariami.
+				Maszyna <strong className="mono fw-medium">{machineToDelete?.name}</strong> zostanie usunięta razem z awariami.
 				{machineToDelete && lineOfMachine(state.lines, machineToDelete.id) && ` Zniknie też z ${lineOfMachine(state.lines, machineToDelete.id)!.name}.`}
+				{machineToDelete && <DetachedOrders count={pendingBlocks(state.blocks, machineToDelete.id, now).length} />}
 			</ConfirmModal>
 			<ConfirmModal
 				show={lineToDelete !== undefined}
@@ -216,8 +229,8 @@ const MachinesPage = () => {
 				undoable
 				onConfirm={() => lineToDelete && deleteLine(lineToDelete.id)}
 				onHide={() => setLineToDelete(undefined)}>
-				Linia <strong>{lineToDelete?.name}</strong> zostanie usunięta razem ze zleceniami linii ({lineToDelete ? blockCount(lineToDelete.id) : 0}). Jej maszyny zostaną
-				jako samodzielne, z własnymi zleceniami.
+				Linia <strong>{lineToDelete?.name}</strong> zostanie usunięta. Jej maszyny zostaną jako samodzielne, z własnymi zleceniami.
+				{lineToDelete && <DetachedOrders count={pendingBlocks(state.blocks, lineToDelete.id, now).length} />}
 			</ConfirmModal>
 		</>
 	);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyLineDraft, applyMachineDraft, removeLine, removeMachine } from './machines';
+import { applyLineDraft, applyMachineDraft, pendingBlocks, removeLine, removeMachine } from './machines';
 import { Line, Machine, PlanState } from './types';
 
 const machines: Machine[] = ['a', 'b', 'c', 'd'].map((id) => ({ id, name: id.toUpperCase(), workMode: 'weekdays' }));
@@ -54,17 +54,39 @@ describe('maszyny i linie', () => {
 		]
 	};
 
-	it('usunięcie maszyny usuwa jej zlecenia, awarie i miejsce w linii', () => {
-		const next = removeMachine(state, 'a');
+	it('usunięcie maszyny usuwa jej awarie i miejsce w linii, a zlecenia zostają bez maszyny', () => {
+		const next = removeMachine(state, 'a', 0);
 		expect(next.lines[0].machineIds).toEqual(['b']);
-		expect(next.blocks.map((b) => b.id)).toEqual(['onLine']);
+		expect(next.blocks.map((b) => [b.id, b.machineId])).toEqual([
+			['onLine', 'l1'],
+			['onA', null]
+		]);
 		expect(next.breakdowns).toEqual([]);
 	});
 
-	it('usunięcie linii zostawia jej maszyny i ich zlecenia', () => {
-		const next = removeLine(state, 'l1');
+	it('usunięcie linii zostawia jej maszyny i ich zlecenia, a zlecenia linii zostają bez maszyny', () => {
+		const next = removeLine(state, 'l1', 0);
 		expect(next.lines).toEqual([]);
 		expect(next.machines).toHaveLength(4);
-		expect(next.blocks.map((b) => b.id)).toEqual(['onA']);
+		expect(next.blocks.map((b) => [b.id, b.machineId])).toEqual([
+			['onLine', null],
+			['onA', 'a']
+		]);
+	});
+
+	it('zlecenie bez maszyny traci termin, a zakończone zlecenia usuwanego zasobu idą do archiwum', () => {
+		const withPinned: PlanState = {
+			...state,
+			blocks: [
+				{ ...state.blocks[0], id: 'done', start: 0, end: 5 },
+				{ ...state.blocks[0], id: 'pinned', start: 20, end: 30, pinnedStart: 20 }
+			]
+		};
+		const next = removeLine(withPinned, 'l1', 10);
+		expect(next.blocks).toHaveLength(1);
+		expect(next.blocks[0]).toMatchObject({ id: 'pinned', machineId: null });
+		expect(next.blocks[0].pinnedStart).toBeUndefined();
+		expect(next.archive).toEqual([expect.objectContaining({ id: 'done', machineName: 'Linia 1', archivedAt: 10 })]);
+		expect(pendingBlocks(withPinned.blocks, 'l1', 10).map((b) => b.id)).toEqual(['pinned']);
 	});
 });

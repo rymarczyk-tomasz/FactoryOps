@@ -1,4 +1,5 @@
-import { Id, Line, LineDraft, Machine, MachineDraft, PlanState } from './types';
+import { resourceName } from './calendar';
+import { ArchivedBlock, Block, Id, Line, LineDraft, Machine, MachineDraft, PlanState } from './types';
 
 /** Linia musi mieć co najmniej 2 maszyny - jedna to zwykła maszyna. */
 export const MIN_LINE_MACHINES = 2;
@@ -43,22 +44,48 @@ export function applyLineDraft({ machines, lines }: MachinesAndLines, draft: Lin
 	};
 }
 
-/** Usuwa maszynę razem z jej zleceniami i awariami; znika też z linii. */
-export function removeMachine(state: PlanState, id: Id): PlanState {
+/** Zlecenia zasobu, które jeszcze się nie zakończyły - po usunięciu zasobu trafią do grupy „Bez maszyny”. */
+export function pendingBlocks(blocks: Block[], resourceId: Id, now: number): Block[] {
+	return blocks.filter((b) => b.machineId === resourceId && b.end > now);
+}
+
+/**
+ * Zlecenia usuwanego zasobu nie giną: niezakończone tracą przypisanie (`machineId = null`, bez terminu) i czekają
+ * na planistę, a zakończone idą do archiwum z nazwą zasobu - inaczej przepadłaby historia.
+ */
+function detachBlocks(state: PlanState, resourceId: Id, now: number): Pick<PlanState, 'blocks' | 'archive'> {
+	const machineName = resourceName(state, resourceId);
+	const done = state.blocks.filter((b) => b.machineId === resourceId && b.end <= now);
+	const doneIds = new Set(done.map((b) => b.id));
+	return {
+		blocks: state.blocks
+			.filter((b) => !doneIds.has(b.id))
+			.map((b) => {
+				if (b.machineId !== resourceId) return b;
+				const detached: Block = { ...b, machineId: null };
+				delete detached.pinnedStart;
+				return detached;
+			}),
+		archive: [...state.archive, ...done.map((b): ArchivedBlock => ({ ...b, machineName, archivedAt: now }))]
+	};
+}
+
+/** Usuwa maszynę i jej awarie; znika też z linii. Jej zlecenia zostają bez maszyny. */
+export function removeMachine(state: PlanState, id: Id, now: number): PlanState {
 	return {
 		...state,
+		...detachBlocks(state, id, now),
 		machines: state.machines.filter((m) => m.id !== id),
 		lines: withoutMachines(state.lines, [id]),
-		blocks: state.blocks.filter((b) => b.machineId !== id),
 		breakdowns: state.breakdowns.filter((b) => b.machineId !== id)
 	};
 }
 
-/** Usuwa linię i zlecenia przypisane do niej; jej maszyny zostają jako samodzielne. */
-export function removeLine(state: PlanState, id: Id): PlanState {
+/** Usuwa linię; jej maszyny zostają jako samodzielne, a zlecenia linii - bez maszyny. */
+export function removeLine(state: PlanState, id: Id, now: number): PlanState {
 	return {
 		...state,
-		lines: state.lines.filter((l) => l.id !== id),
-		blocks: state.blocks.filter((b) => b.machineId !== id)
+		...detachBlocks(state, id, now),
+		lines: state.lines.filter((l) => l.id !== id)
 	};
 }

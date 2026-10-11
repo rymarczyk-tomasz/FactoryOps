@@ -56,13 +56,13 @@ export function machineCalendar(plant: WorkCalendar, machine: Machine | undefine
 /** Zasoby planu, od których zależy czas zleceń. */
 export type PlanResources = Pick<PlanState, 'calendar' | 'machines' | 'lines' | 'breakdowns'>;
 
-export function findLine(lines: Line[], id: Id | undefined): Line | undefined {
+export function findLine(lines: Line[], id: Id | null | undefined): Line | undefined {
 	return lines.find((l) => l.id === id);
 }
 
 /** Linia, do której należy maszyna. */
-export function lineOfMachine(lines: Line[], machineId: Id): Line | undefined {
-	return lines.find((l) => l.machineIds.includes(machineId));
+export function lineOfMachine(lines: Line[], machineId: Id | null): Line | undefined {
+	return machineId === null ? undefined : lines.find((l) => l.machineIds.includes(machineId));
 }
 
 /** Maszyny linii w jej kolejności (pomija nieistniejące). */
@@ -77,8 +77,8 @@ export function standaloneMachines({ machines, lines }: Pick<PlanState, 'machine
 	return machines.filter((m) => !inLines.has(m.id));
 }
 
-/** Nazwa maszyny lub linii. */
-export function resourceName({ machines, lines }: Pick<PlanState, 'machines' | 'lines'>, id: Id | undefined): string {
+/** Nazwa maszyny lub linii; pusta dla zlecenia bez maszyny. */
+export function resourceName({ machines, lines }: Pick<PlanState, 'machines' | 'lines'>, id: Id | null | undefined): string {
 	return machines.find((m) => m.id === id)?.name ?? findLine(lines, id)?.name ?? '';
 }
 
@@ -107,7 +107,7 @@ export type CapacityLookup = (resourceId: Id) => CapacityAt;
 export function capacityLookup(resources: PlanResources, now: number, blocks: Block[] = []): CapacityLookup {
 	const byMachine = new Map(resources.machines.map((m) => [m.id, machineCapacity(resources.calendar, m, resources.breakdowns, now)]));
 	const busy = new Map<Id, [number, number][]>();
-	for (const block of blocks) busy.set(block.machineId, [...(busy.get(block.machineId) ?? []), [block.start, block.end]]);
+	for (const { machineId, start, end } of blocks) if (machineId !== null) busy.set(machineId, [...(busy.get(machineId) ?? []), [start, end]]);
 	const byLine = new Map(
 		resources.lines.map((line): [Id, CapacityAt] => {
 			const members = line.machineIds

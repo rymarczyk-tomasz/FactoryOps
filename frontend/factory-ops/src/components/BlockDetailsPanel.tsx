@@ -1,14 +1,14 @@
 import { Button, Form } from 'react-bootstrap';
 import { usePlan } from '../data/PlanContext';
-import { breakdownEnd, findLine, isOngoing, lineOfMachine, resourceName } from '../domain/calendar';
+import { breakdownEnd, findLine, isOngoing, lineMachines, lineOfMachine, resourceName, standaloneMachines } from '../domain/calendar';
 import { formatClockDuration, formatDateTime, formatHours, programmerName, STATUS_LABELS } from '../domain/format';
 import { blockStatus } from '../domain/schedule';
 import { Block, BlockStatus, Id } from '../domain/types';
 import { projectColorVar } from './projectColor';
 
 /** Warianty Badge dla listy zleceń (do etapu 4 redesignu). */
-export const STATUS_VARIANTS: Record<BlockStatus, string> = { done: 'secondary', in_progress: 'success', planned: 'primary' };
-export const STATUS_PILLS: Record<BlockStatus, string> = { done: 'pill-neutral', in_progress: 'pill-success', planned: 'pill-info' };
+export const STATUS_VARIANTS: Record<BlockStatus, string> = { done: 'secondary', in_progress: 'success', planned: 'primary', unassigned: 'danger' };
+export const STATUS_PILLS: Record<BlockStatus, string> = { done: 'pill-neutral', in_progress: 'pill-success', planned: 'pill-info', unassigned: 'pill-danger' };
 
 const HOUR = 3600_000;
 /** Kolejka w panelu: tyle zleceń przed i po zaznaczonym. */
@@ -32,10 +32,11 @@ interface BlockDetailsPanelProps {
 
 /** Panel zaznaczonego zlecenia - kolumna obok planu: szczegóły, awarie, programista, kolejka zasobu i akcje. */
 const BlockDetailsPanel = ({ block, onSelect, onEdit, onDelete, onShow, onClose }: BlockDetailsPanelProps) => {
-	const { state, now, updateBlock } = usePlan();
+	const { state, now, updateBlock, assignBlock } = usePlan();
 	const line = findLine(state.lines, block.machineId);
 	const machine = state.machines.find((m) => m.id === block.machineId);
-	if (!machine && !line) return null;
+	const unassigned = block.machineId === null;
+	if (!machine && !line && !unassigned) return null;
 	const parentLine = machine ? lineOfMachine(state.lines, machine.id) : undefined;
 	const resource = resourceName(state, block.machineId);
 	// awarie maszyn zlecenia w jego czasie - to one je wydłużają
@@ -44,7 +45,7 @@ const BlockDetailsPanel = ({ block, onSelect, onEdit, onDelete, onShow, onClose 
 	const status = blockStatus(block, now);
 	const progress = status === 'in_progress' ? Math.round(((now - block.start) / (block.end - block.start)) * 100) : undefined;
 
-	const queue = state.blocks.filter((b) => b.machineId === block.machineId).sort((a, b) => a.start - b.start);
+	const queue = unassigned ? [] : state.blocks.filter((b) => b.machineId === block.machineId).sort((a, b) => a.start - b.start);
 	const index = queue.findIndex((b) => b.id === block.id);
 	const neighbours = queue.slice(Math.max(0, index - QUEUE_BEFORE), index + QUEUE_AFTER + 1);
 
@@ -91,8 +92,36 @@ const BlockDetailsPanel = ({ block, onSelect, onEdit, onDelete, onShow, onClose 
 				)}
 
 				<dl className="details-list">
-					<dt>{line ? 'Linia' : 'Maszyna'}</dt>
+					<dt>{unassigned ? <label htmlFor="panelResource">Maszyna</label> : line ? 'Linia' : 'Maszyna'}</dt>
 					<dd>
+						{unassigned && (
+							<Form.Select
+								id="panelResource"
+								size="sm"
+								className="details-select is-unassigned"
+								title="Zlecenie trafi na koniec kolejki wybranej maszyny lub linii"
+								value=""
+								onChange={(e) => e.target.value && assignBlock(block.id, e.target.value)}>
+								<option value="">— przypisz —</option>
+								{state.lines.map((l) => (
+									<optgroup key={l.id} label={l.name}>
+										<option value={l.id}>{l.name} - cała linia</option>
+										{lineMachines(l, state.machines).map((m) => (
+											<option key={m.id} value={m.id}>
+												{m.name}
+											</option>
+										))}
+									</optgroup>
+								))}
+								<optgroup label="Maszyny">
+									{standaloneMachines(state).map((m) => (
+										<option key={m.id} value={m.id}>
+											{m.name}
+										</option>
+									))}
+								</optgroup>
+							</Form.Select>
+						)}
 						<span className="mono">{resource}</span>
 						{line && <span className="text-secondary"> · {line.machineIds.length} maszyny</span>}
 						{parentLine && <span className="text-secondary"> · z {parentLine.name}</span>}
@@ -140,30 +169,32 @@ const BlockDetailsPanel = ({ block, onSelect, onEdit, onDelete, onShow, onClose 
 					)}
 				</dl>
 
-				<section className="details-queue" aria-label={`Kolejka ${resource}`}>
-					<span className="details-queue-label">
-						Kolejka · <span className="mono">{resource}</span>
-					</span>
-					{neighbours.map((b) => (
-						<button
-							key={b.id}
-							type="button"
-							className={`queue-item ${b.id === block.id ? 'is-current' : ''} ${blockStatus(b, now) === 'done' ? 'is-done' : ''}`}
-							style={projectColorVar(b.projectNo || b.project)}
-							aria-current={b.id === block.id}
-							onClick={() => onSelect(b.id)}>
-							<span className="queue-bar" />
-							<span className="queue-text">
-								<span className="queue-title">
-									{b.operation} · {b.projectNo} · {b.project}
+				{!unassigned && (
+					<section className="details-queue" aria-label={`Kolejka ${resource}`}>
+						<span className="details-queue-label">
+							Kolejka · <span className="mono">{resource}</span>
+						</span>
+						{neighbours.map((b) => (
+							<button
+								key={b.id}
+								type="button"
+								className={`queue-item ${b.id === block.id ? 'is-current' : ''} ${blockStatus(b, now) === 'done' ? 'is-done' : ''}`}
+								style={projectColorVar(b.projectNo || b.project)}
+								aria-current={b.id === block.id}
+								onClick={() => onSelect(b.id)}>
+								<span className="queue-bar" />
+								<span className="queue-text">
+									<span className="queue-title">
+										{b.operation} · {b.projectNo} · {b.project}
+									</span>
+									<span className="queue-when mono">
+										{formatDateTime(b.start)} → {endLabel(b.start, b.end)}
+									</span>
 								</span>
-								<span className="queue-when mono">
-									{formatDateTime(b.start)} → {endLabel(b.start, b.end)}
-								</span>
-							</span>
-						</button>
-					))}
-				</section>
+							</button>
+						))}
+					</section>
+				)}
 			</div>
 
 			<footer className="details-footer">

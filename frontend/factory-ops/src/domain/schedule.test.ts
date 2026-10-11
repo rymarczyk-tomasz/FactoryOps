@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { capacityLookup, machineCalendar, machineDays, nonWorkingPeriods, nonWorkingSegments } from './calendar';
 import { CapacityAt, endAfterWork, firstProductiveHourFrom, IsWorkingHour, nearestHourStart, nextHourStart, roundUpHours, shiftDayStart } from './shifts';
-import { addBlock, compactMachine, moveBlock, previewMove, reflow, removeBlock, updateBlock } from './schedule';
+import { addBlock, assignBlock, blockStatus, compactMachine, moveBlock, previewMove, reflow, removeBlock, updateBlock } from './schedule';
 import { Block, BlockDraft, Breakdown, Line, Machine, WorkCalendar } from './types';
 
 // 2026-10-05 to poniedziałek, 2026-10-10/11 to weekend
@@ -282,5 +282,22 @@ describe('harmonogram', () => {
 	it('zmiana kalendarza przesuwa zlecenia z dnia wolnego', () => {
 		const blocks = reflow(plan(8), { calendar: { overrides: { '2026-10-05': false } }, machines: [], lines: [], breakdowns: [] });
 		expect(blocks[0].start).toBe(at(6, 6));
+	});
+
+	it('zlecenie bez maszyny nie jest planowane, a upuszczone na wiersz dostaje maszynę i miejsce w kolejce', () => {
+		const orphan: Block = { ...draft(8), machineId: null, id: 'o', start: at(5, 7), end: at(5, 15) };
+		const blocks = [...plan(8), orphan];
+		expect(byId(reflow(blocks, capacities, undefined, now), 'o')).toBe(orphan);
+		expect(blockStatus(orphan, now)).toBe('unassigned');
+		const assigned = moveBlock(blocks, 'o', at(5, 15), 'm1', capacities, now);
+		expect(byId(assigned, 'o')).toMatchObject({ machineId: 'm1', start: at(5, 15), end: at(5, 23) });
+		expect(blockStatus(byId(assigned, 'o'), now)).toBe('planned');
+	});
+
+	it('przypisanie zlecenia bez maszyny stawia je na koniec kolejki, bez terminu', () => {
+		const orphan: Block = { ...draft(8), machineId: null, id: 'o', start: at(5, 7), end: at(5, 15), pinnedStart: at(5, 7) };
+		const assigned = assignBlock([...plan(8, 8), orphan], 'o', 'm1', capacities, now);
+		expect(byId(assigned, 'o')).toMatchObject({ machineId: 'm1', start: at(5, 23), end: at(6, 7) });
+		expect(byId(assigned, 'o').pinnedStart).toBeUndefined();
 	});
 });

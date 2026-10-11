@@ -205,6 +205,9 @@ function lineDownSegments(line: Line, breakdowns: Breakdown[], now: number): { s
 
 type GroupKind = 'lines' | 'machines';
 
+/** Wiersz zleceń bez maszyny (ich maszynę lub linię usunięto) - na górze planu, dopóki jakieś są. */
+const UNASSIGNED_ROW = 'unassigned';
+
 /** Wiersz planu: linia, maszyna (także maszyna linii, wcięta pod nią) albo nagłówek zwijanej grupy. */
 type PlanGroup = {
 	id: Id;
@@ -216,6 +219,8 @@ type PlanGroup = {
 	/** Maszyna wyświetlana pod swoją linią. */
 	inLine?: boolean;
 	header?: { kind: GroupKind; count: number; collapsed: boolean };
+	/** Liczba zleceń w wierszu „Bez maszyny”. */
+	unassigned?: number;
 };
 
 const GROUP_TITLES: Record<GroupKind, string> = { lines: 'Linie produkcyjne', machines: 'Maszyny' };
@@ -318,7 +323,7 @@ const FactoryOpsTimeline = () => {
 	const [collapsed, setCollapsed] = useState<Record<GroupKind, boolean>>({ lines: false, machines: false });
 	// na start rozwinięte są linie, których maszyny mają własne zlecenia - inaczej nie byłoby ich widać
 	const [expandedLines, setExpandedLines] = useState<Set<Id>>(
-		() => new Set(state.lines.filter((l) => state.blocks.some((b) => l.machineIds.includes(b.machineId))).map((l) => l.id))
+		() => new Set(state.lines.filter((l) => state.blocks.some((b) => b.machineId !== null && l.machineIds.includes(b.machineId))).map((l) => l.id))
 	);
 	const [query, setQuery] = useState('');
 	const [matchIndex, setMatchIndex] = useState(0);
@@ -443,6 +448,8 @@ const FactoryOpsTimeline = () => {
 
 	// --- wiersze: linie (z rozwijanymi maszynami) i samodzielne maszyny w zwijanych grupach ---
 	const standalone = useMemo(() => standaloneMachines(state), [state]);
+	const unassignedBlocks = useMemo(() => state.blocks.filter((b) => b.machineId === null).sort((a, b) => a.start - b.start), [state.blocks]);
+	const unassignedCount = unassignedBlocks.length;
 	const allLinesExpanded = state.lines.length > 0 && state.lines.every((l) => expandedLines.has(l.id));
 	const toggleLine = (lineId: Id) =>
 		setExpandedLines((current) => {
@@ -452,7 +459,9 @@ const FactoryOpsTimeline = () => {
 			return next;
 		});
 	/** Pokazuje wiersz zasobu - rozwija grupę i linię, w której jest maszyna. */
-	const reveal = (resourceId: Id) => {
+	const reveal = (resourceId: Id | null) => {
+		// wiersz „Bez maszyny” jest zawsze na górze
+		if (resourceId === null) return;
 		const line = lineOfMachine(state.lines, resourceId);
 		const isLineRow = state.lines.some((l) => l.id === resourceId);
 		setCollapsed((c) => ({ ...c, [line || isLineRow ? 'lines' : 'machines']: false }));
@@ -480,7 +489,7 @@ const FactoryOpsTimeline = () => {
 			setMatchIndex(0);
 		}
 		const block = (command.showBlock && state.blocks.find((b) => b.id === command.showBlock)) || picked[0];
-		const rowId = breakdown ? breakdown.machineId : block ? block.machineId : undefined;
+		const rowId = breakdown ? breakdown.machineId : block ? (block.machineId ?? UNASSIGNED_ROW) : undefined;
 		if (breakdown) {
 			reveal(breakdown.machineId);
 			setRange(rangeAround(breakdown.start, span, 0.25));
@@ -557,9 +566,12 @@ const FactoryOpsTimeline = () => {
 			...(expandedLines.has(line.id) ? lineMachines(line, state.machines).map((m) => machineRow(m, true)) : [])
 		]);
 		const machineRows = standalone.map((m) => machineRow(m));
+		// zlecenia bez maszyny w stosie - mogą pochodzić z kilku usuniętych zasobów i nachodzić na siebie
+		const unassignedRows: PlanGroup[] =
+			unassignedCount > 0 ? [{ id: UNASSIGNED_ROW, title: 'Bez maszyny', stackItems: true, height: ROW_HEIGHT, unassigned: unassignedCount }] : [];
 		// nagłówki tylko wtedy, gdy są oba rodzaje - inaczej nie ma czego grupować
-		if (state.lines.length === 0) return machineRows;
-		if (standalone.length === 0) return lineRows;
+		if (state.lines.length === 0) return [...unassignedRows, ...machineRows];
+		if (standalone.length === 0) return [...unassignedRows, ...lineRows];
 		const header = (kind: GroupKind, count: number): PlanGroup => ({
 			id: `hdr:${kind}`,
 			title: GROUP_TITLES[kind],
@@ -567,8 +579,14 @@ const FactoryOpsTimeline = () => {
 			height: HEADER_HEIGHT,
 			header: { kind, count, collapsed: collapsed[kind] }
 		});
-		return [header('lines', state.lines.length), ...(collapsed.lines ? [] : lineRows), header('machines', standalone.length), ...(collapsed.machines ? [] : machineRows)];
-	}, [state.lines, state.machines, standalone, collapsed, expandedLines]);
+		return [
+			...unassignedRows,
+			header('lines', state.lines.length),
+			...(collapsed.lines ? [] : lineRows),
+			header('machines', standalone.length),
+			...(collapsed.machines ? [] : machineRows)
+		];
+	}, [state.lines, state.machines, standalone, collapsed, expandedLines, unassignedCount]);
 	const visibleIds = useMemo(() => new Set(groups.filter((g) => g.machine || g.line).map((g) => g.id)), [groups]);
 	const rowHeights = useMemo(() => new Map(groups.map((g) => [g.id, g.height ?? ROW_HEIGHT])), [groups]);
 	useEffect(() => {
@@ -676,7 +694,7 @@ const FactoryOpsTimeline = () => {
 			let value = blockLooks.get(block);
 			if (value === undefined) {
 				const programmer = state.programmers.find((p) => p.id === block.programmerId);
-				const line = lines.get(block.machineId);
+				const line = lines.get(block.machineId ?? '');
 				const tooltip = [
 					`${block.operation} · ${block.projectNo} · ${block.project}`,
 					`Zamówienie ${block.orderNo}`,
@@ -687,12 +705,15 @@ const FactoryOpsTimeline = () => {
 				]
 					.filter(Boolean)
 					.join('\n');
-				value = { tooltip, background: blockBackground(color, block.start, block.end, nonWorkingSegments(calendars(block.machineId), block.start, block.end)) };
+				const offSegments = block.machineId === null ? [] : nonWorkingSegments(calendars(block.machineId), block.start, block.end);
+				value = { tooltip, background: blockBackground(color, block.start, block.end, offSegments) };
 				blockLooks.set(block, value);
 			}
 			return value;
 		};
-		const shown = state.blocks.filter((b) => (b.end > windowFrom && b.start < windowTo && visibleIds.has(b.machineId)) || b.id === draggedId || b.id === selectedId);
+		const shown = state.blocks.filter(
+			(b) => (b.end > windowFrom && b.start < windowTo && (b.machineId === null || visibleIds.has(b.machineId))) || b.id === draggedId || b.id === selectedId
+		);
 		return shown.map((block) => {
 			const color = projectColor(block.projectNo || block.project);
 			const { tooltip, background } = look(block, color);
@@ -701,13 +722,14 @@ const FactoryOpsTimeline = () => {
 			const classes = [
 				'plan-block',
 				status === 'done' && 'is-done',
+				status === 'unassigned' && 'is-unassigned',
 				block.id === draggedId && 'dragging-block',
 				searching && (matchIds.has(block.id) ? 'search-match' : 'dimmed')
 			].filter(Boolean);
 			return {
 				id: block.id,
 				kind: 'block',
-				group: block.machineId,
+				group: block.machineId ?? UNASSIGNED_ROW,
 				title: blockLabels(block)[0],
 				labels: blockLabels(block),
 				start_time: block.start,
@@ -762,7 +784,7 @@ const FactoryOpsTimeline = () => {
 
 	// elementy zwiniętych wierszy nie trafiają do biblioteki
 	const items = useMemo(
-		() => [...offItems, ...blockItems, ...breakdownItems, ...indicatorItems].filter((item) => visibleIds.has(String(item.group))),
+		() => [...offItems, ...blockItems, ...breakdownItems, ...indicatorItems].filter((item) => item.group === UNASSIGNED_ROW || visibleIds.has(String(item.group))),
 		[offItems, blockItems, breakdownItems, indicatorItems, visibleIds]
 	);
 
@@ -1000,7 +1022,10 @@ const FactoryOpsTimeline = () => {
 							}}
 							itemRenderer={renderItem}
 							horizontalLineClassNamesForGroup={(group) =>
-								[group.header ? 'group-header-row' : group.inLine ? 'line-machine-row' : '', group.id === flashRow ? 'row-flash' : ''].filter(Boolean)
+								[
+									group.header ? 'group-header-row' : group.inLine ? 'line-machine-row' : group.unassigned ? 'unassigned-row' : '',
+									group.id === flashRow ? 'row-flash' : ''
+								].filter(Boolean)
 							}
 							groupRenderer={({ group }) => {
 								const flash = group.id === flashRow ? ' row-flash' : '';
@@ -1015,6 +1040,28 @@ const FactoryOpsTimeline = () => {
 											<span className="group-chevron">{group.header.collapsed ? '▸' : '▾'}</span>
 											<span className="group-title">{group.title}</span>
 											<span className="group-count mono">{group.header.count}</span>
+										</button>
+									);
+								}
+								if (group.unassigned !== undefined) {
+								// klik przechodzi po kolei do zleceń bez maszyny - przypisuje się je przeciągnięciem na wiersz albo w panelu
+									const current = unassignedBlocks.findIndex((b) => b.id === selectedId);
+									const next = unassignedBlocks[(current + 1) % unassignedBlocks.length];
+									return (
+										<button
+										type="button"
+										className="row-label unassigned-label"
+										title="Zlecenia, których maszynę lub linię usunięto. Przeciągnij zlecenie na wiersz albo przypisz je w panelu. Klik: następne zlecenie"
+										onClick={() => {
+											setSelectedId(next.id);
+											showBlock(next);
+										}}>
+											<span className="unassigned-marker" aria-hidden="true">
+											!
+											</span>
+											<span className="row-name">
+												{group.title} · <span className="mono">{group.unassigned}</span>
+											</span>
 										</button>
 									);
 								}

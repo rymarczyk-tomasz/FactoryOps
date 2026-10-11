@@ -76,8 +76,11 @@ export interface Programmer {
 /** Jeden bloczek pracy na maszynie (np. jeden stopień / operacja zamówienia). */
 export interface Block {
 	id: Id;
-	/** Gdzie idzie zlecenie: maszyna albo cała linia (id linii). */
-	machineId: Id;
+	/**
+	 * Gdzie idzie zlecenie: maszyna albo cała linia (id linii). `null` - bez maszyny (jej maszynę lub linię usunięto);
+	 * takie zlecenie nie bierze udziału w planowaniu i czeka, aż planista przypisze je do zasobu.
+	 */
+	machineId: Id | null;
 	orderNo: string;
 	/** Numer projektu, np. IMR-6001. */
 	projectNo: string;
@@ -99,7 +102,8 @@ export interface Block {
 	note?: string;
 }
 
-export type BlockDraft = Omit<Block, 'id' | 'start' | 'end' | 'pinnedStart'> & {
+export type BlockDraft = Omit<Block, 'id' | 'start' | 'end' | 'pinnedStart' | 'machineId'> & {
+	machineId: Id;
 	/** Brak = dopisz na koniec kolejki maszyny. */
 	start?: number;
 };
@@ -113,7 +117,7 @@ export interface ArchivedBlock extends Block {
 	archivedAt: number;
 }
 
-export type BlockStatus = 'done' | 'in_progress' | 'planned';
+export type BlockStatus = 'done' | 'in_progress' | 'planned' | 'unassigned';
 
 /** Kalendarz zakładu - wyjątki dla wszystkich maszyn (np. święto, pracująca sobota). */
 export interface WorkCalendar {

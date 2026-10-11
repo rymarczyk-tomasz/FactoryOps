@@ -47,6 +47,30 @@
 	border-color: oklch(0.7 0.12 70);
 }
 
+.filter-pill-danger {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	height: 30px;
+	padding: 0 11px;
+	border: 1.5px solid transparent;
+	border-radius: 999px;
+	background: var(--danger-tint);
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--danger-ink);
+	transition: border-color var(--transition-fast);
+}
+
+.filter-pill-danger .mono {
+	font-size: 11.5px;
+}
+
+.filter-pill-danger:hover,
+.filter-pill-danger.active {
+	border-color: var(--danger);
+}
+
 .list-archive-note {
 	font-size: 13px;
 	color: var(--ink-2);
@@ -187,6 +211,14 @@
 
 .list-status.status-planned .status-dot {
 	background: var(--accent);
+}
+
+.list-status.status-unassigned {
+	color: var(--danger-ink);
+}
+
+.list-status.status-unassigned .status-dot {
+	background: var(--danger);
 }
 
 .list-status.status-done {

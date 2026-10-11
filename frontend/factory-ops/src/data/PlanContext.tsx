@@ -4,7 +4,7 @@ import { isOngoing, resourceName } from '../domain/calendar';
 import { formatDateTime } from '../domain/format';
 import * as schedule from '../domain/schedule';
 import { newId } from '../domain/ids';
-import { applyLineDraft, applyMachineDraft, removeLine, removeMachine } from '../domain/machines';
+import { applyLineDraft, applyMachineDraft, pendingBlocks, removeLine, removeMachine } from '../domain/machines';
 import { addHours, nearestHourStart } from '../domain/shifts';
 import { Block, BlockDraft, DayOverride, Id, LineDraft, MachineDraft, PlanState } from '../domain/types';
 import { LocalStoragePlanRepository, PlanRepository } from './PlanRepository';
@@ -28,6 +28,12 @@ const breakdownMachine = (s: PlanState, id: Id) => s.breakdowns.filter((b) => b.
 const orderNo = (s: PlanState, id: Id) => s.blocks.find((b) => b.id === id)?.orderNo ?? '';
 /** „zlecenia” / „zleceń” po liczbie (2-4 zlecenia, 5 zleceń, 22 zlecenia, 12 zleceń). */
 const ordersWord = (n: number) => (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'zlecenia' : 'zleceń');
+
+/** Dopisek do komunikatu o usunięciu zasobu: ile zleceń trafiło do grupy „Bez maszyny”. */
+const detachedNotice = (s: PlanState, id: Id) => {
+	const n = pendingBlocks(s.blocks, id, Date.now()).length;
+	return n === 0 ? '' : ` · ${n === 1 ? '1 zlecenie' : `${n} ${ordersWord(n)}`} bez maszyny`;
+};
 
 /** Zmiana ustawienia dnia: `value` undefined usuwa wyjątek. */
 export interface DayChange {
@@ -65,6 +71,8 @@ interface PlanActions {
 	/** Ta sama zmiana dla kilku zleceń (np. przypisanie programisty) - jeden krok cofania. */
 	updateBlocks(ids: Id[], patch: Partial<Omit<Block, 'id' | 'end'>>): void;
 	moveBlock(id: Id, start: number, machineId: Id): void;
+	/** Przypisuje zlecenie (np. bez maszyny) do maszyny lub linii - na koniec kolejki. */
+	assignBlock(id: Id, machineId: Id): void;
 	deleteBlock(id: Id): void;
 	compactMachine(machineId: Id): void;
 	/** Dodaje (bez `id`) albo zapisuje istniejącą maszynę. */
@@ -198,6 +206,11 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 						return `Przeniesiono ${block?.orderNo} na ${machineName(after, machineId)} · start ${block ? formatDateTime(block.start) : ''}`;
 					}
 				),
+			assignBlock: (id, machineId) =>
+				withBlocks(
+					(s) => schedule.assignBlock(s.blocks, id, machineId, s, Date.now()),
+					(before, after) => `Przypisano ${orderNo(before, id)} do ${machineName(after, machineId)}`
+				),
 			deleteBlock: (id) =>
 				withBlocks(
 					(s) => schedule.removeBlock(s.blocks, id, s, Date.now()),
@@ -222,8 +235,8 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 			},
 			deleteMachine: (id) =>
 				apply(
-					(s) => withReflow(removeMachine(s, id)),
-					(before) => `Usunięto ${machineName(before, id)}`
+					(s) => withReflow(removeMachine(s, id, Date.now())),
+					(before) => `Usunięto ${machineName(before, id)}${detachedNotice(before, id)}`
 				),
 			saveLine(draft, existingId) {
 				const id = existingId ?? newId();
@@ -235,8 +248,8 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 			},
 			deleteLine: (id) =>
 				apply(
-					(s) => withReflow(removeLine(s, id)),
-					(before) => `Usunięto ${machineName(before, id)}`
+					(s) => withReflow(removeLine(s, id, Date.now())),
+					(before) => `Usunięto ${machineName(before, id)}${detachedNotice(before, id)}`
 				),
 			reportBreakdown(machineId, start) {
 				const id = newId();

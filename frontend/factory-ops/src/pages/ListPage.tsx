@@ -27,6 +27,8 @@ type ListBlock = Block & Partial<Pick<ArchivedBlock, 'machineName'>>;
 
 /** Filtr programisty: zlecenia bez programisty. */
 const UNASSIGNED = '__none__';
+/** Wartość filtra maszyn dla zleceń bez maszyny. */
+const NO_MACHINE = '__no_machine__';
 
 /** Zakładki statusów: „Wszystkie” to zlecenia niezakończone - zakończone są pod osobną zakładką. */
 type StatusTab = 'active' | BlockStatus;
@@ -36,7 +38,7 @@ const STATUS_TABS: { key: StatusTab; label: string }[] = [
 	{ key: 'planned', label: 'Zaplanowane' },
 	{ key: 'done', label: 'Zakończone' }
 ];
-const STATUS_ORDER: Record<BlockStatus, number> = { in_progress: 0, planned: 1, done: 2 };
+const STATUS_ORDER: Record<BlockStatus, number> = { unassigned: 0, in_progress: 1, planned: 2, done: 3 };
 const inTab = (tab: StatusTab, status: BlockStatus) => (tab === 'active' ? status !== 'done' : status === tab);
 
 /** Pełne imię i nazwisko; na węższym ekranie „Piotr W.” (pełne w podpowiedzi). */
@@ -104,6 +106,7 @@ const ListPage = () => {
 	// opcje filtrów: linie z ich maszynami, samodzielne maszyny, projekty po numerze
 	const machineOptions = useMemo<MultiSelectOption[]>(
 		() => [
+			...(state.blocks.some((b) => b.machineId === null) ? [{ value: NO_MACHINE, label: 'Bez maszyny', group: 'Bez maszyny' }] : []),
 			...state.lines.flatMap((line) => [
 				{ value: line.id, label: `${line.name} (cała linia)`, group: 'Linie produkcyjne' },
 				...lineMachines(line, state.machines).map((m) => ({ value: m.id, label: m.name, group: 'Linie produkcyjne', indent: true, mono: true }))
@@ -124,7 +127,7 @@ const ListPage = () => {
 	// archiwum: zlecenia zakończone ponad 30 dni temu, tylko do wglądu
 	const source: ListBlock[] = archived ? state.archive : state.blocks;
 	const statusOf = (b: Block): BlockStatus => (archived ? 'done' : blockStatus(b, now));
-	const nameOf = (b: ListBlock) => b.machineName ?? machineNames.get(b.machineId) ?? '';
+	const nameOf = (b: ListBlock) => b.machineName ?? (b.machineId === null ? 'Bez maszyny' : (machineNames.get(b.machineId) ?? ''));
 
 	// wszystkie filtry poza statusem i programistą - z tego liczymy liczniki zakładek i „Bez programisty”
 	const filtered = useMemo(() => {
@@ -132,7 +135,7 @@ const ListPage = () => {
 		return source.filter(
 			(b) =>
 				(!q || [b.orderNo, b.projectNo, b.project, b.operation].some((f) => f.toLowerCase().includes(q))) &&
-				(machineIds.length === 0 || machineIds.includes(b.machineId)) &&
+				(machineIds.length === 0 || machineIds.includes(b.machineId ?? NO_MACHINE)) &&
 				(projectNos.length === 0 || projectNos.includes(b.projectNo))
 		);
 	}, [source, query, machineIds, projectNos]);
@@ -206,6 +209,8 @@ const ListPage = () => {
 	);
 
 	const unassignedOnly = programmerIds.length === 1 && programmerIds[0] === UNASSIGNED;
+	const noMachineOnly = machineIds.length === 1 && machineIds[0] === NO_MACHINE;
+	const noMachineCount = useMemo(() => state.blocks.filter((b) => b.machineId === null).length, [state.blocks]);
 	const showOnPlan = (id: Id) => navigate('/', { state: { showBlock: id } satisfies PlanNavigationState });
 	// kilka zleceń: plan wyróżnia je jak wyniki wyszukiwania i przeskakuje między nimi strzałkami
 	const showManyOnPlan = (ids: Id[]) => navigate('/', { state: (ids.length === 1 ? { showBlock: ids[0] } : { showBlocks: ids }) satisfies PlanNavigationState });
@@ -289,6 +294,16 @@ const ListPage = () => {
 				<MultiSelect id="filterProject" label="Projekt" allLabel="wszystkie" options={projectOptions} selected={projectNos} onChange={setProjectNos} />
 				<MultiSelect id="filterProgrammer" label="Programista" allLabel="wszyscy" options={programmerOptions} selected={programmerIds} onChange={setProgrammerIds} />
 				<span className="list-filters-extra">
+					{!archived && (noMachineCount > 0 || noMachineOnly) && (
+						<button
+							type="button"
+							className={`filter-pill-danger ${noMachineOnly ? 'active' : ''}`}
+							aria-pressed={noMachineOnly}
+							title="Zlecenia, których maszynę lub linię usunięto - przypisz je na planie"
+							onClick={() => setMachineIds(noMachineOnly ? [] : [NO_MACHINE])}>
+							Bez maszyny · <span className="mono">{noMachineCount}</span>
+						</button>
+					)}
 					{!archived && (
 						<button
 						type="button"

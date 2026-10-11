@@ -160,7 +160,7 @@ export function createSeedState(now: number): PlanState {
 	blocks.push(...fillQueue('l3m3', [], 3));
 	// potem zlecenia linii - linie przerabiają je szybciej, więc mają ich więcej
 	for (const line of lines.slice(0, LINE_COUNT)) {
-		const members = blocks.filter((b) => line.machineIds.includes(b.machineId));
+		const members = blocks.filter((b) => b.machineId !== null && line.machineIds.includes(b.machineId));
 		blocks.push(...fillQueue(line.id, members));
 	}
 

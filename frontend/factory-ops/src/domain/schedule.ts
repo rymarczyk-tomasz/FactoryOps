@@ -46,6 +46,7 @@ function reflowMachine(blocks: Block[], capacityAt: CapacityAt, placement?: Plac
 function reflowEach(blocks: Block[], capacities: CapacityLookup, placement?: Placement, now?: number): Block[] {
 	const byMachine = new Map<Id, Block[]>();
 	for (const block of blocks) {
+		if (block.machineId === null) continue;
 		const queue = byMachine.get(block.machineId);
 		if (queue) queue.push(block);
 		else byMachine.set(block.machineId, [block]);
@@ -68,18 +69,20 @@ export function reflow(blocks: Block[], resources: PlanResources, placement?: Pl
 		// linia zależy od zleceń i awarii swoich maszyn
 		for (const line of resources.lines) if (line.machineIds.some((id) => affected!.has(id))) affected.add(line.id);
 	}
-	const inScope = (b: Block) => !affected || affected.has(b.machineId);
-	const machineBlocks = blocks.filter((b) => !lineIds.has(b.machineId));
+	const inScope = (b: Block) => !affected || (b.machineId !== null && affected.has(b.machineId));
+	// zlecenia bez maszyny nie są planowane - czekają na przypisanie
+	const unassigned = blocks.filter((b) => b.machineId === null);
+	const machineBlocks = blocks.filter((b) => b.machineId !== null && !lineIds.has(b.machineId));
 	const onMachines = [
 		...machineBlocks.filter((b) => !inScope(b)),
 		...reflowEach(machineBlocks.filter(inScope), capacityLookup(resources, clock), placement, now)
 	];
-	const lineBlocks = blocks.filter((b) => lineIds.has(b.machineId));
+	const lineBlocks = blocks.filter((b) => b.machineId !== null && lineIds.has(b.machineId));
 	const onLines = [
 		...lineBlocks.filter((b) => !inScope(b)),
 		...reflowEach(lineBlocks.filter(inScope), capacityLookup(resources, clock, onMachines), placement, now)
 	];
-	return [...onMachines, ...onLines];
+	return [...onMachines, ...onLines, ...unassigned];
 }
 
 /** Moment, od którego można dopisać nowe zlecenie na koniec kolejki maszyny lub linii. */
@@ -107,14 +110,25 @@ export function updateBlock(
 	const updated = blocks.map((b) => (b.id === id ? { ...b, ...patch, start: start ?? b.start } : b));
 	// nowe miejsce tylko przy zmianie startu lub maszyny - sama zmiana godzin czy opisu nie rusza terminu
 	const moved = current && ((start !== undefined && start !== current.start) || (patch.machineId !== undefined && patch.machineId !== current.machineId));
-	const scope = [current?.machineId, patch.machineId].filter((m): m is Id => m !== undefined);
+	const scope = [current?.machineId, patch.machineId].filter((m): m is Id => typeof m === 'string');
 	return reflow(updated, resources, moved ? { id } : undefined, now, scope);
 }
 
 export function moveBlock(blocks: Block[], id: Id, start: number, machineId: Id, resources: PlanResources, now?: number): Block[] {
 	const from = blocks.find((b) => b.id === id)?.machineId;
 	const updated = blocks.map((b) => (b.id === id ? { ...b, start: nearestHourStart(start), machineId } : b));
+	// zlecenie bez maszyny upuszczone na wiersz dostaje maszynę
 	return reflow(updated, resources, { id, attachWithin: ATTACH_WITHIN_HOURS }, now, from ? [from, machineId] : [machineId]);
+}
+
+/** Przypisuje zlecenie (np. bez maszyny) do zasobu - na koniec jego kolejki, bez terminu. */
+export function assignBlock(blocks: Block[], id: Id, machineId: Id, resources: PlanResources, now: number): Block[] {
+	const current = blocks.find((b) => b.id === id);
+	if (!current || current.machineId === machineId) return blocks;
+	const others = blocks.filter((b) => b.id !== id);
+	const start = queueEnd(others, machineId, resources, now);
+	const updated = blocks.map((b) => (b.id === id ? { ...b, machineId, start } : b));
+	return reflow(updated, resources, { id, attachWithin: Infinity }, now, [current.machineId, machineId].filter((m): m is Id => m !== null));
 }
 
 export interface MovePreview {
@@ -141,7 +155,7 @@ export function previewMove(
 	if (!moved) return undefined;
 	// wystarczy przeliczyć docelową maszynę, a dla linii - także zlecenia jej maszyn, które zajmują linię
 	const affecting = new Set([machineId, ...(resources.lines.find((l) => l.id === machineId)?.machineIds ?? [])]);
-	const subset = [...blocks.filter((b) => affecting.has(b.machineId) && b.id !== id), moved];
+	const subset = [...blocks.filter((b) => b.machineId !== null && affecting.has(b.machineId) && b.id !== id), moved];
 	const result = moveBlock(subset, id, start, machineId, resources, now)
 		.filter((b) => b.machineId === machineId)
 		.sort((a, b) => a.start - b.start);
@@ -158,7 +172,7 @@ export function removeBlock(blocks: Block[], id: Id, resources: PlanResources, n
 		resources,
 		undefined,
 		now,
-		removed ? [removed.machineId] : []
+		removed?.machineId ? [removed.machineId] : []
 	);
 }
 
@@ -177,6 +191,7 @@ export function compactMachine(blocks: Block[], machineId: Id, resources: PlanRe
 }
 
 export function blockStatus(block: Block, now: number): BlockStatus {
+	if (block.machineId === null) return 'unassigned';
 	if (block.end <= now) return 'done';
 	if (block.start <= now) return 'in_progress';
 	return 'planned';

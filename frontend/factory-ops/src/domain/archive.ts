@@ -11,12 +11,14 @@ const DAY = 24 * 3600_000;
  */
 export function archiveOld(state: PlanState, now: number): PlanState {
 	const before = now - ARCHIVE_AFTER_DAYS * DAY;
-	const old = state.blocks.filter((b) => b.end <= before);
+	// zlecenie bez maszyny czeka na przypisanie - nie znika z planu
+	const old = state.blocks.filter((b) => b.end <= before && b.machineId !== null);
 	if (old.length === 0) return state;
 	const archived = old.map((b): ArchivedBlock => ({ ...b, machineName: resourceName(state, b.machineId), archivedAt: now }));
+	const archivedIds = new Set(old.map((b) => b.id));
 	return {
 		...state,
-		blocks: state.blocks.filter((b) => b.end > before),
+		blocks: state.blocks.filter((b) => !archivedIds.has(b.id)),
 		archive: [...(state.archive ?? []), ...archived]
 	};
 }

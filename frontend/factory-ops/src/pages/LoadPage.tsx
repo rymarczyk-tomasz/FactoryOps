@@ -79,7 +79,7 @@ const LoadPage = () => {
 		const row = (id: Id, meta: string, down: boolean): ResourceRow => {
 			// zlecenia linii liczą się razem ze zleceniami jej maszyn
 			const ids = new Set([id, ...(findLine(state.lines, id)?.machineIds ?? [])]);
-			const pending = state.blocks.filter((b) => ids.has(b.machineId) && b.end > now);
+			const pending = state.blocks.filter((b) => b.machineId !== null && ids.has(b.machineId) && b.end > now);
 			const lastEnd = Math.max(-Infinity, ...pending.map((b) => b.end));
 			return { id, name: resourceName(state, id), meta, days: loads.get(id) ?? [], freeFrom: lastEnd > now ? lastEnd : undefined, queued: pending.length, down };
 		};
