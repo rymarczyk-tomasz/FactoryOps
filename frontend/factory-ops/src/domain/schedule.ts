@@ -97,6 +97,42 @@ export function addBlock(blocks: Block[], draft: BlockDraft, id: Id, resources: 
 	return reflow([...blocks, block], resources, { id }, now, [draft.machineId]);
 }
 
+/**
+ * Zlecenie `id` schodzi ze swojego miejsca (usunięte, przeniesione) - następne zlecenie tej samej maszyny
+ * dostaje termin na swoim obecnym starcie, więc w planie zostaje przerwa. Domyka się ją przyciskiem (`closeGap`).
+ */
+function keepGapAfter(blocks: Block[], id: Id, now?: number): Block[] {
+	const left = blocks.find((b) => b.id === id);
+	if (!left || left.machineId === null) return blocks;
+	const next = blocks
+		.filter((b) => b.id !== id && b.machineId === left.machineId && b.start > left.start)
+		.reduce<Block | undefined>((first, b) => (!first || b.start < first.start ? b : first), undefined);
+	// zlecenie z terminem i rozpoczęte i tak się nie cofną
+	if (!next || next.pinnedStart !== undefined || (now !== undefined && next.start < now)) return blocks;
+	return blocks.map((b) => (b === next ? { ...b, pinnedStart: b.start } : b));
+}
+
+/** Przerwa (ms) przed zleceniem - od końca poprzedniego zlecenia tej samej maszyny lub linii; 0 - brak przerwy albo pierwsze w kolejce. */
+export function gapBefore(blocks: Block[], id: Id): number {
+	const block = blocks.find((b) => b.id === id);
+	if (!block || block.machineId === null) return 0;
+	const previousEnd = Math.max(-Infinity, ...blocks.filter((b) => b.machineId === block.machineId && b.start < block.start).map((b) => b.end));
+	return previousEnd === -Infinity ? 0 : Math.max(0, block.start - previousEnd);
+}
+
+/** Domyka przerwę przed zleceniem - zdejmuje jego termin, zlecenie (i kolejne bez terminu) dosuwa się do poprzedniego. */
+export function closeGap(blocks: Block[], id: Id, resources: PlanResources, now?: number): Block[] {
+	const block = blocks.find((b) => b.id === id);
+	if (!block || block.machineId === null || block.pinnedStart === undefined) return blocks;
+	const unpinned = blocks.map((b) => {
+		if (b !== block) return b;
+		const next = { ...b };
+		delete next.pinnedStart;
+		return next;
+	});
+	return reflow(unpinned, resources, undefined, now, [block.machineId]);
+}
+
 export function updateBlock(
 	blocks: Block[],
 	id: Id,
@@ -107,16 +143,17 @@ export function updateBlock(
 	const current = blocks.find((b) => b.id === id);
 	// start z formularza przyciągamy do pełnej godziny tak samo jak przy dodawaniu i przeciąganiu
 	const start = patch.start !== undefined ? nearestHourStart(patch.start) : undefined;
-	const updated = blocks.map((b) => (b.id === id ? { ...b, ...patch, start: start ?? b.start } : b));
 	// nowe miejsce tylko przy zmianie startu lub maszyny - sama zmiana godzin czy opisu nie rusza terminu
 	const moved = current && ((start !== undefined && start !== current.start) || (patch.machineId !== undefined && patch.machineId !== current.machineId));
+	// miejsce po przeniesionym zleceniu zostaje puste
+	const updated = (moved ? keepGapAfter(blocks, id, now) : blocks).map((b) => (b.id === id ? { ...b, ...patch, start: start ?? b.start } : b));
 	const scope = [current?.machineId, patch.machineId].filter((m): m is Id => typeof m === 'string');
 	return reflow(updated, resources, moved ? { id } : undefined, now, scope);
 }
 
 export function moveBlock(blocks: Block[], id: Id, start: number, machineId: Id, resources: PlanResources, now?: number): Block[] {
 	const from = blocks.find((b) => b.id === id)?.machineId;
-	const updated = blocks.map((b) => (b.id === id ? { ...b, start: nearestHourStart(start), machineId } : b));
+	const updated = keepGapAfter(blocks, id, now).map((b) => (b.id === id ? { ...b, start: nearestHourStart(start), machineId } : b));
 	// zlecenie bez maszyny upuszczone na wiersz dostaje maszynę
 	return reflow(updated, resources, { id, attachWithin: ATTACH_WITHIN_HOURS }, now, from ? [from, machineId] : [machineId]);
 }
@@ -127,7 +164,7 @@ export function assignBlock(blocks: Block[], id: Id, machineId: Id, resources: P
 	if (!current || current.machineId === machineId) return blocks;
 	const others = blocks.filter((b) => b.id !== id);
 	const start = queueEnd(others, machineId, resources, now);
-	const updated = blocks.map((b) => (b.id === id ? { ...b, machineId, start } : b));
+	const updated = keepGapAfter(blocks, id, now).map((b) => (b.id === id ? { ...b, machineId, start } : b));
 	return reflow(updated, resources, { id, attachWithin: Infinity }, now, [current.machineId, machineId].filter((m): m is Id => m !== null));
 }
 
@@ -164,11 +201,11 @@ export function previewMove(
 	return { start: placed.start, end: placed.end, after: result[index - 1], before: result[index + 1], pinned: placed.pinnedStart !== undefined && index > 0 };
 }
 
-/** Usuwa zlecenie; kolejne zlecenia bez terminu cofają się na jego miejsce. */
+/** Usuwa zlecenie; na jego miejscu zostaje przerwa - kolejne zlecenia się nie cofają. */
 export function removeBlock(blocks: Block[], id: Id, resources: PlanResources, now?: number): Block[] {
 	const removed = blocks.find((b) => b.id === id);
 	return reflow(
-		blocks.filter((b) => b.id !== id),
+		keepGapAfter(blocks, id, now).filter((b) => b.id !== id),
 		resources,
 		undefined,
 		now,

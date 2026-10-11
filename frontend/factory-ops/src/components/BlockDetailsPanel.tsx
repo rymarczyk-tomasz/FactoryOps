@@ -2,7 +2,7 @@ import { Button, Form } from 'react-bootstrap';
 import { usePlan } from '../data/PlanContext';
 import { breakdownEnd, findLine, isOngoing, lineMachines, lineOfMachine, resourceName, standaloneMachines } from '../domain/calendar';
 import { formatClockDuration, formatDateTime, formatHours, orderLabel, programmerName, STATUS_LABELS } from '../domain/format';
-import { blockStatus } from '../domain/schedule';
+import { blockStatus, gapBefore } from '../domain/schedule';
 import { Block, BlockStatus, Id } from '../domain/types';
 import { projectKey } from '../domain/projects';
 import ColorSwatches from './ColorSwatches';
@@ -35,10 +35,12 @@ interface BlockDetailsPanelProps {
 
 /** Panel zaznaczonego zlecenia - kolumna obok planu: szczegóły, awarie, programista, kolejka zasobu i akcje. */
 const BlockDetailsPanel = ({ block, onSelect, onEdit, onDelete, onShow, onClose }: BlockDetailsPanelProps) => {
-	const { state, now, updateBlock, assignBlock, setProjectColor } = usePlan();
+	const { state, now, updateBlock, assignBlock, setProjectColor, closeGap } = usePlan();
 	const line = findLine(state.lines, block.machineId);
 	const machine = state.machines.find((m) => m.id === block.machineId);
 	const unassigned = block.machineId === null;
+	// przerwę przed zleceniem z terminem, które jeszcze się nie zaczęło, można domknąć
+	const gap = block.pinnedStart !== undefined && block.start > now ? gapBefore(state.blocks, block.id) : 0;
 	if (!machine && !line && !unassigned) return null;
 	const parentLine = machine ? lineOfMachine(state.lines, machine.id) : undefined;
 	const resource = resourceName(state, block.machineId);
@@ -158,6 +160,17 @@ const BlockDetailsPanel = ({ block, onSelect, onEdit, onDelete, onShow, onClose 
 							<dt>Termin</dt>
 							<dd>
 								nie wcześniej niż <span className="mono details-time">{formatDateTime(block.pinnedStart)}</span>
+							</dd>
+						</>
+					)}
+					{gap > 0 && (
+						<>
+							<dt>Przerwa</dt>
+							<dd className="details-gap">
+								{formatClockDuration(gap)} przed zleceniem
+								<Button size="sm" variant="outline-secondary" className="details-gap-close" onClick={() => closeGap(block.id)}>
+									Domknij
+								</Button>
 							</dd>
 						</>
 					)}

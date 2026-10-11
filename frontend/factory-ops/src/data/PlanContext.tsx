@@ -43,6 +43,12 @@ function readinessChange(patch: Partial<Block>): string | undefined {
 	return flags.length ? flags.map((flag) => READINESS_TEXT[flag][patch[flag] ? 0 : 1]).join(' · ') : undefined;
 }
 
+/** Zlecenie, przed którym zmiana zostawiła nową przerwę (dostało termin) - dla przycisku „Domknij przerwę”. */
+const openedGap = (before: PlanState, after: PlanState, movedId: Id) => {
+	const pinned = new Set(before.blocks.filter((b) => b.pinnedStart !== undefined).map((b) => b.id));
+	return after.blocks.find((b) => b.id !== movedId && b.pinnedStart !== undefined && !pinned.has(b.id) && schedule.gapBefore(after.blocks, b.id) > 0);
+};
+
 /** Dopisek do komunikatu o usunięciu zasobu: ile zleceń trafiło do grupy „Bez maszyny”. */
 const detachedNotice = (s: PlanState, id: Id) => {
 	const n = pendingBlocks(s.blocks, id, Date.now()).length;
@@ -77,7 +83,17 @@ export interface Notice {
 	id: number;
 	text: string;
 	undoable: boolean;
+	/** Dodatkowy przycisk w komunikacie, np. „Domknij przerwę”. */
+	action?: NoticeAction;
 }
+
+export interface NoticeAction {
+	label: string;
+	run: () => void;
+}
+
+/** Opis zmiany w komunikacie - sam tekst albo tekst z przyciskiem. */
+type Describe = (before: PlanState, after: PlanState) => string | { text: string; action?: NoticeAction };
 
 interface PlanActions {
 	/** `color` - kolor projektu wybrany w formularzu (zapisywany na projekcie, w tym samym kroku cofania). */
@@ -92,6 +108,8 @@ interface PlanActions {
 	assignBlock(id: Id, machineId: Id): void;
 	deleteBlock(id: Id): void;
 	compactMachine(machineId: Id): void;
+	/** Domyka przerwę przed zleceniem - zlecenie i kolejne dosuwają się do poprzedniego. */
+	closeGap(id: Id): void;
 	/** Dodaje (bez `id`) albo zapisuje istniejącą maszynę. */
 	saveMachine(draft: MachineDraft, id?: Id): Id;
 	deleteMachine(id: Id): void;
@@ -159,11 +177,14 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 		setState(next);
 	}, [now, loaded]);
 
-	const notify = useCallback((text: string, undoable: boolean) => setNotice({ id: ++noticeId.current, text, undoable }), []);
+	const notify = useCallback(
+		(text: string, undoable: boolean, action?: NoticeAction) => setNotice({ id: ++noticeId.current, text, undoable, action }),
+		[]
+	);
 
 	/** Zmienia plan, zapamiętuje poprzedni stan do cofnięcia i pokazuje komunikat opisany przez `describe`. */
 	const apply = useCallback(
-		(change: (current: PlanState) => PlanState, describe?: (before: PlanState, after: PlanState) => string) => {
+		(change: (current: PlanState) => PlanState, describe?: Describe) => {
 			const current = stateRef.current;
 			if (!current) return;
 			const next = change(current);
@@ -171,13 +192,16 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 			stateRef.current = next;
 			setHistory((h) => [...h.slice(-(HISTORY_LIMIT - 1)), current]);
 			setState(next);
-			if (describe) notify(describe(current, next), true);
+			if (!describe) return;
+			const described = describe(current, next);
+			if (typeof described === 'string') notify(described, true);
+			else notify(described.text, true, described.action);
 		},
 		[notify]
 	);
 
 	const withBlocks = useCallback(
-		(change: (s: PlanState) => Block[], describe?: (before: PlanState, after: PlanState) => string) =>
+		(change: (s: PlanState) => Block[], describe?: Describe) =>
 			apply((s) => {
 				const blocks = change(s);
 				// nic się nie zmieniło (np. domknięcie przerw bez przerw) - bez komunikatu i kroku do cofnięcia
@@ -195,8 +219,18 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 		notify('Cofnięto ostatnią zmianę', false);
 	}, [history, notify]);
 
-	const actions = useMemo<Omit<PlanActions, 'undo'>>(
-		() => ({
+	const actions = useMemo<Omit<PlanActions, 'undo'>>(() => {
+		const closeGap = (id: Id) =>
+			withBlocks(
+				(s) => schedule.closeGap(s.blocks, id, s, Date.now()),
+				(before) => `Domknięto przerwę · ${orderName(before, id)}`
+			);
+		/** Komunikat z przyciskiem „Domknij przerwę”, gdy zmiana zostawiła przerwę w planie. */
+		const withGapAction = (text: string, before: PlanState, after: PlanState, movedId: Id) => {
+			const gap = openedGap(before, after, movedId);
+			return gap ? { text: `${text} · została przerwa`, action: { label: 'Domknij przerwę', run: () => closeGap(gap.id) } } : text;
+		};
+		return {
 			addBlock(draft, color) {
 				const id = newId();
 				apply(
@@ -212,9 +246,9 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 						const block = blocks.find((b) => b.id === id);
 						return withProjectColor(sameBlocks(s.blocks, blocks) ? s : { ...s, blocks }, block ? projectKey(block) : '', color);
 					},
-					(before) => {
+					(before, after) => {
 						const change = readinessChange(patch);
-						return change ? `${orderName(before, id)} · ${change}` : `Zapisano ${orderName(before, id)}`;
+						return change ? `${orderName(before, id)} · ${change}` : withGapAction(`Zapisano ${orderName(before, id)}`, before, after, id);
 					}
 				),
 			setProjectColor: (key, color) =>
@@ -236,20 +270,21 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 			moveBlock: (id, start, machineId) =>
 				withBlocks(
 					(s) => schedule.moveBlock(s.blocks, id, start, machineId, s, Date.now()),
-					(_, after) => {
+					(before, after) => {
 						const block = after.blocks.find((b) => b.id === id);
-						return `Przeniesiono ${block ? orderLabel(block) : ''} · ${machineName(after, machineId)} · start ${block ? formatDateTime(block.start) : ''}`;
+						const text = `Przeniesiono ${block ? orderLabel(block) : ''} · ${machineName(after, machineId)} · start ${block ? formatDateTime(block.start) : ''}`;
+						return withGapAction(text, before, after, id);
 					}
 				),
 			assignBlock: (id, machineId) =>
 				withBlocks(
 					(s) => schedule.assignBlock(s.blocks, id, machineId, s, Date.now()),
-					(before, after) => `Przypisano ${orderName(before, id)} · ${machineName(after, machineId)}`
+					(before, after) => withGapAction(`Przypisano ${orderName(before, id)} · ${machineName(after, machineId)}`, before, after, id)
 				),
 			deleteBlock: (id) =>
 				withBlocks(
 					(s) => schedule.removeBlock(s.blocks, id, s, Date.now()),
-					(before) => `Usunięto ${orderName(before, id)}`
+					(before, after) => withGapAction(`Usunięto ${orderName(before, id)}`, before, after, id)
 				),
 			compactMachine(machineId) {
 				const before = stateRef.current;
@@ -259,6 +294,7 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 				);
 				if (before && stateRef.current === before) notify(`Brak przerw do domknięcia · ${machineName(before, machineId)}`, false);
 			},
+			closeGap,
 			saveMachine(draft, existingId) {
 				const id = existingId ?? newId();
 				// system pracy i przynależność do linii zmieniają czas zleceń
@@ -334,8 +370,8 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 				notify('Przywrócono dane przykładowe', false);
 			},
 			dismissNotice: () => setNotice(undefined)
-		}),
-		[apply, withBlocks, repo, notify]
+		};
+	}, [apply, withBlocks, repo, notify]
 	);
 
 	if (!state) {

@@ -49,6 +49,11 @@ function App() {
 								<span className="flex-grow-1 notice-text" title={notice.text}>
 									{notice.text}
 								</span>
+								{notice.action && (
+									<Button size="sm" variant="light" className="py-1 text-nowrap" onClick={notice.action.run}>
+										{notice.action.label}
+									</Button>
+								)}
 								{notice.undoable && canUndo && (
 									<Button size="sm" variant="light" className="py-1" onClick={undo}>
 										Cofnij

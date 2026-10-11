@@ -1282,3 +1282,15 @@
 	box-shadow: 0 0 0 2px var(--primary);
 	animation: block-pulse 0.6s ease-in-out 2;
 }
+
+/* przerwa przed zleceniem - zostaje po usunięciu lub przeniesieniu poprzedniego, domyka się przyciskiem */
+.details-gap {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.details-gap .details-gap-close {
+	padding: 1px 8px;
+	font-size: 12px;
+}
