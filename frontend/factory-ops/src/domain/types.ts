@@ -81,7 +81,11 @@ export interface Block {
 	 * takie zlecenie nie bierze udziału w planowaniu i czeka, aż planista przypisze je do zasobu.
 	 */
 	machineId: Id | null;
-	orderNo: string;
+	/**
+	 * Numer zamówienia (ZAM/…) - opcjonalny: zlecenie rozpoznaje się po „IMR-xxxx · stopień”.
+	 * Zostaje w modelu dla importu i eksportu.
+	 */
+	orderNo?: string;
 	/** Numer projektu, np. IMR-6001. */
 	projectNo: string;
 	/** Nazwa projektu, np. Huanyon. */

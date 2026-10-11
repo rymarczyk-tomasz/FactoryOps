@@ -27,7 +27,7 @@ import {
 	standaloneMachines,
 	workMode
 } from '../domain/calendar';
-import { formatDateTime, formatHours, programmerName, timelineLabel } from '../domain/format';
+import { formatDateTime, formatHours, orderLabel, programmerName, timelineLabel } from '../domain/format';
 import { subtractIntervals } from '../domain/conflicts';
 import { blockStatus, previewMove } from '../domain/schedule';
 import { addHours, dayKey, isWeekend, nearestHourStart, shiftDayStart } from '../domain/shifts';
@@ -122,9 +122,9 @@ const LABEL_PADDING = 16;
 /** Ikona gotowości (12px) z odstępem. */
 const READINESS_ICON_WIDTH = 14;
 
-/** Opis bloczka: operacja i numer projektu - nazwa projektu jest w podpowiedzi i panelu. */
+/** Opis bloczka: „IMR-6001 · Stopień 3”, a gdy się nie mieści - sam stopień (projekt widać po kolorze). */
 function blockLabels(block: Block): string[] {
-	return [`${block.operation} · ${block.projectNo}`, block.operation];
+	return [orderLabel(block), block.operation];
 }
 
 /**
@@ -305,7 +305,7 @@ const rangeAround = (time: number, span: number, lead: number): Range => ({ star
 
 function matchesQuery(block: Block, query: string): boolean {
 	const q = query.trim().toLowerCase();
-	return [block.orderNo, block.projectNo, block.project, block.operation].some((field) => field.toLowerCase().includes(q));
+	return [block.orderNo ?? '', block.projectNo, block.project, block.operation, orderLabel(block)].some((field) => field.toLowerCase().includes(q));
 }
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -776,8 +776,8 @@ const FactoryOpsTimeline = () => {
 				const programmer = state.programmers.find((p) => p.id === block.programmerId);
 				const line = lines.get(block.machineId ?? '');
 				const tooltip = [
-					`${block.operation} · ${block.projectNo} · ${block.project}`,
-					`Zamówienie ${block.orderNo}`,
+					`${orderLabel(block)} · ${block.project}`,
+					block.orderNo ? `Zamówienie ${block.orderNo}` : '',
 					line ? `${formatHours(block.hours)} pracy maszyny · linia: ${line.machineIds.length} maszyny` : formatHours(block.hours),
 					`${formatDateTime(block.start)} → ${formatDateTime(block.end)}`,
 					block.pinnedStart !== undefined ? `Termin: nie wcześniej niż ${formatDateTime(block.pinnedStart)}` : '',
@@ -861,14 +861,14 @@ const FactoryOpsTimeline = () => {
 									kind: 'share',
 									group: machineId,
 									title: '',
-									labels: [`${lb.operation} · ${lb.projectNo}`, lb.operation],
+									labels: [orderLabel(lb), lb.operation],
 									start_time: start,
 									end_time: end,
 									canMove: false,
 									canResize: false,
 									canChangeGroup: false,
 									className: 'line-share-item',
-									itemProps: { title: `${lb.operation} · ${lb.projectNo} - zlecenie ${line.name} na tej maszynie` }
+									itemProps: { title: `${orderLabel(lb)} - zlecenie ${line.name} na tej maszynie` }
 								})
 							)
 						);
@@ -880,8 +880,8 @@ const FactoryOpsTimeline = () => {
 	const dropInfo = preview && {
 		resource: resourceName(state, drag?.machineId),
 		start: formatDateTime(preview.start),
-		after: preview.after && { label: preview.pinned ? 'przerwa po' : 'po', orderNo: preview.after.orderNo },
-		before: preview.before?.orderNo
+		after: preview.after && { label: preview.pinned ? 'przerwa po' : 'po', name: orderLabel(preview.after) },
+		before: preview.before && orderLabel(preview.before)
 	};
 
 	// kreska w miejscu, gdzie faktycznie wyląduje przenoszony bloczek (po zepchnięciu kolejki)
@@ -1322,7 +1322,7 @@ const FactoryOpsTimeline = () => {
 									{dropInfo.after && (
 										<>
 											{' '}
-											· {dropInfo.after.label} <span className="mono">{dropInfo.after.orderNo}</span>
+											· {dropInfo.after.label} <span className="mono">{dropInfo.after.name}</span>
 										</>
 									)}
 									{dropInfo.before && (
@@ -1400,7 +1400,7 @@ const FactoryOpsTimeline = () => {
 				onHide={() => setToDelete(undefined)}>
 				{toDelete && (
 					<>
-						Zlecenie <strong className="mono fw-medium">{toDelete.orderNo}</strong> ({toDelete.operation}) zostanie usunięte z planu. Następne zlecenia na
+						Zlecenie <strong className="mono fw-medium">{orderLabel(toDelete)}</strong> ({toDelete.project}) zostanie usunięte z planu. Następne zlecenia na
 						maszynie cofną się na jego miejsce.
 					</>
 				)}

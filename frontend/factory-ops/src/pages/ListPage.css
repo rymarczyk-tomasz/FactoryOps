@@ -287,7 +287,16 @@
 	color: oklch(0.55 0.02 260);
 }
 
-button.list-order-no:hover {
+/* nazwa zlecenia przenosi na plan */
+button.list-title {
+	padding: 0;
+	border: none;
+	background: transparent;
+	color: inherit;
+	text-align: left;
+}
+
+button.list-title:hover {
 	color: var(--accent);
 	text-decoration: underline;
 }

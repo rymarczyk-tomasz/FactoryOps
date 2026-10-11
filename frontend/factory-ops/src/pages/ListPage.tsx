@@ -12,7 +12,7 @@ import { projectColorVar } from '../components/projectColor';
 import { usePlan } from '../data/PlanContext';
 import { ARCHIVE_AFTER_DAYS } from '../domain/archive';
 import { lineMachines, resourceName, standaloneMachines } from '../domain/calendar';
-import { formatDateTime, formatHours, programmerName, STATUS_LABELS, toLocalInputValue } from '../domain/format';
+import { formatDateTime, formatHours, orderLabel, programmerName, STATUS_LABELS, toLocalInputValue } from '../domain/format';
 import { blockStatus } from '../domain/schedule';
 import { ArchivedBlock, Block, BlockStatus, Id, Programmer } from '../domain/types';
 import './ListPage.css';
@@ -146,7 +146,7 @@ const ListPage = () => {
 		const q = query.trim().toLowerCase();
 		return source.filter(
 			(b) =>
-				(!q || [b.orderNo, b.projectNo, b.project, b.operation].some((f) => f.toLowerCase().includes(q))) &&
+				(!q || [b.orderNo ?? '', b.projectNo, b.project, b.operation, orderLabel(b)].some((f) => f.toLowerCase().includes(q))) &&
 				(machineIds.length === 0 || machineIds.includes(b.machineId ?? NO_MACHINE)) &&
 				(projectNos.length === 0 || projectNos.includes(b.projectNo)) &&
 				(readiness.length === 0 || readiness.some((r) => matchesReadiness(b, r)))
@@ -162,7 +162,13 @@ const ListPage = () => {
 
 	const rows = useMemo(() => {
 		const sortValue = (block: ListBlock, key: SortKey): string | number =>
-			key === 'machine' ? nameOf(block) : key === 'status' ? STATUS_ORDER[statuses.get(block.id)!] : (block[key] as string | number);
+			key === 'machine'
+				? nameOf(block)
+				: key === 'status'
+					? STATUS_ORDER[statuses.get(block.id)!]
+					: key === 'operation'
+						? orderLabel(block)
+						: ((block[key] ?? '') as string | number);
 		return filtered
 			.filter((b) => (archived || inTab(statusTab, statuses.get(b.id)!)) && (programmerIds.length === 0 || programmerIds.includes(b.programmerId ?? UNASSIGNED)))
 			.sort((a, b) => {
@@ -254,7 +260,7 @@ const ListPage = () => {
 				b.operation,
 				b.projectNo,
 				b.project,
-				b.orderNo,
+				b.orderNo ?? '',
 				nameOf(b),
 				String(b.hours).replace('.', ','),
 				STATUS_LABELS[statusOf(b)],
@@ -279,7 +285,7 @@ const ListPage = () => {
 					<input
 						ref={searchRef}
 						type="search"
-						placeholder="Szukaj: nr zamówienia, projekt, operacja…"
+						placeholder="Szukaj: IMR, stopień, projekt…"
 						aria-label="Szukaj zleceń"
 						value={query}
 						onChange={(e) => setQuery(e.target.value)}
@@ -401,7 +407,7 @@ const ListPage = () => {
 									<button
 										type="button"
 										className="check-button"
-										aria-label={`Zaznacz ${block.orderNo}`}
+										aria-label={`Zaznacz ${orderLabel(block)}`}
 										aria-pressed={checked}
 										onClick={(e) => toggleRow(index, e.shiftKey)}>
 										<span className={`check-box ${checked ? 'is-checked' : ''}`}>{checked ? '✓' : ''}</span>
@@ -412,16 +418,14 @@ const ListPage = () => {
 									{STATUS_LABELS[status]}
 								</span>
 								<span className="list-order">
-									<span className="list-title">
-										{block.operation} · {block.projectNo}
-									</span>
 									{archived ? (
-										<span className="list-order-no mono">{block.orderNo}</span>
+										<span className="list-title">{orderLabel(block)}</span>
 									) : (
-										<button type="button" className="list-order-no mono" title="Pokaż na planie" onClick={() => showOnPlan(block.id)}>
-											{block.orderNo}
+										<button type="button" className="list-title" title="Pokaż na planie" onClick={() => showOnPlan(block.id)}>
+											{orderLabel(block)}
 										</button>
 									)}
+									{block.orderNo && <span className="list-order-no mono">{block.orderNo}</span>}
 								</span>
 								<span className="list-project">
 									<span className="project-chip mono" style={projectColorVar(block, state.projects)}>
@@ -444,7 +448,7 @@ const ListPage = () => {
 											type="button"
 											className={`readiness-toggle ${block[flag] ? 'is-on' : 'is-off'}`}
 											aria-pressed={!!block[flag]}
-											aria-label={`${label} · ${block.orderNo}`}
+											aria-label={`${label} · ${orderLabel(block)}`}
 											title={`${block[flag] ? label : missing}${archived ? '' : ' - kliknij, żeby zmienić'}`}
 											disabled={archived}
 											onClick={() => updateBlock(block.id, { [flag]: !block[flag] })}>
@@ -464,7 +468,10 @@ const ListPage = () => {
 										)
 									) : (
 										<Dropdown>
-											<Dropdown.Toggle as="button" bsPrefix={programmer ? 'programmer-toggle' : 'assign-toggle'} aria-label={`Programista ${block.orderNo}`}>
+											<Dropdown.Toggle
+												as="button"
+												bsPrefix={programmer ? 'programmer-toggle' : 'assign-toggle'}
+												aria-label={`Programista ${orderLabel(block)}`}>
 												{programmer ? (
 													<>
 														<span className="avatar">{initials(programmer)}</span>

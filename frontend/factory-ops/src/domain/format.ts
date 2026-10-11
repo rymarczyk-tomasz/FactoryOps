@@ -1,5 +1,6 @@
 import { roundUpHours } from './shifts';
-import { BlockStatus, Programmer } from './types';
+import { projectKey } from './projects';
+import { Block, BlockStatus, Programmer } from './types';
 
 const dateTimeFormat = new Intl.DateTimeFormat('pl-PL', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 const dateTimeYearFormat = new Intl.DateTimeFormat('pl-PL', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -36,6 +37,11 @@ export function formatClockSpan(start: number, end: number): string {
 	const format = end - start < 6 * 24 * HOUR ? spanFormat : spanDateFormat;
 	const label = (ms: number) => format.format(ms).replace(/\./, '').replace(/,/g, '');
 	return `${label(start)} → ${label(end)}`;
+}
+
+/** Nazwa zlecenia na planie, liście i w komunikatach: „IMR-6001 · Stopień 3”. */
+export function orderLabel(block: Pick<Block, 'projectNo' | 'project' | 'operation'>): string {
+	return [projectKey(block), block.operation.trim()].filter(Boolean).join(' · ');
 }
 
 export function programmerName(programmer: Programmer | undefined): string {

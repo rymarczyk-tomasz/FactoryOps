@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatClockDuration, formatClockSpan } from './format';
+import { formatClockDuration, formatClockSpan, orderLabel } from './format';
 
 const HOUR = 3600_000;
 
@@ -9,6 +9,14 @@ describe('formatClockDuration', () => {
 		expect(formatClockDuration(26 * HOUR)).toBe('1 dzień 2 h');
 		expect(formatClockDuration(102 * HOUR)).toBe('4 dni 6 h');
 		expect(formatClockDuration(48 * HOUR)).toBe('2 dni');
+	});
+});
+
+describe('orderLabel', () => {
+	it('zlecenie rozpoznaje się po numerze projektu i stopniu', () => {
+		expect(orderLabel({ projectNo: 'IMR-6001', project: 'Huanyon', operation: 'Stopień 3' })).toBe('IMR-6001 · Stopień 3');
+		// bez numeru - nazwa projektu
+		expect(orderLabel({ projectNo: '', project: 'Huanyon', operation: 'Wirnik' })).toBe('Huanyon · Wirnik');
 	});
 });
 

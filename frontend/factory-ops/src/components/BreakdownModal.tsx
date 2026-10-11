@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { Button, Form, Modal } from 'react-bootstrap';
 import { usePlan } from '../data/PlanContext';
 import { isOngoing, lineMachines, lineOfMachine, resourceName, standaloneMachines } from '../domain/calendar';
-import { formatDateTime, fromLocalInputValue, toLocalInputValue } from '../domain/format';
+import { formatDateTime, fromLocalInputValue, orderLabel, toLocalInputValue } from '../domain/format';
 import { blockStatus } from '../domain/schedule';
 import { addHours, hourStartAtOrBefore, nearestHourStart } from '../domain/shifts';
 import { Id } from '../domain/types';
@@ -170,7 +170,7 @@ const BreakdownModal = ({ show, target, onHide }: BreakdownModalProps) => {
 							<span className="consequence-orders">
 								{affected.length === 0
 									? 'Wydłuży: nic - brak zleceń w kolejce'
-									: `Wydłuży: ${extended.map((b) => `${b.operation} · ${b.projectNo}${blockStatus(b, now) === 'in_progress' ? ' (w toku)' : ''}`).join(', ')}${
+									: `Wydłuży: ${extended.map((b) => `${orderLabel(b)}${blockStatus(b, now) === 'in_progress' ? ' (w toku)' : ''}`).join(', ')}${
 										shifted > 0 ? ` · przesunie wszystkie kolejne zlecenia ${queueOwner} (${shifted})` : ''
 									}`}
 							</span>

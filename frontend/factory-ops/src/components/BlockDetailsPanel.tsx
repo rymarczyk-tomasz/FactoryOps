@@ -1,7 +1,7 @@
 import { Button, Form } from 'react-bootstrap';
 import { usePlan } from '../data/PlanContext';
 import { breakdownEnd, findLine, isOngoing, lineMachines, lineOfMachine, resourceName, standaloneMachines } from '../domain/calendar';
-import { formatClockDuration, formatDateTime, formatHours, programmerName, STATUS_LABELS } from '../domain/format';
+import { formatClockDuration, formatDateTime, formatHours, orderLabel, programmerName, STATUS_LABELS } from '../domain/format';
 import { blockStatus } from '../domain/schedule';
 import { Block, BlockStatus, Id } from '../domain/types';
 import { projectKey } from '../domain/projects';
@@ -62,10 +62,11 @@ const BlockDetailsPanel = ({ block, onSelect, onEdit, onDelete, onShow, onClose 
 					<span className={`pill ${STATUS_PILLS[status]}`}>{STATUS_LABELS[status]}</span>
 					<button type="button" className="btn-close ms-auto" aria-label="Zamknij panel" onClick={onClose} />
 				</div>
-				<h2 className="details-title">
-					{block.operation} · {block.project}
-				</h2>
-				<div className="details-order mono">{block.orderNo}</div>
+				<h2 className="details-title">{orderLabel(block)}</h2>
+				<div className="details-order">
+					{block.project}
+					{block.orderNo && <span className="mono"> · {block.orderNo}</span>}
+				</div>
 				{progress !== undefined && (
 					<div className="details-progress" title="Wykonana część zlecenia (według planu)">
 						<span className="details-progress-bar">
@@ -211,7 +212,7 @@ const BlockDetailsPanel = ({ block, onSelect, onEdit, onDelete, onShow, onClose 
 								<span className="queue-bar" />
 								<span className="queue-text">
 									<span className="queue-title">
-										{b.operation} · {b.projectNo} · {b.project}
+										{orderLabel(b)} · {b.project}
 									</span>
 									<span className="queue-when mono">
 										{formatDateTime(b.start)} → {endLabel(b.start, b.end)}

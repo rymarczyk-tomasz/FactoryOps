@@ -3,7 +3,7 @@ import { Button, Form, Modal } from 'react-bootstrap';
 import { useForm } from 'react-hook-form';
 import { usePlan } from '../data/PlanContext';
 import { findLine, lineMachines, lineOfMachine, resourceName, standaloneMachines } from '../domain/calendar';
-import { formatClockDuration, formatClockSpan, formatDateTime, fromLocalInputValue, programmerName, toLocalInputValue } from '../domain/format';
+import { formatClockDuration, formatClockSpan, formatDateTime, fromLocalInputValue, orderLabel, programmerName, toLocalInputValue } from '../domain/format';
 import { nearestHourStart } from '../domain/shifts';
 import { Block, BlockDraft, Id } from '../domain/types';
 import { machinesLabel, previewPlacement } from './planSelectors';
@@ -27,7 +27,6 @@ interface BlockFormModalProps {
 
 interface BlockForm {
 	machineId: Id;
-	orderNo: string;
 	projectNo: string;
 	project: string;
 	operation: string;
@@ -85,7 +84,6 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 		const machineId = block?.machineId ?? defaults?.machineId ?? (exists(lastMachineId) ? lastMachineId : (state.lines[0]?.id ?? state.machines[0]?.id));
 		reset({
 			machineId: machineId ?? '',
-			orderNo: block?.orderNo ?? '',
 			projectNo: block?.projectNo ?? '',
 			project: block?.project ?? '',
 			operation: block?.operation ?? '',
@@ -133,7 +131,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 		const manual = startMode === 'manual';
 		if (manual && !start) return undefined;
 		const draft: BlockDraft = {
-			...(block ?? { orderNo: '', projectNo: '', project: '', operation: '' }),
+			...(block ?? { projectNo: '', project: '', operation: '' }),
 			machineId,
 			hours,
 			start: manual ? fromLocalInputValue(start) : undefined
@@ -168,7 +166,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 			const last = state.blocks.filter((b) => b.machineId === machineId).reduce<Block | undefined>((l, b) => (!l || b.end > l.end ? b : l), undefined);
 			return last ? (
 				<>
-					{name} · na koniec kolejki po <span className="mono">{last.orderNo}</span> · podaj czas pracy, żeby zobaczyć termin
+					{name} · na koniec kolejki po <span className="mono">{orderLabel(last)}</span> · podaj czas pracy, żeby zobaczyć termin
 				</>
 			) : (
 				`${name} · podaj czas pracy, żeby zobaczyć termin`
@@ -189,14 +187,14 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 					{after && (
 						<>
 							{' '}
-							· po <span className="mono">{after.orderNo}</span>
+							· po <span className="mono">{orderLabel(after)}</span>
 							{after.end < placed.start && ' (z przerwą)'}
 						</>
 					)}
 					{before && (
 						<>
 							{' '}
-							· przed <span className="mono">{before.orderNo}</span>
+							· przed <span className="mono">{orderLabel(before)}</span>
 						</>
 					)}
 					{placed.start !== requested && (
@@ -204,7 +202,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 							start przesunięty z {at(requested)} na {at(placed.start)} –{' '}
 							{busyBy ? (
 								<>
-									wcześniej zajęte przez <span className="mono">{busyBy.orderNo}</span>
+									wcześniej zajęte przez <span className="mono">{orderLabel(busyBy)}</span>
 								</>
 							) : (
 								'wcześniej maszyna nie pracuje'
@@ -219,7 +217,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 				{name} ·{' '}
 				{after && (
 					<>
-						po <span className="mono">{after.orderNo}</span> ·{' '}
+						po <span className="mono">{orderLabel(after)}</span> ·{' '}
 					</>
 				)}
 				start {formatDateTime(placed.start)} → koniec {formatDateTime(placed.end)}
@@ -242,7 +240,8 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 		handleSubmit((form) => {
 			const draft: BlockDraft = {
 				machineId: form.machineId,
-				orderNo: form.orderNo.trim(),
+				// numer zamówienia nie jest już wpisywany - edycja zachowuje numer z importu lub starszych danych
+				orderNo: block?.orderNo,
 				projectNo: form.projectNo.trim(),
 				project: form.project.trim(),
 				operation: form.operation.trim(),
@@ -353,11 +352,6 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 								))}
 							</div>
 						)}
-					</Form.Group>
-					<Form.Group controlId="orderNo">
-						<Form.Label>Nr zamówienia</Form.Label>
-						<Form.Control className="mono" {...register('orderNo', required)} isInvalid={!!errors.orderNo} placeholder="np. ZAM/2026/0450" />
-						<Form.Control.Feedback type="invalid">{errors.orderNo?.message}</Form.Control.Feedback>
 					</Form.Group>
 					<Form.Group controlId="machineId">
 						<Form.Label>Linia / maszyna</Form.Label>

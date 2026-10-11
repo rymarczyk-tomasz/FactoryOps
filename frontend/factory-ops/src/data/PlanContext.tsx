@@ -1,7 +1,7 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { archiveOld } from '../domain/archive';
 import { isOngoing, resourceName } from '../domain/calendar';
-import { formatDateTime } from '../domain/format';
+import { formatDateTime, orderLabel } from '../domain/format';
 import * as schedule from '../domain/schedule';
 import { newId } from '../domain/ids';
 import { applyLineDraft, applyMachineDraft, pendingBlocks, removeLine, removeMachine } from '../domain/machines';
@@ -26,7 +26,10 @@ const sameBlocks = (a: Block[], b: Block[]) => {
 
 const machineName = (s: PlanState, id: Id | undefined) => resourceName(s, id);
 const breakdownMachine = (s: PlanState, id: Id) => s.breakdowns.filter((b) => b.id === id).map((b) => b.machineId);
-const orderNo = (s: PlanState, id: Id) => s.blocks.find((b) => b.id === id)?.orderNo ?? '';
+const orderName = (s: PlanState, id: Id) => {
+	const block = s.blocks.find((b) => b.id === id);
+	return block ? orderLabel(block) : '';
+};
 /** „zlecenia” / „zleceń” po liczbie (2-4 zlecenia, 5 zleceń, 22 zlecenia, 12 zleceń). */
 const ordersWord = (n: number) => (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'zlecenia' : 'zleceń');
 
@@ -188,7 +191,7 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 				const id = newId();
 				apply(
 					(s) => withProjectColor({ ...s, blocks: schedule.addBlock(s.blocks, draft, id, s, Date.now()) }, projectKey(draft), color),
-					(_, after) => `Dodano ${draft.orderNo} na ${machineName(after, draft.machineId)}`
+					(_, after) => `Dodano ${orderLabel(draft)} na ${machineName(after, draft.machineId)}`
 				);
 				return id;
 			},
@@ -199,7 +202,7 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 						const block = blocks.find((b) => b.id === id);
 						return withProjectColor(sameBlocks(s.blocks, blocks) ? s : { ...s, blocks }, block ? projectKey(block) : '', color);
 					},
-					(before) => `Zapisano ${orderNo(before, id)}`
+					(before) => `Zapisano ${orderName(before, id)}`
 				),
 			setProjectColor: (key, color) =>
 				apply(
@@ -216,18 +219,18 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 					(s) => schedule.moveBlock(s.blocks, id, start, machineId, s, Date.now()),
 					(_, after) => {
 						const block = after.blocks.find((b) => b.id === id);
-						return `Przeniesiono ${block?.orderNo} na ${machineName(after, machineId)} · start ${block ? formatDateTime(block.start) : ''}`;
+						return `Przeniesiono ${block ? orderLabel(block) : ''} na ${machineName(after, machineId)} · start ${block ? formatDateTime(block.start) : ''}`;
 					}
 				),
 			assignBlock: (id, machineId) =>
 				withBlocks(
 					(s) => schedule.assignBlock(s.blocks, id, machineId, s, Date.now()),
-					(before, after) => `Przypisano ${orderNo(before, id)} do ${machineName(after, machineId)}`
+					(before, after) => `Przypisano ${orderName(before, id)} do ${machineName(after, machineId)}`
 				),
 			deleteBlock: (id) =>
 				withBlocks(
 					(s) => schedule.removeBlock(s.blocks, id, s, Date.now()),
-					(before) => `Usunięto ${orderNo(before, id)}`
+					(before) => `Usunięto ${orderName(before, id)}`
 				),
 			compactMachine(machineId) {
 				const before = stateRef.current;
