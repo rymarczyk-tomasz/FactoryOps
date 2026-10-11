@@ -41,6 +41,14 @@ describe('obciążenie maszyn', () => {
 		expect(loadPercent(load)).toBe(50);
 	});
 
+	it('maszyna linii bez własnych zleceń jest zajęta zleceniami linii', () => {
+		const line: Line = { id: 'l', name: 'L', machineIds: ['a', 'b'] };
+		const resources = { calendar, machines: continuous(line.machineIds), lines: [line], breakdowns: [] };
+		const blocks = [block('onLine', 'l', at(5, 6), at(5, 18)), block('own', 'a', at(5, 18), at(5, 24))];
+		expect(loadPercent(dailyLoad(loadUnits(resources, blocks, 'b', 0), at(5, 6)))).toBe(50);
+		expect(loadPercent(dailyLoad(loadUnits(resources, blocks, 'a', 0), at(5, 6)))).toBe(75);
+	});
+
 	it('dzień wolny nie ma zajętości w procentach', () => {
 		const machine: Machine = { id: 'm', name: 'M', workMode: 'weekdays' };
 		const resources = { calendar, machines: [machine], lines: [], breakdowns: [] };

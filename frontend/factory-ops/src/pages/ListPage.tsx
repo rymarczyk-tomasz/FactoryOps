@@ -499,8 +499,10 @@ const ListPage = () => {
 					{sortHeader('machine', 'Zasób')}
 					{sortHeader('start', 'Start → koniec')}
 					{sortHeader('hours', 'Czas', 'text-end')}
-					<span className="list-readiness-head" title="Materiał i program gotowe">
-						Got.
+					<span className="list-readiness-head" title="Gotowość: materiał i program">
+						{READINESS.map(({ flag, label, Icon }) => (
+							<Icon key={flag} size={12} aria-label={label} />
+						))}
 					</span>
 					<span>Programista</span>
 				</div>
@@ -539,7 +541,6 @@ const ListPage = () => {
 											{orderLabel(block)}
 										</button>
 									)}
-									{block.orderNo && <span className="list-order-no mono">{block.orderNo}</span>}
 								</span>
 								<span className="list-project">
 									<span className="project-chip mono" style={projectColorVar(block, state.projects)}>
@@ -553,6 +554,7 @@ const ListPage = () => {
 								<span className="list-dates mono">
 									<span>{formatDateTime(block.start)}</span>
 									<span className="list-dates-end">→ {formatDateTime(block.end)}</span>
+									{block.machineId === null && !archived && <span className="last-plan">ostatni plan</span>}
 								</span>
 								<span className="list-hours mono">{formatHours(block.hours)}</span>
 								<span className="list-readiness">

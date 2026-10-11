@@ -191,7 +191,7 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 				const id = newId();
 				apply(
 					(s) => withProjectColor({ ...s, blocks: schedule.addBlock(s.blocks, draft, id, s, Date.now()) }, projectKey(draft), color),
-					(_, after) => `Dodano ${orderLabel(draft)} na ${machineName(after, draft.machineId)}`
+					(_, after) => `Dodano ${orderLabel(draft)} · ${machineName(after, draft.machineId)}`
 				);
 				return id;
 			},
@@ -219,13 +219,13 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 					(s) => schedule.moveBlock(s.blocks, id, start, machineId, s, Date.now()),
 					(_, after) => {
 						const block = after.blocks.find((b) => b.id === id);
-						return `Przeniesiono ${block ? orderLabel(block) : ''} na ${machineName(after, machineId)} · start ${block ? formatDateTime(block.start) : ''}`;
+						return `Przeniesiono ${block ? orderLabel(block) : ''} · ${machineName(after, machineId)} · start ${block ? formatDateTime(block.start) : ''}`;
 					}
 				),
 			assignBlock: (id, machineId) =>
 				withBlocks(
 					(s) => schedule.assignBlock(s.blocks, id, machineId, s, Date.now()),
-					(before, after) => `Przypisano ${orderName(before, id)} do ${machineName(after, machineId)}`
+					(before, after) => `Przypisano ${orderName(before, id)} · ${machineName(after, machineId)}`
 				),
 			deleteBlock: (id) =>
 				withBlocks(
@@ -236,9 +236,9 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 				const before = stateRef.current;
 				withBlocks(
 					(s) => schedule.compactMachine(s.blocks, machineId, s, Date.now()),
-					(previous) => `Domknięto przerwy na ${machineName(previous, machineId)}`
+					(previous) => `Domknięto przerwy · ${machineName(previous, machineId)}`
 				);
-				if (before && stateRef.current === before) notify(`Brak przerw do domknięcia na ${machineName(before, machineId)}`, false);
+				if (before && stateRef.current === before) notify(`Brak przerw do domknięcia · ${machineName(before, machineId)}`, false);
 			},
 			saveMachine(draft, existingId) {
 				const id = existingId ?? newId();
@@ -271,7 +271,7 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 				const id = newId();
 				apply(
 					(s) => withReflow({ ...s, breakdowns: [...s.breakdowns, { id, machineId, start: nearestHourStart(start) }] }, [machineId]),
-					(before) => `Zgłoszono awarię na ${machineName(before, machineId)} · plan przeliczony`
+					(before) => `Zgłoszono awarię · ${machineName(before, machineId)} · plan przeliczony`
 				);
 				return id;
 			},
@@ -285,17 +285,17 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 							},
 							breakdownMachine(s, id)
 						),
-					(before) => `Zakończono awarię na ${machineName(before, before.breakdowns.find((b) => b.id === id)?.machineId)} · plan przeliczony`
+					(before) => `Zakończono awarię · ${machineName(before, before.breakdowns.find((b) => b.id === id)?.machineId)} · plan przeliczony`
 				),
 			removeBreakdown: (id) =>
 				apply(
 					(s) => withReflow({ ...s, breakdowns: s.breakdowns.filter((b) => b.id !== id) }, breakdownMachine(s, id)),
-					(before) => `Usunięto awarię na ${machineName(before, before.breakdowns.find((b) => b.id === id)?.machineId)}`
+					(before) => `Usunięto awarię · ${machineName(before, before.breakdowns.find((b) => b.id === id)?.machineId)}`
 				),
 			setDayWorking: (dayKey, working, machineId) =>
 				apply(
 					(s) => withReflow(withDayChanges(s, dayKey, [{ machineId, value: working }]), machineId ? [machineId] : undefined),
-					(before) => `Zmieniono kalendarz ${machineId ? machineName(before, machineId) : 'całego zakładu'} na ${dayKey}`
+					(before) => `Zmieniono kalendarz · ${machineId ? machineName(before, machineId) : 'cały zakład'} · ${dayKey}`
 				),
 			saveDay: (dayKey, changes) =>
 				apply(
@@ -305,7 +305,7 @@ export function PlanProvider({ children, repository }: { children: ReactNode; re
 						const plantChanged = changes.some((c) => c.machineId === undefined);
 						return withReflow(withDayChanges(s, dayKey, changes), plantChanged ? undefined : changes.map((c) => c.machineId!));
 					},
-					() => `Zapisano kalendarz na ${dayKey}`
+					() => `Zapisano kalendarz · ${dayKey}`
 				),
 			async resetDemo() {
 				const fresh = await repo.reset();

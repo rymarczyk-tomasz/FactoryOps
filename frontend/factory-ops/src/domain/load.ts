@@ -1,4 +1,4 @@
-import { capacityLookup, findLine, PlanResources } from './calendar';
+import { capacityLookup, findLine, lineOfMachine, PlanResources } from './calendar';
 import { addHours } from './shifts';
 import { Block, Id } from './types';
 
@@ -21,12 +21,17 @@ const covers = (blocks: Block[]) => (hourStart: number) => blocks.some((b) => b.
 
 /**
  * Maszyny, z których liczymy obciążenie zasobu: zwykła maszyna to ona sama, linia - jej maszyny.
- * Maszyna linii jest zajęta, gdy ma własne zlecenie albo trwa zlecenie linii.
+ * Maszyna linii jest zajęta, gdy ma własne zlecenie albo trwa zlecenie linii - także liczona osobno
+ * (inaczej maszyna pracująca tylko na zlecenia linii miałaby 0%).
  */
 export function loadUnits(resources: PlanResources, blocks: Block[], resourceId: Id, now: number): LoadUnit[] {
 	const capacities = capacityLookup(resources, now);
-	const line = findLine(resources.lines, resourceId);
+	const line = findLine(resources.lines, resourceId) ?? lineOfMachine(resources.lines, resourceId);
 	const lineBlocks = line ? blocks.filter((b) => b.machineId === line.id) : [];
+	if (line && line.id !== resourceId) {
+		const capacity = capacities(resourceId);
+		return [{ works: (h) => capacity(h) > 0, busy: covers([...lineBlocks, ...blocks.filter((b) => b.machineId === resourceId)]) }];
+	}
 	return (line ? line.machineIds : [resourceId]).map((machineId) => {
 		const capacity = capacities(machineId);
 		return { works: (h) => capacity(h) > 0, busy: covers([...lineBlocks, ...blocks.filter((b) => b.machineId === machineId)]) };

@@ -3,14 +3,15 @@ import { Button, Form, Modal } from 'react-bootstrap';
 import { useForm } from 'react-hook-form';
 import { usePlan } from '../data/PlanContext';
 import { findLine, lineMachines, lineOfMachine, resourceName, standaloneMachines } from '../domain/calendar';
-import { formatClockDuration, formatClockSpan, formatDateTime, fromLocalInputValue, orderLabel, programmerName, toLocalInputValue } from '../domain/format';
+import { formatClockDuration, formatClockSpan, formatDateTime, fromLocalInputValue, programmerName, toLocalInputValue } from '../domain/format';
 import { projectKey, projectOperations } from '../domain/projects';
 import { nearestHourStart } from '../domain/shifts';
 import { Block, BlockDraft, Id } from '../domain/types';
 import { machinesLabel, previewPlacement } from './planSelectors';
 import './modals.css';
 import ColorSwatches from './ColorSwatches';
-import { projectColor } from './projectColor';
+import OrderName from './OrderName';
+import { projectColor, recolorNote } from './projectColor';
 import Segmented from './Segmented';
 
 export interface BlockFormDefaults {
@@ -160,7 +161,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 			const last = state.blocks.filter((b) => b.machineId === machineId).reduce<Block | undefined>((l, b) => (!l || b.end > l.end ? b : l), undefined);
 			return last ? (
 				<>
-					{name} · na koniec kolejki po <span className="mono">{orderLabel(last)}</span> · podaj czas pracy, żeby zobaczyć termin
+					{name} · na koniec kolejki po <OrderName block={last} /> · podaj czas pracy, żeby zobaczyć termin
 				</>
 			) : (
 				`${name} · podaj czas pracy, żeby zobaczyć termin`
@@ -181,14 +182,14 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 					{after && (
 						<>
 							{' '}
-							· po <span className="mono">{orderLabel(after)}</span>
+							· po <OrderName block={after} />
 							{after.end < placed.start && ' (z przerwą)'}
 						</>
 					)}
 					{before && (
 						<>
 							{' '}
-							· przed <span className="mono">{orderLabel(before)}</span>
+							· przed <OrderName block={before} />
 						</>
 					)}
 					{placed.start !== requested && (
@@ -196,7 +197,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 							start przesunięty z {at(requested)} na {at(placed.start)} –{' '}
 							{busyBy ? (
 								<>
-									wcześniej zajęte przez <span className="mono">{orderLabel(busyBy)}</span>
+									wcześniej zajęte przez <OrderName block={busyBy} />
 								</>
 							) : (
 								'wcześniej maszyna nie pracuje'
@@ -211,7 +212,7 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 				{name} ·{' '}
 				{after && (
 					<>
-						po <span className="mono">{orderLabel(after)}</span> ·{' '}
+						po <OrderName block={after} /> ·{' '}
 					</>
 				)}
 				start {formatDateTime(placed.start)} → koniec {formatDateTime(placed.end)}
@@ -303,6 +304,9 @@ const BlockFormModal = ({ show, block, defaults, onHide }: BlockFormModalProps) 
 							<span className="form-swatches-label">Kolor projektu</span>
 							<ColorSwatches label="Kolor projektu" value={color} onChange={setPickedColor} size="sm" />
 						</div>
+						{recolorNote(state.blocks, projectKey({ projectNo, project: projectName })) && (
+							<div className="swatch-note">{recolorNote(state.blocks, projectKey({ projectNo, project: projectName }))}</div>
+						)}
 					</Form.Group>
 					<Form.Group controlId="project">
 						<Form.Label>Nazwa projektu</Form.Label>

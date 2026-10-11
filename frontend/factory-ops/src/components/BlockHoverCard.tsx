@@ -54,12 +54,6 @@ const BlockHoverCard = ({ block, anchor }: { block: Block; anchor: HoverAnchor }
 				</span>
 			</div>
 			<dl className="hover-card-list">
-				{block.orderNo && (
-					<>
-						<dt>Zamówienie</dt>
-						<dd className="mono">{block.orderNo}</dd>
-					</>
-				)}
 				<dt>Czas</dt>
 				<dd>{line ? `${formatHours(block.hours)} maszyny · linia: ${machinesLabel(line.machineIds.length)}` : formatHours(block.hours)}</dd>
 				<dt>Termin</dt>

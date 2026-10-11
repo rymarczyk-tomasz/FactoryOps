@@ -2,7 +2,8 @@
 
 .hover-card {
 	position: fixed;
-	z-index: 1070;
+	/* pod menu, oknami i komunikatami */
+	z-index: 1040;
 	display: flex;
 	flex-direction: column;
 	gap: 8px;

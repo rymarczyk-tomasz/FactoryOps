@@ -1,5 +1,5 @@
 import React, { CSSProperties, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { List } from 'lucide-react';
+import { List, TriangleAlert } from 'lucide-react';
 import { Button } from 'react-bootstrap';
 import Timeline, {
 	CustomHeader,
@@ -30,6 +30,7 @@ import {
 } from '../domain/calendar';
 import { formatDateTime, formatHours, orderLabel, programmerName, timelineLabel } from '../domain/format';
 import { subtractIntervals } from '../domain/conflicts';
+import { layoutLanes } from '../domain/lanes';
 import { blockStatus, previewMove } from '../domain/schedule';
 import { addHours, dayKey, isWeekend, nearestHourStart, shiftDayStart } from '../domain/shifts';
 import { Block, Breakdown, Id, Line, Machine, ReadinessFlag } from '../domain/types';
@@ -38,12 +39,13 @@ import BlockFormModal, { BlockFormDefaults } from './BlockFormModal';
 import BreakdownModal, { BreakdownModalTarget } from './BreakdownModal';
 import BlockHoverCard, { HoverAnchor } from './BlockHoverCard';
 import ConfirmModal from './ConfirmModal';
+import OrderName from './OrderName';
 import SearchResultsPanel from './SearchResultsPanel';
 import DayCalendarModal from './DayCalendarModal';
 import HelpModal from './HelpModal';
 import PageHeader from './PageHeader';
 import PlanScrollbar from './PlanScrollbar';
-import { loadByDay, removalImpact, totalPercent } from './planSelectors';
+import { loadByDay, ordersLabel, removalImpact, totalPercent } from './planSelectors';
 import { PlanNavigationState } from './planNavigation';
 import { projectColor } from './projectColor';
 import RowContextMenu, { RowMenuTarget } from './RowContextMenu';
@@ -60,8 +62,10 @@ const BREAKDOWN_PREFIX = 'brk:';
 const LINE_DOWN_PREFIX = 'lbrk:';
 const DROP_INDICATOR_PREFIX = 'drop:';
 const LINE_SHARE_PREFIX = 'share:';
+/** „+N” w wierszu „Bez maszyny” - klik otwiera listę ukrytych zleceń. */
+const MORE_PREFIX = 'more:';
 const isHelperItem = (id: Id) =>
-	[OFF_PREFIX, BREAKDOWN_PREFIX, LINE_DOWN_PREFIX, DROP_INDICATOR_PREFIX, LINE_SHARE_PREFIX].some((prefix) => String(id).startsWith(prefix));
+	[OFF_PREFIX, BREAKDOWN_PREFIX, LINE_DOWN_PREFIX, DROP_INDICATOR_PREFIX, LINE_SHARE_PREFIX, MORE_PREFIX].some((prefix) => String(id).startsWith(prefix));
 /**
  * Rysujemy tylko widoczny zakres z zapasem po obu stronach, zaokrąglony do tygodnia - plan ma tysiące zleceń,
  * a przy przewijaniu w obrębie tygodnia elementy nie są liczone od nowa.
@@ -116,7 +120,7 @@ function blockBackground(color: string, start: number, end: number, offSegments:
 const progressLayer = (color: string, percent: number) => `linear-gradient(to right, ${tint(color, 34)} 0 ${percent}%, transparent ${percent}% 100%)`;
 
 /** `share` - wyszarzony fragment zlecenia linii na wierszu jej maszyny (czas, w którym ta maszyna pracuje na linię). */
-type ItemKind = 'block' | 'off' | 'breakdown' | 'lineDown' | 'drop' | 'share';
+type ItemKind = 'block' | 'off' | 'breakdown' | 'lineDown' | 'drop' | 'share' | 'more';
 
 /**
  * Element timeline: zlecenie albo awaria z wariantami opisu (renderer wybiera najdłuższy, który mieści się w kafelku).
@@ -161,6 +165,14 @@ function renderItem({ item, itemContext, timelineContext, getItemProps }: ItemRe
 		case 'off':
 		case 'drop':
 			return <div {...props} ref={ref} key={key} />;
+		case 'more':
+			return (
+				<div {...props} ref={ref} key={key} title={String(item.title ?? '')}>
+					<span className="more-body" style={labelStyle}>
+						{item.labels?.[0]}
+					</span>
+				</div>
+			);
 		case 'share': {
 			const label = item.labels ? fitting(item.labels, SMALL_CHAR_WIDTH) : '';
 			return (
@@ -256,6 +268,10 @@ type GroupKind = 'lines' | 'machines';
 
 /** Wiersz zleceń bez maszyny (ich maszynę lub linię usunięto) - na górze planu, dopóki jakieś są. */
 const UNASSIGNED_ROW = 'unassigned';
+/** Nakładające się zlecenia bez maszyny rozkładamy na najwyżej tyle podwierszy, resztę pokazuje „+N”. */
+const UNASSIGNED_LANES = 3;
+const unassignedLaneRow = (lane: number) => (lane === 0 ? UNASSIGNED_ROW : `${UNASSIGNED_ROW}:${lane}`);
+const isUnassignedRow = (id: Id) => id === UNASSIGNED_ROW || id.startsWith(`${UNASSIGNED_ROW}:`);
 
 /** Wiersz planu: linia, maszyna (także maszyna linii, wcięta pod nią) albo nagłówek zwijanej grupy. */
 type PlanGroup = {
@@ -268,8 +284,10 @@ type PlanGroup = {
 	/** Maszyna wyświetlana pod swoją linią. */
 	inLine?: boolean;
 	header?: { kind: GroupKind; count: number; collapsed: boolean };
-	/** Liczba zleceń w wierszu „Bez maszyny”. */
+	/** Liczba zleceń w wierszu „Bez maszyny” (tylko na pierwszym podwierszu). */
 	unassigned?: number;
+	/** Podwiersz wiersza „Bez maszyny”. */
+	unassignedLane?: number;
 };
 
 const GROUP_TITLES: Record<GroupKind, string> = { lines: 'Linie produkcyjne', machines: 'Maszyny' };
@@ -356,7 +374,7 @@ function useMinuteClock(): number {
 }
 
 const FactoryOpsTimeline = () => {
-	const { state, now, moveBlock, deleteBlock } = usePlan();
+	const { state, now, moveBlock, deleteBlock, notice } = usePlan();
 	const clock = useMinuteClock();
 	const [selectedId, setSelectedId] = useState<Id>();
 	/** Zlecenia dołożone do zaznaczenia Ctrl/Shift+klikiem - akcje z menu prawego kliku dotyczą wszystkich. */
@@ -405,12 +423,23 @@ const FactoryOpsTimeline = () => {
 		hoverTarget.current = undefined;
 		setHover(undefined);
 	}, []);
+	/**
+	 * Po kliknięciu, prawym kliku i komunikacie karta nie wraca, dopóki mysz się nie poruszy - przebudowa planu pod
+	 * nieruchomym kursorem wywołuje mouseover, a karta zasłaniałaby menu, komunikat i panel.
+	 */
+	const hoverPaused = useRef(false);
+	const pauseHover = useCallback(() => {
+		hoverPaused.current = true;
+		hideHover();
+	}, [hideHover]);
 	const trackHover = (e: React.MouseEvent) => {
+		if (hoverPaused.current) return;
 		const element = (e.target as Element).closest<HTMLElement>('[data-block-id]');
 		const id = element?.dataset.blockId;
 		if (id === hoverTarget.current) return;
 		hideHover();
-		if (!element || !id || e.buttons !== 0) return;
+		// przy otwartym menu prawego kliku karta zasłaniałaby menu i zostawała po nim na ekranie
+		if (!element || !id || e.buttons !== 0 || rowMenu) return;
 		hoverTarget.current = id;
 		const x = e.clientX;
 		hoverTimer.current = setTimeout(() => {
@@ -419,6 +448,8 @@ const FactoryOpsTimeline = () => {
 		}, HOVER_DELAY);
 	};
 	useEffect(() => () => clearTimeout(hoverTimer.current), []);
+	// komunikat po zmianie pojawia się w rogu - karta nie może na nim leżeć
+	useEffect(() => pauseHover(), [notice?.id, pauseHover]);
 	const searchRef = useRef<HTMLInputElement>(null);
 	// przeciąganie planu myszką nie przesuwa widoku (ani na pustym miejscu, ani na zleceniu) - myliło się z przenoszeniem zleceń;
 	// widok przesuwa Shift + kółko, pasek pod planem i przenoszony bloczek przy krawędzi planu
@@ -490,6 +521,17 @@ const FactoryOpsTimeline = () => {
 	const rightPress = useRef(false);
 	const select = (itemId: Id, e?: React.SyntheticEvent) => {
 		const id = String(itemId);
+		if (id.startsWith(MORE_PREFIX)) {
+			// „+N”: ukryte zlecenia trafiają na listę wyników po prawej
+			const more = unassignedLayout.overflow.find((o) => `${MORE_PREFIX}${o.start}` === id);
+			if (more) {
+				setQuery('');
+				setListPick(more.ids);
+				setMatchIndex(0);
+				setResultsOpen(true);
+			}
+			return;
+		}
 		if (rightPress.current || isHelperItem(id)) return;
 		const mouse = e as React.MouseEvent | undefined;
 		if (mouse && (mouse.ctrlKey || mouse.metaKey || mouse.shiftKey)) {
@@ -533,6 +575,8 @@ const FactoryOpsTimeline = () => {
 	const standalone = useMemo(() => standaloneMachines(state), [state]);
 	const unassignedBlocks = useMemo(() => state.blocks.filter((b) => b.machineId === null).sort((a, b) => a.start - b.start), [state.blocks]);
 	const unassignedCount = unassignedBlocks.length;
+	// zlecenia bez maszyny trzymają ostatnie zaplanowane daty - nakładające się idą do podwierszy
+	const unassignedLayout = useMemo(() => layoutLanes(unassignedBlocks, UNASSIGNED_LANES), [unassignedBlocks]);
 	const conflicts = useLineConflicts();
 	const conflictIds = useMemo(() => new Set(conflicts.flatMap((c) => [c.lineBlockId, c.machineBlockId])), [conflicts]);
 	const conflictsByLine = useMemo(() => {
@@ -676,8 +720,17 @@ const FactoryOpsTimeline = () => {
 		]);
 		const machineRows = standalone.map((m) => machineRow(m));
 		// zlecenia bez maszyny w stosie - mogą pochodzić z kilku usuniętych zasobów i nachodzić na siebie
-		const unassignedRows: PlanGroup[] =
-			unassignedCount > 0 ? [{ id: UNASSIGNED_ROW, title: 'Bez maszyny', stackItems: true, height: ROW_HEIGHT, unassigned: unassignedCount }] : [];
+		const unassignedRows = Array.from(
+			{ length: unassignedCount > 0 ? Math.max(1, unassignedLayout.laneCount) : 0 },
+			(_, lane): PlanGroup => ({
+				id: unassignedLaneRow(lane),
+				title: lane === 0 ? 'Bez maszyny' : '',
+				stackItems: false,
+				height: lane === 0 ? ROW_HEIGHT : LINE_MACHINE_ROW_HEIGHT,
+				unassigned: lane === 0 ? unassignedCount : undefined,
+				unassignedLane: lane
+			})
+		);
 		// nagłówki tylko wtedy, gdy są oba rodzaje - inaczej nie ma czego grupować
 		if (state.lines.length === 0) return [...unassignedRows, ...machineRows];
 		if (standalone.length === 0) return [...unassignedRows, ...lineRows];
@@ -695,7 +748,7 @@ const FactoryOpsTimeline = () => {
 			header('machines', standalone.length),
 			...(collapsed.machines ? [] : machineRows)
 		];
-	}, [state.lines, state.machines, standalone, collapsed, expandedLines, unassignedCount]);
+	}, [state.lines, state.machines, standalone, collapsed, expandedLines, unassignedCount, unassignedLayout]);
 	const visibleIds = useMemo(() => new Set(groups.filter((g) => g.machine || g.line).map((g) => g.id)), [groups]);
 	const rowHeights = useMemo(() => new Map(groups.map((g) => [g.id, g.height ?? ROW_HEIGHT])), [groups]);
 	useEffect(() => {
@@ -811,7 +864,6 @@ const FactoryOpsTimeline = () => {
 				const line = lines.get(block.machineId ?? '');
 				const tooltip = [
 					`${orderLabel(block)} · ${block.project}`,
-					block.orderNo ? `Zamówienie ${block.orderNo}` : '',
 					line ? `${formatHours(block.hours)} pracy maszyny · linia: ${line.machineIds.length} maszyny` : formatHours(block.hours),
 					`${formatDateTime(block.start)} → ${formatDateTime(block.end)}`,
 					block.pinnedStart !== undefined ? `Termin: nie wcześniej niż ${formatDateTime(block.pinnedStart)}` : '',
@@ -826,8 +878,12 @@ const FactoryOpsTimeline = () => {
 			}
 			return value;
 		};
-		const shown = state.blocks.filter(
-			(b) => (b.end > windowFrom && b.start < windowTo && (b.machineId === null || visibleIds.has(b.machineId))) || b.id === draggedId || b.id === selectedId
+		const { lanes } = unassignedLayout;
+		const shown = state.blocks.filter((b) =>
+			b.machineId === null
+				? // zlecenia schowane pod „+N” nie mają własnego miejsca na planie
+				lanes.has(b.id) && ((b.end > windowFrom && b.start < windowTo) || b.id === draggedId || b.id === selectedId)
+				: (b.end > windowFrom && b.start < windowTo && visibleIds.has(b.machineId)) || b.id === draggedId || b.id === selectedId
 		);
 		return shown.map((block) => {
 			const color = projectColor(block, state.projects);
@@ -846,7 +902,7 @@ const FactoryOpsTimeline = () => {
 			return {
 				id: block.id,
 				kind: 'block',
-				group: block.machineId ?? UNASSIGNED_ROW,
+				group: block.machineId ?? unassignedLaneRow(lanes.get(block.id) ?? 0),
 				title: blockLabels(block)[0],
 				labels: blockLabels(block),
 				readiness: { materialReady: block.materialReady, programReady: block.programReady, hideOff: monthView },
@@ -869,7 +925,27 @@ const FactoryOpsTimeline = () => {
 			};
 		});
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [state.blocks, blockLooks, now, draggedId, selectedId, searching, matchIds, windowFrom, windowTo, visibleIds, conflictIds, monthView, pulseId]);
+	}, [state.blocks, blockLooks, now, draggedId, selectedId, searching, matchIds, windowFrom, windowTo, visibleIds, conflictIds, monthView, pulseId, unassignedLayout]);
+
+	const moreItems = useMemo<PlanItem[]>(
+		() =>
+			unassignedLayout.overflow.map(
+				(more): PlanItem => ({
+					id: `${MORE_PREFIX}${more.start}`,
+					kind: 'more',
+					group: unassignedLaneRow(UNASSIGNED_LANES - 1),
+					title: `Jeszcze ${ordersLabel(more.ids.length)} w tym czasie - kliknij, żeby zobaczyć listę`,
+					labels: [`+${more.ids.length}`],
+					start_time: more.start,
+					end_time: more.end,
+					canMove: false,
+					canResize: false,
+					canChangeGroup: false,
+					className: 'more-item'
+				})
+			),
+		[unassignedLayout]
+	);
 
 	// rozwinięta linia: na wierszach jej maszyn wyszarzone fragmenty zleceń linii - tam, gdzie maszyna nie ma
 	// własnego zlecenia, awarii ani czasu wolnego, czyli faktycznie pracuje na linię
@@ -915,8 +991,8 @@ const FactoryOpsTimeline = () => {
 	const dropInfo = preview && {
 		resource: resourceName(state, drag?.machineId),
 		start: formatDateTime(preview.start),
-		after: preview.after && { label: preview.pinned ? 'przerwa po' : 'po', name: orderLabel(preview.after) },
-		before: preview.before && orderLabel(preview.before)
+		after: preview.after && { label: preview.pinned ? 'przerwa po' : 'po', block: preview.after },
+		before: preview.before
 	};
 
 	// kreska w miejscu, gdzie faktycznie wyląduje przenoszony bloczek (po zepchnięciu kolejki)
@@ -943,10 +1019,10 @@ const FactoryOpsTimeline = () => {
 	// elementy zwiniętych wierszy nie trafiają do biblioteki
 	const items = useMemo(
 		() =>
-			[...offItems, ...shareItems, ...blockItems, ...breakdownItems, ...indicatorItems].filter(
-				(item) => item.group === UNASSIGNED_ROW || visibleIds.has(String(item.group))
+			[...offItems, ...shareItems, ...blockItems, ...moreItems, ...breakdownItems, ...indicatorItems].filter(
+				(item) => isUnassignedRow(String(item.group)) || visibleIds.has(String(item.group))
 			),
-		[offItems, shareItems, blockItems, breakdownItems, indicatorItems, visibleIds]
+		[offItems, shareItems, blockItems, moreItems, breakdownItems, indicatorItems, visibleIds]
 	);
 
 	const ongoingByMachine = useMemo(() => new Set(state.breakdowns.filter(isOngoing).map((b) => b.machineId)), [state.breakdowns]);
@@ -1131,7 +1207,16 @@ const FactoryOpsTimeline = () => {
 			</PageHeader>
 
 			<div className="plan-layout">
-				<div className="plan-main" onMouseOver={trackHover} onMouseLeave={hideHover} onMouseDownCapture={hideHover} onWheelCapture={hideHover}>
+				<div
+					className="plan-main"
+					onMouseOver={trackHover}
+					onMouseLeave={hideHover}
+					onMouseMove={(e) => {
+						if (e.movementX !== 0 || e.movementY !== 0) hoverPaused.current = false;
+					}}
+					onMouseDownCapture={pauseHover}
+					onContextMenuCapture={pauseHover}
+					onWheelCapture={hideHover}>
 					<div
 						ref={timelineRef}
 						className={`plan-timeline ${span > HOUR_HEADER_MAX_SPAN ? 'zoom-wide' : 'zoom-hours'}`}
@@ -1199,7 +1284,7 @@ const FactoryOpsTimeline = () => {
 							itemRenderer={renderItem}
 							horizontalLineClassNamesForGroup={(group) =>
 								[
-									group.header ? 'group-header-row' : group.inLine ? 'line-machine-row' : group.unassigned ? 'unassigned-row' : '',
+									group.header ? 'group-header-row' : group.inLine ? 'line-machine-row' : group.unassignedLane !== undefined ? 'unassigned-row' : '',
 									group.id === flashRow ? 'row-flash' : ''
 								].filter(Boolean)
 							}
@@ -1219,6 +1304,7 @@ const FactoryOpsTimeline = () => {
 										</button>
 									);
 								}
+								if (group.unassignedLane !== undefined && group.unassignedLane > 0) return <div className="row-label unassigned-label" aria-hidden="true" />;
 								if (group.unassigned !== undefined) {
 								// klik przechodzi po kolei do zleceń bez maszyny - przypisuje się je przeciągnięciem na wiersz albo w panelu
 									const current = unassignedBlocks.findIndex((b) => b.id === selectedId);
@@ -1272,7 +1358,8 @@ const FactoryOpsTimeline = () => {
 												<span
 													className="conflict-badge"
 													title={`Konflikty (${conflictsByLine.get(line.id)}): maszyny linii mają własne zlecenia w czasie zleceń linii`}>
-													!{conflictsByLine.get(line.id)}
+													<TriangleAlert size={10} strokeWidth={2.5} aria-hidden="true" />
+													{conflictsByLine.get(line.id)}
 												</span>
 											)}
 											{/* znacznik konfliktu zajmuje miejsce opisu - inaczej skróciłaby się nazwa linii */}
@@ -1369,13 +1456,13 @@ const FactoryOpsTimeline = () => {
 									{dropInfo.after && (
 										<>
 											{' '}
-											· {dropInfo.after.label} <span className="mono">{dropInfo.after.name}</span>
+											· {dropInfo.after.label} <OrderName block={dropInfo.after.block} />
 										</>
 									)}
 									{dropInfo.before && (
 										<>
 											{' '}
-											· przed <span className="mono">{dropInfo.before}</span>
+											· przed <OrderName block={dropInfo.before} />
 										</>
 									)}
 								</span>
@@ -1408,8 +1495,9 @@ const FactoryOpsTimeline = () => {
 						title={picking ? 'Wybrane z listy' : 'Wyniki'}
 						results={matches}
 						activeId={selectedId}
-						onPick={(block, index) => {
-							setMatchIndex(index);
+						from={shiftDayStart(now)}
+						onPick={(block) => {
+							setMatchIndex(Math.max(0, matches.indexOf(block)));
 							setSelectedId(block.id);
 							showBlock(block);
 							setScrollToRow(block.machineId ?? UNASSIGNED_ROW);
@@ -1462,7 +1550,9 @@ const FactoryOpsTimeline = () => {
 				onHide={() => setToDelete(undefined)}>
 				{toDelete && (
 					<>
-						Zlecenie <strong className="mono fw-medium">{orderLabel(toDelete)}</strong> ({toDelete.project}) zostanie usunięte z planu. Następne zlecenia na
+						Zlecenie <strong className="fw-medium">
+							<OrderName block={toDelete} />
+						</strong> ({toDelete.project}) zostanie usunięte z planu. Następne zlecenia na
 						maszynie cofną się na jego miejsce.
 					</>
 				)}

@@ -20,6 +20,13 @@ export function projectColor(block: Pick<Block, 'projectNo' | 'project'>, projec
 	return projects?.[key]?.color ?? defaultProjectColor(key);
 }
 
+/** Podpis pod kolorami: kolor jest wspólny dla projektu - „zmieni kolor 12 zleceń IMR-6001”. */
+export function recolorNote(blocks: Pick<Block, 'projectNo' | 'project'>[], key: string): string {
+	const n = key ? blocks.filter((b) => projectKey(b) === key).length : 0;
+	if (n === 0) return '';
+	return `zmieni kolor ${n} ${n === 1 ? 'zlecenia' : 'zleceń'} ${key}`;
+}
+
 /** Kolor projektu jako zmienna CSS `--c` - odcienie (tło, ramka, tekst) liczy CSS przez color-mix. */
 export const projectColorVar = (block: Pick<Block, 'projectNo' | 'project'>, projects: Projects): CSSProperties =>
 	({ '--c': projectColor(block, projects) }) as CSSProperties;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyLineDraft, applyMachineDraft, pendingBlocks, removeLine, removeMachine } from './machines';
+import { reflow } from './schedule';
 import { Line, Machine, PlanState } from './types';
 
 const machines: Machine[] = ['a', 'b', 'c', 'd'].map((id) => ({ id, name: id.toUpperCase(), workMode: 'weekdays' }));
@@ -71,6 +72,23 @@ describe('maszyny i linie', () => {
 		expect(next.blocks.map((b) => [b.id, b.machineId])).toEqual([
 			['onLine', null],
 			['onA', 'a']
+		]);
+	});
+
+	it('zlecenia bez maszyny zachowują ostatnie zaplanowane daty - plan ich nie przelicza', () => {
+		const planned: PlanState = {
+			...state,
+			breakdowns: [],
+			blocks: [
+				{ ...state.blocks[0], id: 'x', start: 10, end: 50, pinnedStart: 10 },
+				{ ...state.blocks[0], id: 'y', start: 30, end: 90 }
+			]
+		};
+		const next = removeLine(planned, 'l1', 0);
+		const replanned = reflow(next.blocks, next, undefined, 0);
+		expect(replanned.map((b) => [b.id, b.machineId, b.start, b.end])).toEqual([
+			['x', null, 10, 50],
+			['y', null, 30, 90]
 		]);
 	});
 

@@ -1,12 +1,16 @@
+import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { usePlan } from '../data/PlanContext';
 import { isOngoing, lineOfMachine, resourceName } from '../domain/calendar';
+import { orderLabel } from '../domain/format';
 import { Breakdown } from '../domain/types';
 import { PlanNavigationState } from './planNavigation';
 import { breakdownImpact, ordersLabel } from './planSelectors';
 import { useLineConflicts } from './useLineConflicts';
 
 const HOUR = 3600_000;
+/** Tyle kart konfliktów widać od razu. */
+const CONFLICTS_SHOWN = 3;
 
 const Logo = () => (
 	<svg width="22" height="22" viewBox="0 0 26 26" aria-hidden="true">
@@ -43,6 +47,13 @@ const AppRail = ({ onReset }: AppRailProps) => {
 	const { state, now } = usePlan();
 	const navigate = useNavigate();
 	const conflicts = useLineConflicts();
+	const [allConflicts, setAllConflicts] = useState(false);
+	// menu boczne musi się zmieścić także przy 800 px wysokości - reszta konfliktów po rozwinięciu
+	const shownConflicts = allConflicts ? conflicts : conflicts.slice(0, CONFLICTS_SHOWN);
+	const blockName = (id: string) => {
+		const block = state.blocks.find((b) => b.id === id);
+		return block ? orderLabel(block) : '';
+	};
 	const ongoing = state.breakdowns.filter(isOngoing).sort((a, b) => a.start - b.start);
 	const impact = (breakdown: Breakdown) => {
 		const count = breakdownImpact(state, breakdown, now).length;
@@ -103,7 +114,7 @@ const AppRail = ({ onReset }: AppRailProps) => {
 						{conflicts.length}
 					</div>
 					<div className="rail-breakdown-list">
-						{conflicts.map((conflict) => {
+						{shownConflicts.map((conflict) => {
 							const line = resourceName(state, conflict.lineId);
 							const machine = resourceName(state, conflict.machineId);
 							const reveal: PlanNavigationState = { revealConflict: conflict };
@@ -121,12 +132,20 @@ const AppRail = ({ onReset }: AppRailProps) => {
 										<span className="rail-breakdown-name mono">{machine}</span>
 										<span className="rail-breakdown-where">{line}</span>
 									</span>
+									<span className="rail-conflict-pair">
+										{blockName(conflict.lineBlockId)} ↔ {blockName(conflict.machineBlockId)}
+									</span>
 									<span className="rail-breakdown-since">
 										{dateTimeFormat.format(conflict.from)} · {Math.round((conflict.to - conflict.from) / HOUR)} h
 									</span>
 								</button>
 							);
 						})}
+						{conflicts.length > CONFLICTS_SHOWN && (
+							<button type="button" className="rail-more" aria-expanded={allConflicts} onClick={() => setAllConflicts((all) => !all)}>
+								{allConflicts ? 'Pokaż mniej' : `Pokaż wszystkie (${conflicts.length})`}
+							</button>
+						)}
 					</div>
 				</section>
 			)}

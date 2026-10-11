@@ -6,7 +6,7 @@ import { blockStatus } from '../domain/schedule';
 import { Block, BlockStatus, Id } from '../domain/types';
 import { projectKey } from '../domain/projects';
 import ColorSwatches from './ColorSwatches';
-import { projectColor, projectColorVar } from './projectColor';
+import { projectColor, projectColorVar, recolorNote } from './projectColor';
 import { READINESS } from './Readiness';
 
 /** Warianty Badge dla listy zleceń (do etapu 4 redesignu). */
@@ -63,10 +63,7 @@ const BlockDetailsPanel = ({ block, onSelect, onEdit, onDelete, onShow, onClose 
 					<button type="button" className="btn-close ms-auto" aria-label="Zamknij panel" onClick={onClose} />
 				</div>
 				<h2 className="details-title">{orderLabel(block)}</h2>
-				<div className="details-order">
-					{block.project}
-					{block.orderNo && <span className="mono"> · {block.orderNo}</span>}
-				</div>
+				<div className="details-order">{block.project}</div>
 				{progress !== undefined && (
 					<div className="details-progress" title="Wykonana część zlecenia (według planu)">
 						<span className="details-progress-bar">
@@ -103,10 +100,10 @@ const BlockDetailsPanel = ({ block, onSelect, onEdit, onDelete, onShow, onClose 
 								id="panelResource"
 								size="sm"
 								className="details-select is-unassigned"
-								title="Zlecenie trafi na koniec kolejki wybranej maszyny lub linii"
+								aria-describedby="panelResourceHint"
 								value=""
 								onChange={(e) => e.target.value && assignBlock(block.id, e.target.value)}>
-								<option value="">— przypisz —</option>
+								<option value="">Przypisz maszynę…</option>
 								{state.lines.map((l) => (
 									<optgroup key={l.id} label={l.name}>
 										<option value={l.id}>{l.name} - cała linia</option>
@@ -126,19 +123,36 @@ const BlockDetailsPanel = ({ block, onSelect, onEdit, onDelete, onShow, onClose 
 								</optgroup>
 							</Form.Select>
 						)}
+						{unassigned && (
+							<div id="panelResourceHint" className="details-hint">
+								trafi na koniec kolejki
+							</div>
+						)}
 						<span className="mono">{resource}</span>
 						{line && <span className="text-secondary"> · {line.machineIds.length} maszyny</span>}
 						{parentLine && <span className="text-secondary"> · z {parentLine.name}</span>}
 					</dd>
+					{block.orderNo && (
+						<>
+							<dt>Nr zamówienia</dt>
+							<dd className="mono">{block.orderNo}</dd>
+						</>
+					)}
 					<dt>Czas techn.</dt>
 					<dd title={line ? `${formatHours(block.hours)} pracy jednej maszyny; linia dzieli zlecenie między ${line.machineIds.length} maszyny` : undefined}>
 						{formatHours(block.hours)}
 						<span className="text-secondary"> · na planie {formatClockDuration(block.end - block.start)}</span>
 					</dd>
 					<dt>Start</dt>
-					<dd className="mono details-time">{formatDateTime(block.start)}</dd>
+					<dd className="mono details-time">
+						{formatDateTime(block.start)}
+						{unassigned && <span className="last-plan">ostatni plan</span>}
+					</dd>
 					<dt>Koniec</dt>
-					<dd className="mono details-time">{formatDateTime(block.end)}</dd>
+					<dd className="mono details-time">
+						{formatDateTime(block.end)}
+						{unassigned && <span className="last-plan">ostatni plan</span>}
+					</dd>
 					{block.pinnedStart !== undefined && (
 						<>
 							<dt>Termin</dt>
@@ -173,6 +187,7 @@ const BlockDetailsPanel = ({ block, onSelect, onEdit, onDelete, onShow, onClose 
 							onChange={(color) => setProjectColor(projectKey(block), color)}
 							size="sm"
 						/>
+						<div className="swatch-note">{recolorNote(state.blocks, projectKey(block))}</div>
 					</dd>
 					<dt>Gotowość</dt>
 					<dd className="readiness-toggles">

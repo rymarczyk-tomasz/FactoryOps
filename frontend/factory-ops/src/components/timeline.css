@@ -628,6 +628,28 @@
 	box-shadow: 0 0 0 3px var(--primary);
 }
 
+/* „+N” - nakładające się zlecenia bez maszyny, które nie zmieściły się w podwierszach */
+.plan-timeline .react-calendar-timeline .rct-item.more-item {
+	background: transparent !important;
+	border-width: 0 !important;
+	cursor: pointer;
+}
+
+.more-body {
+	position: absolute;
+	inset: 0 1px;
+	display: flex;
+	align-items: center;
+	padding: 0 8px;
+	border: 1px dashed var(--danger);
+	border-radius: 4px;
+	background: var(--surface);
+	font-family: var(--font-mono);
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--danger-ink);
+}
+
 /* konflikt: zlecenie linii i własne zlecenie jej maszyny w tym samym czasie */
 .plan-timeline .rct-item.plan-block.is-conflict .plan-block-body {
 	border: 1.5px dashed var(--danger);
@@ -1069,6 +1091,12 @@
 	font-size: 13px;
 }
 
+.details-hint {
+	margin-top: 4px;
+	font-size: 11.5px;
+	color: var(--ink-3);
+}
+
 .readiness-toggles {
 	display: flex;
 	flex-wrap: wrap;
@@ -1216,6 +1244,15 @@
 	padding: 8px 10px;
 	overflow-y: auto;
 	scrollbar-width: thin;
+}
+
+.results-section {
+	margin: 10px 8px 4px;
+	font-family: var(--font-mono);
+	font-size: 10.5px;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--ink-3);
 }
 
 .results-more {

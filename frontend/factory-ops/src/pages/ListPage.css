@@ -89,13 +89,16 @@
 	color: var(--ink-2);
 }
 
+/* nieaktywny (bieżące filtry to już zapisany widok) - nadal czytelny */
+.view-save:disabled {
+	border: 1px dashed var(--input-border);
+	color: var(--ink-3);
+	cursor: default;
+}
+
 .view-save:hover:not(:disabled) {
 	border-color: var(--ink-3);
 	color: var(--ink);
-}
-
-.view-save:disabled {
-	opacity: 0.45;
 }
 
 .sort-level {
@@ -133,7 +136,10 @@
 }
 
 .filter-pill-warn.active {
-	border-color: oklch(0.7 0.12 70);
+	border-color: var(--warn);
+	background: var(--warn);
+	font-weight: 600;
+	color: var(--ink);
 }
 
 .filter-pill-danger {
@@ -303,7 +309,10 @@
 }
 
 .list-readiness-head {
-	text-align: center;
+	display: flex;
+	justify-content: center;
+	gap: 12px;
+	color: var(--ink-3);
 }
 
 .list-readiness {
@@ -322,18 +331,16 @@
 	border: none;
 	border-radius: 6px;
 	background: transparent;
-	color: var(--success-ink);
+	color: #16a34a;
 	transition: background var(--transition-fast);
 }
 
 .readiness-toggle.is-off {
 	color: #94a3b8;
-	opacity: 0.55;
 }
 
 .readiness-toggle:not(:disabled):hover {
 	background: var(--hover);
-	opacity: 1;
 }
 
 .readiness-toggle:disabled {
@@ -366,14 +373,6 @@
 	font-weight: 500;
 	white-space: nowrap;
 	text-overflow: ellipsis;
-}
-
-.list-order-no {
-	padding: 0;
-	border: none;
-	background: transparent;
-	font-size: 11.5px;
-	color: oklch(0.55 0.02 260);
 }
 
 /* nazwa zlecenia przenosi na plan */
