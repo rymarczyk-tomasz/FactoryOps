@@ -589,6 +589,39 @@
 	box-shadow: 0 0 0 3px var(--primary);
 }
 
+/* konflikt: zlecenie linii i własne zlecenie jej maszyny w tym samym czasie */
+.plan-timeline .rct-item.plan-block.is-conflict .plan-block-body {
+	border: 1.5px dashed var(--danger);
+}
+
+/* fragment zlecenia linii na wierszu jej maszyny - tylko podgląd, bez kliknięć */
+.plan-timeline .react-calendar-timeline .rct-item.line-share-item {
+	background: transparent !important;
+	border-width: 0 !important;
+	overflow: hidden;
+	pointer-events: none;
+}
+
+.line-share-body {
+	position: absolute;
+	inset: 0 1px;
+	display: flex;
+	align-items: center;
+	padding: 0 7px;
+	border: 1px dashed oklch(0.82 0.01 255);
+	border-radius: 4px;
+	background: oklch(0.955 0.004 255);
+	font-size: 10.5px;
+	color: var(--ink-3);
+}
+
+.line-share-label {
+	min-width: 0;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
 /* przeciąganie: przenoszony bloczek prześwituje, kreska pokazuje miejsce wstawienia */
 .plan-timeline .rct-item.plan-block.dragging-block {
 	opacity: 0.45;

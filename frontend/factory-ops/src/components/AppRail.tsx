@@ -4,6 +4,7 @@ import { isOngoing, lineOfMachine, resourceName } from '../domain/calendar';
 import { Breakdown } from '../domain/types';
 import { PlanNavigationState } from './planNavigation';
 import { breakdownImpact, ordersLabel } from './planSelectors';
+import { useLineConflicts } from './useLineConflicts';
 
 const HOUR = 3600_000;
 
@@ -41,6 +42,7 @@ interface AppRailProps {
 const AppRail = ({ onReset }: AppRailProps) => {
 	const { state, now } = usePlan();
 	const navigate = useNavigate();
+	const conflicts = useLineConflicts();
 	const ongoing = state.breakdowns.filter(isOngoing).sort((a, b) => a.start - b.start);
 	const impact = (breakdown: Breakdown) => {
 		const count = breakdownImpact(state, breakdown, now).length;
@@ -88,6 +90,40 @@ const AppRail = ({ onReset }: AppRailProps) => {
 									</span>
 									<span className="rail-breakdown-since">{since(breakdown, now)}</span>
 									{impact(breakdown) && <span className="rail-breakdown-since">{impact(breakdown)}</span>}
+								</button>
+							);
+						})}
+					</div>
+				</section>
+			)}
+			{conflicts.length > 0 && (
+				<section className="rail-breakdowns rail-conflicts" aria-label="Konflikty linii">
+					<div className="rail-section-label">
+						<span className="rail-label">Konflikty · </span>
+						{conflicts.length}
+					</div>
+					<div className="rail-breakdown-list">
+						{conflicts.map((conflict) => {
+							const line = resourceName(state, conflict.lineId);
+							const machine = resourceName(state, conflict.machineId);
+							const reveal: PlanNavigationState = { revealConflict: conflict };
+							return (
+								<button
+									key={`${conflict.lineBlockId}:${conflict.machineBlockId}`}
+									type="button"
+									className="rail-breakdown rail-conflict"
+									title={`${machine} ma własne zlecenie w czasie zlecenia ${line} - pokaż na planie`}
+									onClick={() => navigate('/', { state: reveal })}>
+									<span className="rail-breakdown-head">
+										<span className="conflict-badge" aria-hidden="true">
+											!
+										</span>
+										<span className="rail-breakdown-name mono">{machine}</span>
+										<span className="rail-breakdown-where">{line}</span>
+									</span>
+									<span className="rail-breakdown-since">
+										{dateTimeFormat.format(conflict.from)} · {Math.round((conflict.to - conflict.from) / HOUR)} h
+									</span>
 								</button>
 							);
 						})}

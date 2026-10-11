@@ -28,6 +28,7 @@ import {
 	workMode
 } from '../domain/calendar';
 import { formatDateTime, formatHours, programmerName, timelineLabel } from '../domain/format';
+import { subtractIntervals } from '../domain/conflicts';
 import { blockStatus, previewMove } from '../domain/schedule';
 import { addHours, dayKey, isWeekend, nearestHourStart, shiftDayStart } from '../domain/shifts';
 import { Block, Breakdown, Id, Line, Machine } from '../domain/types';
@@ -44,6 +45,7 @@ import { PlanNavigationState } from './planNavigation';
 import { projectColor } from './projectColor';
 import RowContextMenu, { RowMenuTarget } from './RowContextMenu';
 import Segmented from './Segmented';
+import { useLineConflicts } from './useLineConflicts';
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -53,7 +55,9 @@ const OFF_PREFIX = 'off:';
 const BREAKDOWN_PREFIX = 'brk:';
 const LINE_DOWN_PREFIX = 'lbrk:';
 const DROP_INDICATOR_PREFIX = 'drop:';
-const isHelperItem = (id: Id) => [OFF_PREFIX, BREAKDOWN_PREFIX, LINE_DOWN_PREFIX, DROP_INDICATOR_PREFIX].some((prefix) => String(id).startsWith(prefix));
+const LINE_SHARE_PREFIX = 'share:';
+const isHelperItem = (id: Id) =>
+	[OFF_PREFIX, BREAKDOWN_PREFIX, LINE_DOWN_PREFIX, DROP_INDICATOR_PREFIX, LINE_SHARE_PREFIX].some((prefix) => String(id).startsWith(prefix));
 /**
  * Rysujemy tylko widoczny zakres z zapasem po obu stronach, zaokrąglony do tygodnia - plan ma tysiące zleceń,
  * a przy przewijaniu w obrębie tygodnia elementy nie są liczone od nowa.
@@ -92,7 +96,8 @@ function blockBackground(color: string, start: number, end: number, offSegments:
 /** Wykonana część zlecenia w toku - ciemniejszy odcień od początku do „teraz”. */
 const progressLayer = (color: string, percent: number) => `linear-gradient(to right, ${tint(color, 34)} 0 ${percent}%, transparent ${percent}% 100%)`;
 
-type ItemKind = 'block' | 'off' | 'breakdown' | 'lineDown' | 'drop';
+/** `share` - wyszarzony fragment zlecenia linii na wierszu jej maszyny (czas, w którym ta maszyna pracuje na linię). */
+type ItemKind = 'block' | 'off' | 'breakdown' | 'lineDown' | 'drop' | 'share';
 
 /**
  * Element timeline: zlecenie albo awaria z wariantami opisu (renderer wybiera najdłuższy, który mieści się w kafelku).
@@ -133,6 +138,20 @@ function renderItem({ item, itemContext, timelineContext, getItemProps }: ItemRe
 		case 'off':
 		case 'drop':
 			return <div {...props} ref={ref} key={key} />;
+		case 'share': {
+			const label = item.labels ? fitting(item.labels, SMALL_CHAR_WIDTH) : '';
+			return (
+				<div {...props} ref={ref} key={key}>
+					<div className="line-share-body">
+						{label && (
+							<span className="line-share-label" style={labelStyle}>
+								{label}
+							</span>
+						)}
+					</div>
+				</div>
+			);
+		}
 		case 'lineDown': {
 			const { down, units, labels } = item.lineDown!;
 			const label = fitting(labels, SMALL_CHAR_WIDTH);
@@ -450,6 +469,13 @@ const FactoryOpsTimeline = () => {
 	const standalone = useMemo(() => standaloneMachines(state), [state]);
 	const unassignedBlocks = useMemo(() => state.blocks.filter((b) => b.machineId === null).sort((a, b) => a.start - b.start), [state.blocks]);
 	const unassignedCount = unassignedBlocks.length;
+	const conflicts = useLineConflicts();
+	const conflictIds = useMemo(() => new Set(conflicts.flatMap((c) => [c.lineBlockId, c.machineBlockId])), [conflicts]);
+	const conflictsByLine = useMemo(() => {
+		const counts = new Map<Id, number>();
+		for (const c of conflicts) counts.set(c.lineId, (counts.get(c.lineId) ?? 0) + 1);
+		return counts;
+	}, [conflicts]);
 	const allLinesExpanded = state.lines.length > 0 && state.lines.every((l) => expandedLines.has(l.id));
 	const toggleLine = (lineId: Id) =>
 		setExpandedLines((current) => {
@@ -480,7 +506,18 @@ const FactoryOpsTimeline = () => {
 	const navigate = useNavigate();
 	const command = location.state as PlanNavigationState | null;
 	useEffect(() => {
-		if (!command?.revealBreakdown && !command?.showBlock && !command?.showBlocks) return;
+		if (!command?.revealBreakdown && !command?.revealConflict && !command?.showBlock && !command?.showBlocks) return;
+		const conflict = command.revealConflict;
+		if (conflict) {
+			setCollapsed((c) => ({ ...c, lines: false }));
+			setExpandedLines((current) => new Set([...current, conflict.lineId]));
+			setRange(rangeAround(conflict.from, span, 0.25));
+			if (state.blocks.some((b) => b.id === conflict.machineBlockId)) setSelectedId(conflict.machineBlockId);
+			setFlashRow(conflict.machineId);
+			setScrollToRow(conflict.machineId);
+			navigate(location.pathname, { replace: true, state: null });
+			return;
+		}
 		const breakdown = command.revealBreakdown && state.breakdowns.find((b) => b.id === command.revealBreakdown);
 		const picked = command.showBlocks ? state.blocks.filter((b) => command.showBlocks!.includes(b.id)).sort((a, b) => a.start - b.start) : [];
 		if (picked.length > 0) {
@@ -503,7 +540,7 @@ const FactoryOpsTimeline = () => {
 		navigate(location.pathname, { replace: true, state: null });
 		// reagujemy tylko na nowe polecenie z nawigacji
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [command?.revealBreakdown, command?.showBlock, command?.showBlocks, location.key]);
+	}, [command?.revealBreakdown, command?.revealConflict, command?.showBlock, command?.showBlocks, location.key]);
 
 	useEffect(() => {
 		if (!flashRow) return;
@@ -723,6 +760,7 @@ const FactoryOpsTimeline = () => {
 				'plan-block',
 				status === 'done' && 'is-done',
 				status === 'unassigned' && 'is-unassigned',
+				conflictIds.has(block.id) && 'is-conflict',
 				block.id === draggedId && 'dragging-block',
 				searching && (matchIds.has(block.id) ? 'search-match' : 'dimmed')
 			].filter(Boolean);
@@ -751,7 +789,47 @@ const FactoryOpsTimeline = () => {
 			};
 		});
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [state.blocks, blockLooks, now, draggedId, selectedId, searching, matchIds, windowFrom, windowTo, visibleIds]);
+	}, [state.blocks, blockLooks, now, draggedId, selectedId, searching, matchIds, windowFrom, windowTo, visibleIds, conflictIds]);
+
+	// rozwinięta linia: na wierszach jej maszyn wyszarzone fragmenty zleceń linii - tam, gdzie maszyna nie ma
+	// własnego zlecenia, awarii ani czasu wolnego, czyli faktycznie pracuje na linię
+	const shareItems = useMemo<PlanItem[]>(() => {
+		const calendars = calendarLookup(state);
+		const inWindow = (b: { start: number; end: number }) => b.end > windowFrom && b.start < windowTo;
+		return state.lines
+			.filter((line) => visibleIds.has(line.id) && line.machineIds.some((id) => visibleIds.has(id)))
+			.flatMap((line) => {
+				const lineBlocks = state.blocks.filter((b) => b.machineId === line.id && inWindow(b));
+				if (lineBlocks.length === 0) return [];
+				return line.machineIds
+					.filter((id) => visibleIds.has(id))
+					.flatMap((machineId) => {
+						const busy: [number, number][] = [
+							...state.blocks.filter((b) => b.machineId === machineId && inWindow(b)).map((b): [number, number] => [b.start, b.end]),
+							...state.breakdowns.filter((b) => b.machineId === machineId).map((b): [number, number] => [b.start, breakdownEnd(b, now)]),
+							...nonWorkingPeriods(calendars(machineId), windowFrom, windowTo)
+						];
+						return lineBlocks.flatMap((lb) =>
+							subtractIntervals(lb.start, lb.end, busy).map(
+								([start, end]): PlanItem => ({
+									id: `${LINE_SHARE_PREFIX}${machineId}:${lb.id}:${start}`,
+									kind: 'share',
+									group: machineId,
+									title: '',
+									labels: [`${lb.operation} · ${lb.projectNo}`, lb.operation],
+									start_time: start,
+									end_time: end,
+									canMove: false,
+									canResize: false,
+									canChangeGroup: false,
+									className: 'line-share-item',
+									itemProps: { title: `${lb.operation} · ${lb.projectNo} - zlecenie ${line.name} na tej maszynie` }
+								})
+							)
+						);
+					});
+			});
+	}, [state, visibleIds, windowFrom, windowTo, now]);
 
 	// gdzie wyląduje przenoszony bloczek - opis w stopce, żeby nie zasłaniał zleceń na planie
 	const dropInfo = preview && {
@@ -784,8 +862,11 @@ const FactoryOpsTimeline = () => {
 
 	// elementy zwiniętych wierszy nie trafiają do biblioteki
 	const items = useMemo(
-		() => [...offItems, ...blockItems, ...breakdownItems, ...indicatorItems].filter((item) => item.group === UNASSIGNED_ROW || visibleIds.has(String(item.group))),
-		[offItems, blockItems, breakdownItems, indicatorItems, visibleIds]
+		() =>
+			[...offItems, ...shareItems, ...blockItems, ...breakdownItems, ...indicatorItems].filter(
+				(item) => item.group === UNASSIGNED_ROW || visibleIds.has(String(item.group))
+			),
+		[offItems, shareItems, blockItems, breakdownItems, indicatorItems, visibleIds]
 	);
 
 	const ongoingByMachine = useMemo(() => new Set(state.breakdowns.filter(isOngoing).map((b) => b.machineId)), [state.breakdowns]);
@@ -1092,9 +1173,19 @@ const FactoryOpsTimeline = () => {
 											</button>
 											<span className={`status-dot ${down.length ? 'danger' : ''}`} />
 											<span className="row-name mono">{group.title}</span>
-											<span className="row-meta">
-												{members.length}×{continuous ? ' · 24/7' : ''}
-											</span>
+											{conflictsByLine.has(line.id) && (
+												<span
+													className="conflict-badge"
+													title={`Konflikty (${conflictsByLine.get(line.id)}): maszyny linii mają własne zlecenia w czasie zleceń linii`}>
+													!{conflictsByLine.get(line.id)}
+												</span>
+											)}
+											{/* znacznik konfliktu zajmuje miejsce opisu - inaczej skróciłaby się nazwa linii */}
+											{!conflictsByLine.has(line.id) && (
+												<span className="row-meta">
+													{members.length}×{continuous ? ' · 24/7' : ''}
+												</span>
+											)}
 											{loadBar}
 										</div>
 									);

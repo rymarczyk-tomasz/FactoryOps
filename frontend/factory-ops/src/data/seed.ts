@@ -119,11 +119,11 @@ export function createSeedState(now: number): PlanState {
 	 * Kolejka jednej maszyny lub linii, dopóki nie sięgnie końca roku (albo `maxCount` zleceń);
 	 * `others` - zlecenia, od których zależy (maszyny linii).
 	 */
-	const fillQueue = (machineId: string, others: Block[] = [], maxCount = MAX_ORDERS_PER_QUEUE): Block[] => {
+	const fillQueue = (machineId: string, others: Block[] = [], maxCount = MAX_ORDERS_PER_QUEUE, from = planStart): Block[] => {
 		// zlecenia maszyn linii są już ułożone, więc wydajność kolejki liczymy raz
 		const capacityAt = capacityLookup(resources, planStart, others)(machineId);
 		const own: Block[] = [];
-		let cursor = planStart;
+		let cursor = from;
 		for (let i = 0; i < maxCount && cursor < planEnd; i++) {
 			// czasem zlecenie czeka z przerwą (np. na materiał) - dostaje własny termin
 			const pinnedStart = i > 0 && rnd() < 0.15 ? addHours(cursor, 8 + Math.floor(rnd() * 16)) : undefined;
@@ -157,7 +157,8 @@ export function createSeedState(now: number): PlanState {
 		const line = lines.find((l) => l.machineIds.includes(machine.id));
 		if (!line || line.id === `l${LINE_COUNT + 1}`) blocks.push(...fillQueue(machine.id));
 	}
-	blocks.push(...fillQueue('l3m3', [], 3));
+	// i dwa bieżące - plan pokazuje je jako konflikty ze zleceniami linii
+	blocks.push(...fillQueue('l3m3', [], 3), ...fillQueue('l3m3', [], 2, now - 6 * 3600_000));
 	// potem zlecenia linii - linie przerabiają je szybciej, więc mają ich więcej
 	for (const line of lines.slice(0, LINE_COUNT)) {
 		const members = blocks.filter((b) => b.machineId !== null && line.machineIds.includes(b.machineId));

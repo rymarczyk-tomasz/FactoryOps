@@ -203,6 +203,27 @@
 	color: oklch(0.45 0.12 25);
 }
 
+.rail-conflict {
+	border-style: dashed;
+}
+
+/* czerwony znacznik konfliktu linii (menu boczne, wiersz linii na planie) */
+.conflict-badge {
+	flex: none;
+	display: inline-grid;
+	place-items: center;
+	min-width: 16px;
+	height: 16px;
+	padding: 0 4px;
+	border-radius: 999px;
+	background: var(--danger);
+	color: #fff;
+	font-family: var(--font-mono);
+	font-size: 10.5px;
+	font-weight: 600;
+	line-height: 1;
+}
+
 .rail-reset {
 	margin-top: auto;
 	padding: 0 10px;
