@@ -560,6 +560,25 @@
 	transition: box-shadow var(--transition-fast), opacity var(--transition-fast);
 }
 
+.plan-block-content {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	min-width: 0;
+}
+
+/* gotowość: klocki - materiał, kartka - program; wyłączona flaga wyszarzona */
+.readiness-icons {
+	flex: none;
+	display: inline-flex;
+	gap: 2px;
+}
+
+.readiness-icon.is-off {
+	color: #94a3b8;
+	opacity: 0.4;
+}
+
 .plan-block-label {
 	min-width: 0;
 	overflow: hidden;
@@ -1004,6 +1023,37 @@
 	padding-top: 0;
 	padding-bottom: 0;
 	font-size: 13px;
+}
+
+.readiness-toggles {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+/* przełącznik-pigułka: zmiana od razu, z cofaniem */
+.readiness-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	height: 26px;
+	padding: 0 10px;
+	border: 1px solid var(--input-border);
+	border-radius: 999px;
+	background: var(--surface);
+	font-size: 12.5px;
+	color: var(--ink-3);
+	transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.readiness-pill:hover {
+	border-color: oklch(0.8 0.01 255);
+}
+
+.readiness-pill.is-on {
+	border-color: transparent;
+	background: var(--success-tint);
+	color: var(--success-ink);
 }
 
 .details-list dd:has(.details-select) {

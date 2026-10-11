@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import BlockFormModal from '../components/BlockFormModal';
 import MultiSelect, { MultiSelectOption } from '../components/MultiSelect';
 import PageHeader from '../components/PageHeader';
+import { READINESS } from '../components/Readiness';
 import { NARROW_SCREEN, useMediaQuery } from '../components/useMediaQuery';
 import { PlanNavigationState } from '../components/planNavigation';
 import { projectColorVar } from '../components/projectColor';
@@ -29,6 +30,16 @@ type ListBlock = Block & Partial<Pick<ArchivedBlock, 'machineName'>>;
 const UNASSIGNED = '__none__';
 /** Wartość filtra maszyn dla zleceń bez maszyny. */
 const NO_MACHINE = '__no_machine__';
+
+/** Filtr gotowości: brak materiału, brak programu albo wszystko gotowe (wybrane warunki łączy „lub”). */
+type ReadinessFilter = 'noMaterial' | 'noProgram' | 'ready';
+const READINESS_FILTERS: MultiSelectOption[] = [
+	{ value: 'noMaterial', label: 'Brak materiału' },
+	{ value: 'noProgram', label: 'Brak programu' },
+	{ value: 'ready', label: 'Materiał i program gotowe' }
+];
+const matchesReadiness = (b: Block, filter: string) =>
+	(filter as ReadinessFilter) === 'noMaterial' ? !b.materialReady : filter === 'noProgram' ? !b.programReady : !!b.materialReady && !!b.programReady;
 
 /** Zakładki statusów: „Wszystkie” to zlecenia niezakończone - zakończone są pod osobną zakładką. */
 type StatusTab = 'active' | BlockStatus;
@@ -80,6 +91,7 @@ const ListPage = () => {
 	const [machineIds, setMachineIds] = useState<string[]>([]);
 	const [projectNos, setProjectNos] = useState<string[]>([]);
 	const [programmerIds, setProgrammerIds] = useState<string[]>([]);
+	const [readiness, setReadiness] = useState<string[]>([]);
 	const [sort, setSort] = useState<Sort>({ key: 'start', direction: 1 });
 	const [archived, setArchived] = useState(false);
 	const [selectedIds, setSelectedIds] = useState<Set<Id>>(() => new Set());
@@ -136,9 +148,10 @@ const ListPage = () => {
 			(b) =>
 				(!q || [b.orderNo, b.projectNo, b.project, b.operation].some((f) => f.toLowerCase().includes(q))) &&
 				(machineIds.length === 0 || machineIds.includes(b.machineId ?? NO_MACHINE)) &&
-				(projectNos.length === 0 || projectNos.includes(b.projectNo))
+				(projectNos.length === 0 || projectNos.includes(b.projectNo)) &&
+				(readiness.length === 0 || readiness.some((r) => matchesReadiness(b, r)))
 		);
-	}, [source, query, machineIds, projectNos]);
+	}, [source, query, machineIds, projectNos, readiness]);
 
 	const statuses = useMemo(() => new Map(filtered.map((b) => [b.id, statusOf(b)])), [filtered, archived, now]); // eslint-disable-line react-hooks/exhaustive-deps
 	const tabCounts = useMemo(() => {
@@ -162,7 +175,7 @@ const ListPage = () => {
 	}, [filtered, statuses, archived, statusTab, programmerIds, sort, machineNames]);
 
 	// po zmianie filtrów lub sortowania znowu pokazujemy pierwszą porcję wierszy
-	const pageKey = JSON.stringify([archived, query, statusTab, machineIds, projectNos, programmerIds, sort]);
+	const pageKey = JSON.stringify([archived, query, statusTab, machineIds, projectNos, programmerIds, readiness, sort]);
 	const [page, setPage] = useState({ key: pageKey, limit: PAGE_SIZE });
 	const limit = page.key === pageKey ? page.limit : PAGE_SIZE;
 	const shown = rows.slice(0, limit);
@@ -217,7 +230,21 @@ const ListPage = () => {
 
 	/** Eksport wierszy do CSV ze średnikami i BOM, który polski Excel otwiera bez importu. */
 	const exportCsv = (blocks: ListBlock[], suffix = '') => {
-		const header = ['Start', 'Koniec', 'Operacja', 'Nr projektu', 'Projekt', 'Nr zamówienia', 'Linia / maszyna', 'Czas pracy [h]', 'Status', 'Programista', 'Uwagi'];
+		const header = [
+			'Start',
+			'Koniec',
+			'Operacja',
+			'Nr projektu',
+			'Projekt',
+			'Nr zamówienia',
+			'Linia / maszyna',
+			'Czas pracy [h]',
+			'Status',
+			'Programista',
+			'Materiał gotowy',
+			'Program gotowy',
+			'Uwagi'
+		];
 		const cell = (value: string) => (/[";\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value);
 		const date = (ms: number) => toLocalInputValue(ms).replace('T', ' ');
 		const lines = blocks.map((b) =>
@@ -232,6 +259,8 @@ const ListPage = () => {
 				String(b.hours).replace('.', ','),
 				STATUS_LABELS[statusOf(b)],
 				programmerName(programmers.get(b.programmerId ?? '')),
+				b.materialReady ? 'tak' : 'nie',
+				b.programReady ? 'tak' : 'nie',
 				b.note ?? ''
 			]
 				.map(cell)
@@ -293,6 +322,7 @@ const ListPage = () => {
 				<MultiSelect id="filterMachine" label="Maszyna" allLabel="wszystkie" options={machineOptions} selected={machineIds} onChange={setMachineIds} />
 				<MultiSelect id="filterProject" label="Projekt" allLabel="wszystkie" options={projectOptions} selected={projectNos} onChange={setProjectNos} />
 				<MultiSelect id="filterProgrammer" label="Programista" allLabel="wszyscy" options={programmerOptions} selected={programmerIds} onChange={setProgrammerIds} />
+				<MultiSelect id="filterReadiness" label="Gotowość" allLabel="wszystkie" options={READINESS_FILTERS} selected={readiness} onChange={setReadiness} />
 				<span className="list-filters-extra">
 					{!archived && (noMachineCount > 0 || noMachineOnly) && (
 						<button
@@ -349,6 +379,9 @@ const ListPage = () => {
 					{sortHeader('machine', 'Zasób')}
 					{sortHeader('start', 'Start → koniec')}
 					{sortHeader('hours', 'Czas', 'text-end')}
+					<span className="list-readiness-head" title="Materiał i program gotowe">
+						Got.
+					</span>
 					<span>Programista</span>
 				</div>
 				<div className="list-rows">
@@ -404,6 +437,21 @@ const ListPage = () => {
 									<span className="list-dates-end">→ {formatDateTime(block.end)}</span>
 								</span>
 								<span className="list-hours mono">{formatHours(block.hours)}</span>
+								<span className="list-readiness">
+									{READINESS.map(({ flag, label, missing, Icon }) => (
+										<button
+											key={flag}
+											type="button"
+											className={`readiness-toggle ${block[flag] ? 'is-on' : 'is-off'}`}
+											aria-pressed={!!block[flag]}
+											aria-label={`${label} · ${block.orderNo}`}
+											title={`${block[flag] ? label : missing}${archived ? '' : ' - kliknij, żeby zmienić'}`}
+											disabled={archived}
+											onClick={() => updateBlock(block.id, { [flag]: !block[flag] })}>
+											<Icon size={14} aria-hidden="true" />
+										</button>
+									))}
+								</span>
 								<span className="list-programmer">
 									{archived ? (
 										programmer && (
@@ -455,6 +503,21 @@ const ListPage = () => {
 								</Dropdown.Menu>
 							</Dropdown>
 						)}
+						{!archived &&
+							READINESS.map(({ flag, label }) => {
+								// wszystkie zaznaczone mają flagę - przycisk ją zdejmuje, inaczej ustawia wszystkim
+								const all = selectedBlocks.every((b) => b[flag]);
+								return (
+									<button
+										key={flag}
+										type="button"
+										className="list-bar-button"
+										aria-pressed={all}
+										onClick={() => updateBlocks(selected, { [flag]: !all })}>
+										{all ? `✓ ${label}` : label}
+									</button>
+								);
+							})}
 						{!archived && (
 							<button type="button" className="list-bar-button" onClick={() => showManyOnPlan(selected)}>
 								Pokaż na planie

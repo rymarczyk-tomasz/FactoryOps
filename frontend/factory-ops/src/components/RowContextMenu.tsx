@@ -5,18 +5,21 @@ import { formatDateTime } from '../domain/format';
 import { addHours } from '../domain/shifts';
 import { Id } from '../domain/types';
 import { BreakdownModalTarget } from './BreakdownModal';
-import { machinesLabel } from './planSelectors';
+import { machinesLabel, ordersLabel } from './planSelectors';
+import { READINESS } from './Readiness';
 import './RowContextMenu.css';
 
 export interface RowMenuTarget {
 	x: number;
 	y: number;
-	/** Maszyna albo linia klikniętego wiersza. */
-	resourceId: Id;
+	/** Maszyna albo linia klikniętego wiersza; `null` - zlecenie bez maszyny. */
+	resourceId: Id | null;
 	/** Początek doby (6:00), której dotyczy menu. */
 	day: number;
 	/** Pełna godzina w klikniętym miejscu - od niej można dodać zlecenie. */
 	hour: number;
+	/** Kliknięte zlecenie (albo wszystkie zaznaczone, gdy kliknięto jedno z nich) - menu pokazuje flagi gotowości. */
+	blockIds?: Id[];
 }
 
 interface RowContextMenuProps {
@@ -35,7 +38,7 @@ const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1
 
 /** Menu prawego przycisku na wierszu planu: dodanie zlecenia, awarie maszyn wiersza i kalendarz dnia. */
 const RowContextMenu = ({ target, onAddBlock, onReportBreakdown, onOpenDay, onClose }: RowContextMenuProps) => {
-	const { state, now, endBreakdown, removeBreakdown } = usePlan();
+	const { state, now, endBreakdown, removeBreakdown, updateBlocks } = usePlan();
 	const ref = useRef<HTMLDivElement>(null);
 	const [position, setPosition] = useState({ left: target.x, top: target.y });
 
@@ -65,10 +68,11 @@ const RowContextMenu = ({ target, onAddBlock, onReportBreakdown, onOpenDay, onCl
 
 	const machine = state.machines.find((m) => m.id === target.resourceId);
 	const line = findLine(state.lines, target.resourceId);
-	if (!machine && !line) return null;
+	const blocks = state.blocks.filter((b) => target.blockIds?.includes(b.id));
+	if (!machine && !line && blocks.length === 0) return null;
 
-	const machines = machine ? [machine] : lineMachines(line!, state.machines);
-	const name = machine?.name ?? line!.name;
+	const machines = machine ? [machine] : line ? lineMachines(line, state.machines) : [];
+	const name = machine?.name ?? line?.name ?? 'Bez maszyny';
 	const names = new Map(machines.map((m) => [m.id, m.name]));
 	const dayEnd = addHours(target.day, 24);
 	// trwające awarie maszyn wiersza oraz zakończone, które przypadają na klikniętą dobę
@@ -81,6 +85,25 @@ const RowContextMenu = ({ target, onAddBlock, onReportBreakdown, onOpenDay, onCl
 		action();
 		onClose();
 	};
+
+	/** Flaga włączona na wszystkich zleceniach menu - wtedy klik ją wyłącza, inaczej włącza wszystkim. */
+	const readinessItems = READINESS.map(({ flag, label, Icon }) => {
+		const on = blocks.every((b) => b[flag]);
+		return (
+			<button
+				key={flag}
+				type="button"
+				role="menuitemcheckbox"
+				aria-checked={on}
+				className="row-menu-item"
+				onClick={run(() => updateBlocks(blocks.map((b) => b.id), { [flag]: !on }))}>
+				<span className="row-menu-check">{on ? '✓' : ''}</span>
+				<Icon size={14} aria-hidden="true" className="row-menu-icon" />
+				{label}
+				{blocks.length > 1 && <span className="row-menu-hint">{ordersLabel(blocks.length)}</span>}
+			</button>
+		);
+	});
 
 	const dayDate = new Date(target.day);
 	const dayLabel = `${weekdayFormat.format(target.day).replace('.', '')} ${dayDate.getDate()}.${dayDate.getMonth() + 1}`;
@@ -96,54 +119,66 @@ const RowContextMenu = ({ target, onAddBlock, onReportBreakdown, onOpenDay, onCl
 				<div className="row-menu-sub">
 					{machine
 						? `${describeDay(effectiveDay(state.calendar, machine, target.day))} · ${WORK_MODE_LABELS[workMode(machine)]}`
-						: `Linia: ${machinesLabel(machines.length)} pracujące równolegle`}
+						: line
+							? `Linia: ${machinesLabel(machines.length)} pracujące równolegle`
+							: 'Zlecenie czeka na przypisanie maszyny'}
 				</div>
 			</div>
-			<div className="row-menu-body">
-				<button type="button" role="menuitem" className="row-menu-item" onClick={run(onAddBlock)}>
+			{!machine && !line ? (
+				<div className="row-menu-body">{readinessItems}</div>
+			) : (
+				<div className="row-menu-body">
+					{blocks.length > 0 && (
+						<>
+							{readinessItems}
+							<div className="row-menu-divider" />
+						</>
+					)}
+					<button type="button" role="menuitem" className="row-menu-item" onClick={run(onAddBlock)}>
 					Dodaj zlecenie od {hourFormat.format(target.hour)}
-					<span className="row-menu-hint">dwuklik</span>
-				</button>
-				{breakdowns.map((breakdown) => (
-					<div key={breakdown.id} className="row-menu-breakdown">
-						<span>
+						<span className="row-menu-hint">dwuklik</span>
+					</button>
+					{breakdowns.map((breakdown) => (
+						<div key={breakdown.id} className="row-menu-breakdown">
+							<span>
 							Awaria{line ? ` ${names.get(breakdown.machineId)}` : ''} od {since(breakdown.start)}
-							{isOngoing(breakdown) ? (
-								<>
-									{' '}
+								{isOngoing(breakdown) ? (
+									<>
+										{' '}
 									· <b>trwa</b>
-								</>
-							) : (
-								` do ${formatDateTime(breakdownEnd(breakdown, now))}`
-							)}
-						</span>
-						<span className="row-menu-breakdown-actions">
-							{isOngoing(breakdown) && (
-								<button type="button" role="menuitem" className="btn btn-danger" onClick={run(() => endBreakdown(breakdown.id))}>
+									</>
+								) : (
+									` do ${formatDateTime(breakdownEnd(breakdown, now))}`
+								)}
+							</span>
+							<span className="row-menu-breakdown-actions">
+								{isOngoing(breakdown) && (
+									<button type="button" role="menuitem" className="btn btn-danger" onClick={run(() => endBreakdown(breakdown.id))}>
 									Zakończ teraz
-								</button>
-							)}
-							<button type="button" role="menuitem" className="btn row-menu-remove" onClick={run(() => removeBreakdown(breakdown.id))}>
+									</button>
+								)}
+								<button type="button" role="menuitem" className="btn row-menu-remove" onClick={run(() => removeBreakdown(breakdown.id))}>
 								Usuń
-							</button>
-						</span>
-					</div>
-				))}
-				{!machineDown && (
-					<button
+								</button>
+							</span>
+						</div>
+					))}
+					{!machineDown && (
+						<button
 						type="button"
 						role="menuitem"
 						className="row-menu-item is-danger"
 						onClick={run(() => onReportBreakdown(machine ? { machineId: machine.id } : { machineIds: machines.map((m) => m.id) }))}>
-						{machine ? `Zgłoś awarię ${machine.name}…` : 'Zgłoś awarię maszyny linii…'}
-					</button>
-				)}
-				<div className="row-menu-divider" />
-				<button type="button" role="menuitem" className="row-menu-item" onClick={run(onOpenDay)}>
+							{machine ? `Zgłoś awarię ${machine.name}…` : 'Zgłoś awarię maszyny linii…'}
+						</button>
+					)}
+					<div className="row-menu-divider" />
+					<button type="button" role="menuitem" className="row-menu-item" onClick={run(onOpenDay)}>
 					Dzień pracujący / wolny…
-					<span className="row-menu-hint">{dayLabel}</span>
-				</button>
-			</div>
+						<span className="row-menu-hint">{dayLabel}</span>
+					</button>
+				</div>
+			)}
 		</div>
 	);
 };

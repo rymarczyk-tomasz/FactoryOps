@@ -46,6 +46,17 @@
 	transition: background var(--transition-fast);
 }
 
+.row-menu-check {
+	width: 10px;
+	font-size: 12px;
+	color: var(--success-ink);
+}
+
+.row-menu-icon {
+	flex: none;
+	color: var(--ink-3);
+}
+
 .row-menu-item:hover,
 .row-menu-item:focus-visible {
 	background: var(--hover);

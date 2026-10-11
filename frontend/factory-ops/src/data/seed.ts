@@ -144,6 +144,10 @@ export function createSeedState(now: number): PlanState {
 				programmerId: rnd() < 0.7 ? pick(programmers).id : undefined
 			};
 			if (pinnedStart !== undefined) block.pinnedStart = pinnedStart;
+			// rozpoczęte zlecenia mają materiał i program; z przyszłych część jeszcze czeka
+			// (bez losowania - kolejne dane przykładowe zostają takie same)
+			if (start < now || blockCounter % 4 !== 0) block.materialReady = true;
+			if (start < now || blockCounter % 3 !== 0) block.programReady = true;
 			own.push(block);
 			cursor = end;
 		}

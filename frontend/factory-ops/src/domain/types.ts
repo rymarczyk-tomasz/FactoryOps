@@ -100,7 +100,14 @@ export interface Block {
 	pinnedStart?: number;
 	programmerId?: Id;
 	note?: string;
+	/** Materiał na zlecenie jest gotowy (brak = nie). */
+	materialReady?: boolean;
+	/** Program na maszynę jest gotowy (brak = nie). */
+	programReady?: boolean;
 }
+
+/** Flagi gotowości zlecenia - planista odhacza je, zanim zlecenie wejdzie na maszynę. */
+export type ReadinessFlag = 'materialReady' | 'programReady';
 
 export type BlockDraft = Omit<Block, 'id' | 'start' | 'end' | 'pinnedStart' | 'machineId'> & {
 	machineId: Id;

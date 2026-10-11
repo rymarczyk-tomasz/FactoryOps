@@ -106,7 +106,7 @@
 
 .list-grid {
 	display: grid;
-	grid-template-columns: 44px 110px minmax(0, 1.2fr) minmax(0, 1fr) 150px 190px 64px minmax(0, 1fr);
+	grid-template-columns: 44px 110px minmax(0, 1.2fr) minmax(0, 1fr) 150px 190px 64px 58px minmax(0, 1fr);
 	align-items: center;
 }
 
@@ -211,6 +211,44 @@
 
 .list-status.status-planned .status-dot {
 	background: var(--accent);
+}
+
+.list-readiness-head {
+	text-align: center;
+}
+
+.list-readiness {
+	display: flex;
+	justify-content: center;
+	gap: 2px;
+}
+
+/* ikona gotowości w wierszu przełącza flagę jednym kliknięciem */
+.readiness-toggle {
+	display: inline-grid;
+	place-items: center;
+	width: 24px;
+	height: 24px;
+	padding: 0;
+	border: none;
+	border-radius: 6px;
+	background: transparent;
+	color: var(--success-ink);
+	transition: background var(--transition-fast);
+}
+
+.readiness-toggle.is-off {
+	color: #94a3b8;
+	opacity: 0.55;
+}
+
+.readiness-toggle:not(:disabled):hover {
+	background: var(--hover);
+	opacity: 1;
+}
+
+.readiness-toggle:disabled {
+	cursor: default;
 }
 
 .list-status.status-unassigned {

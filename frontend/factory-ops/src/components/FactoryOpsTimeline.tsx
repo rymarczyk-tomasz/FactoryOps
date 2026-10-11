@@ -31,7 +31,7 @@ import { formatDateTime, formatHours, programmerName, timelineLabel } from '../d
 import { subtractIntervals } from '../domain/conflicts';
 import { blockStatus, previewMove } from '../domain/schedule';
 import { addHours, dayKey, isWeekend, nearestHourStart, shiftDayStart } from '../domain/shifts';
-import { Block, Breakdown, Id, Line, Machine } from '../domain/types';
+import { Block, Breakdown, Id, Line, Machine, ReadinessFlag } from '../domain/types';
 import BlockDetailsPanel from './BlockDetailsPanel';
 import BlockFormModal, { BlockFormDefaults } from './BlockFormModal';
 import BreakdownModal, { BreakdownModalTarget } from './BreakdownModal';
@@ -44,6 +44,7 @@ import { loadByDay, removalImpact, totalPercent } from './planSelectors';
 import { PlanNavigationState } from './planNavigation';
 import { projectColor } from './projectColor';
 import RowContextMenu, { RowMenuTarget } from './RowContextMenu';
+import { READINESS, ReadinessIcons, readinessText } from './Readiness';
 import Segmented from './Segmented';
 import { useLineConflicts } from './useLineConflicts';
 
@@ -107,6 +108,8 @@ type PlanItem = TimelineItemBase<number> & {
 	kind: ItemKind;
 	labels?: string[];
 	lineDown?: { down: number; units: number; labels: string[] };
+	/** Flagi gotowości zlecenia; `hideOff` - bez ikon wyłączonych flag (widok miesiąca). */
+	readiness?: Pick<Block, ReadinessFlag> & { hideOff: boolean };
 };
 /** Biblioteka nie eksportuje typu propsów renderera - bierzemy go z propa `itemRenderer`. */
 type ItemRendererProps = Parameters<NonNullable<ReactCalendarTimelineProps<PlanItem>['itemRenderer']>>[0];
@@ -116,6 +119,8 @@ const CHAR_WIDTH = 6.8;
 /** Napis awarii jest mniejszy (10.5px). */
 const SMALL_CHAR_WIDTH = 6;
 const LABEL_PADDING = 16;
+/** Ikona gotowości (12px) z odstępem. */
+const READINESS_ICON_WIDTH = 14;
 
 /** Opis bloczka: operacja i numer projektu - nazwa projektu jest w podpowiedzi i panelu. */
 function blockLabels(block: Block): string[] {
@@ -133,7 +138,7 @@ function renderItem({ item, itemContext, timelineContext, getItemProps }: ItemRe
 	const hidden = Math.max(0, Math.min(itemContext.dimensions.width, visibleLeft - itemContext.dimensions.left));
 	const width = itemContext.dimensions.width - hidden;
 	const labelStyle = hidden > 0 ? { marginLeft: hidden } : undefined;
-	const fitting = (labels: string[], charWidth: number) => labels.find((l) => l.length * charWidth + LABEL_PADDING <= width) ?? '';
+	const fitting = (labels: string[], charWidth: number, room = width) => labels.find((l) => l.length * charWidth + LABEL_PADDING <= room) ?? '';
 	switch (item.kind) {
 		case 'off':
 		case 'drop':
@@ -181,7 +186,13 @@ function renderItem({ item, itemContext, timelineContext, getItemProps }: ItemRe
 			);
 		}
 		default: {
-			const label = item.labels ? fitting(item.labels, CHAR_WIDTH) : itemContext.title;
+			const readiness = item.readiness;
+			const icons = readiness ? READINESS.filter(({ flag }) => !readiness.hideOff || readiness[flag]).length : 0;
+			const iconsWidth = icons * READINESS_ICON_WIDTH;
+			// ikony tylko obok napisu - wąski bloczek zostaje z samym napisem (gotowość jest w podpowiedzi i panelu)
+			const withIcons = icons > 0 && item.labels ? fitting(item.labels, CHAR_WIDTH, width - iconsWidth) : '';
+			const showIcons = withIcons !== '';
+			const label = showIcons ? withIcons : item.labels ? fitting(item.labels, CHAR_WIDTH) : itemContext.title;
 			return (
 				<div
 					{...props}
@@ -194,9 +205,10 @@ function renderItem({ item, itemContext, timelineContext, getItemProps }: ItemRe
 					aria-label={item.itemProps?.['aria-label']}
 					data-block-id={item.id}>
 					<div className="plan-block-body">
-						{label && (
-							<span className="plan-block-label" style={labelStyle}>
-								{label}
+						{(showIcons || label) && (
+							<span className="plan-block-content" style={labelStyle}>
+								{showIcons && <ReadinessIcons block={readiness!} hideOff={readiness!.hideOff} />}
+								{label && <span className="plan-block-label">{label}</span>}
 							</span>
 						)}
 					</div>
@@ -286,6 +298,8 @@ const ZOOMS = [
 ];
 /** Godziny w nagłówku tylko przy małym zakresie - przy tygodniu byłyby nieczytelne. */
 const HOUR_HEADER_MAX_SPAN = 3 * DAY;
+/** Od takiego zakresu plan traktujemy jak widok miesiąca (bez ikon wyłączonych flag gotowości). */
+const MONTH_VIEW_MIN_SPAN = 14 * DAY;
 type Range = { start: number; end: number };
 const rangeAround = (time: number, span: number, lead: number): Range => ({ start: time - span * lead, end: time + span * (1 - lead) });
 
@@ -327,6 +341,8 @@ const FactoryOpsTimeline = () => {
 	const { state, now, moveBlock, deleteBlock } = usePlan();
 	const clock = useMinuteClock();
 	const [selectedId, setSelectedId] = useState<Id>();
+	/** Zlecenia dołożone do zaznaczenia Ctrl/Shift+klikiem - akcje z menu prawego kliku dotyczą wszystkich. */
+	const [multiSelected, setMultiSelected] = useState<Id[]>([]);
 	const [form, setForm] = useState<FormState>({ show: false });
 	const [breakdownForm, setBreakdownForm] = useState<BreakdownFormState>({ show: false });
 	const [dayForm, setDayForm] = useState<DayFormState>({ show: false });
@@ -444,7 +460,26 @@ const FactoryOpsTimeline = () => {
 	const selected = state.blocks.find((b) => b.id === selectedId);
 	// prawy przycisk otwiera tylko menu - bez zmiany zaznaczenia (otwarty panel zwęziłby plan i przesunął wiersz pod menu)
 	const rightPress = useRef(false);
-	const select = (id: Id) => !rightPress.current && !isHelperItem(id) && setSelectedId(String(id));
+	const select = (itemId: Id, e?: React.SyntheticEvent) => {
+		const id = String(itemId);
+		if (rightPress.current || isHelperItem(id)) return;
+		const mouse = e as React.MouseEvent | undefined;
+		if (mouse && (mouse.ctrlKey || mouse.metaKey || mouse.shiftKey)) {
+			// Ctrl/Shift+klik dokłada zlecenie do zaznaczenia albo je z niego zdejmuje; panel pokazuje ostatnio kliknięte
+			const all = [...new Set([...(selectedId ? [selectedId] : []), ...multiSelected])];
+			const next = all.includes(id) ? all.filter((x) => x !== id) : [...all, id];
+			setSelectedId(next[next.length - 1]);
+			setMultiSelected(next.slice(0, -1));
+			return;
+		}
+		setMultiSelected([]);
+		setSelectedId(id);
+	};
+	const clearSelection = () => {
+		setSelectedId(undefined);
+		setMultiSelected([]);
+	};
+	const selectedIds = useMemo(() => [...multiSelected, ...(selectedId ? [selectedId] : [])], [multiSelected, selectedId]);
 
 	// panel zlecenia zwęża plan - biblioteka przelicza szerokość tylko przy zmianie rozmiaru okna
 	const panelOpen = selected !== undefined;
@@ -452,10 +487,10 @@ const FactoryOpsTimeline = () => {
 		window.dispatchEvent(new Event('resize'));
 	}, [panelOpen]);
 
-	const openRowMenu = (resourceId: Id, time: number, e: React.SyntheticEvent) => {
+	const openRowMenu = (resourceId: Id | null, time: number, e: React.SyntheticEvent, blockIds?: Id[]) => {
 		e.preventDefault();
 		const { clientX, clientY } = e as React.MouseEvent;
-		setRowMenu({ x: clientX, y: clientY, resourceId, day: shiftDayStart(time), hour: nearestHourStart(time) });
+		setRowMenu({ x: clientX, y: clientY, resourceId, day: shiftDayStart(time), hour: nearestHourStart(time), blockIds });
 	};
 
 	// --- zoom i przewijanie ---
@@ -581,7 +616,10 @@ const FactoryOpsTimeline = () => {
 					searchRef.current?.focus();
 					searchRef.current?.select();
 				});
-			} else if (e.key === 'Escape') setSelectedId(undefined);
+			} else if (e.key === 'Escape') {
+				setSelectedId(undefined);
+				setMultiSelected([]);
+			}
 		};
 		document.addEventListener('keydown', onKey);
 		return () => document.removeEventListener('keydown', onKey);
@@ -646,6 +684,8 @@ const FactoryOpsTimeline = () => {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [state.blocks, state.lines, state.machines, state.calendar, state.breakdowns, now]);
 
+	// w widoku miesiąca bloczki są wąskie - ikony wyłączonych flag tylko by zaśmiecały plan
+	const monthView = span > MONTH_VIEW_MIN_SPAN;
 	const windowFrom = Math.floor((range.start - span / 2) / WINDOW_STEP) * WINDOW_STEP;
 	const windowTo = Math.ceil((range.end + span / 2) / WINDOW_STEP) * WINDOW_STEP;
 
@@ -738,7 +778,8 @@ const FactoryOpsTimeline = () => {
 					line ? `${formatHours(block.hours)} pracy maszyny · linia: ${line.machineIds.length} maszyny` : formatHours(block.hours),
 					`${formatDateTime(block.start)} → ${formatDateTime(block.end)}`,
 					block.pinnedStart !== undefined ? `Termin: nie wcześniej niż ${formatDateTime(block.pinnedStart)}` : '',
-					programmerName(programmer)
+					programmerName(programmer),
+					readinessText(block)
 				]
 					.filter(Boolean)
 					.join('\n');
@@ -770,6 +811,7 @@ const FactoryOpsTimeline = () => {
 				group: block.machineId ?? UNASSIGNED_ROW,
 				title: blockLabels(block)[0],
 				labels: blockLabels(block),
+				readiness: { materialReady: block.materialReady, programReady: block.programReady, hideOff: monthView },
 				start_time: block.start,
 				end_time: block.end,
 				canMove: true,
@@ -789,7 +831,7 @@ const FactoryOpsTimeline = () => {
 			};
 		});
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [state.blocks, blockLooks, now, draggedId, selectedId, searching, matchIds, windowFrom, windowTo, visibleIds, conflictIds]);
+	}, [state.blocks, blockLooks, now, draggedId, selectedId, searching, matchIds, windowFrom, windowTo, visibleIds, conflictIds, monthView]);
 
 	// rozwinięta linia: na wierszach jej maszyn wyszarzone fragmenty zleceń linii - tam, gdzie maszyna nie ma
 	// własnego zlecenia, awarii ani czasu wolnego, czyli faktycznie pracuje na linię
@@ -1062,10 +1104,10 @@ const FactoryOpsTimeline = () => {
 							canMove
 							canChangeGroup
 							canResize={false}
-							selected={selectedId ? [selectedId] : []}
+							selected={selectedIds}
 							onItemSelect={select}
 							onItemClick={select}
-							onItemDeselect={() => !rightPress.current && setSelectedId(undefined)}
+							onItemDeselect={() => !rightPress.current && clearSelection()}
 							onCanvasDoubleClick={(groupId, time) =>
 								visibleIds.has(String(groupId)) && setForm({ show: true, defaults: { machineId: String(groupId), start: nearestHourStart(time) } })
 							}
@@ -1073,8 +1115,11 @@ const FactoryOpsTimeline = () => {
 							onItemContextMenu={(itemId, e, time) => {
 								const id = String(itemId);
 								const breakdown = id.startsWith(BREAKDOWN_PREFIX) ? state.breakdowns.find((b) => `${BREAKDOWN_PREFIX}${b.id}` === id) : undefined;
-								const resourceId = breakdown?.machineId ?? state.blocks.find((b) => b.id === id)?.machineId;
-								if (resourceId) openRowMenu(resourceId, time, e);
+								const block = state.blocks.find((b) => b.id === id);
+								const resourceId = breakdown?.machineId ?? block?.machineId;
+								// zlecenie z zaznaczenia - flagi gotowości dla wszystkich zaznaczonych
+								const blockIds = block ? (selectedIds.includes(block.id) ? selectedIds : [block.id]) : undefined;
+								if (resourceId || blockIds) openRowMenu(resourceId ?? null, time, e, blockIds);
 								else e.preventDefault();
 							}}
 							moveResizeValidator={(_action, _item, time) => nearestHourStart(time)}
@@ -1316,7 +1361,7 @@ const FactoryOpsTimeline = () => {
 						onEdit={(block) => setForm({ show: true, block })}
 						onDelete={setToDelete}
 						onShow={showBlock}
-						onClose={() => setSelectedId(undefined)}
+						onClose={clearSelection}
 					/>
 				)}
 			</div>
@@ -1327,7 +1372,7 @@ const FactoryOpsTimeline = () => {
 			{rowMenu && (
 				<RowContextMenu
 					target={rowMenu}
-					onAddBlock={() => setForm({ show: true, defaults: { machineId: rowMenu.resourceId, start: rowMenu.hour } })}
+					onAddBlock={() => setForm({ show: true, defaults: { machineId: rowMenu.resourceId ?? undefined, start: rowMenu.hour } })}
 					onReportBreakdown={(target) => setBreakdownForm({ show: true, target })}
 					onOpenDay={() => setDayForm({ show: true, day: rowMenu.day })}
 					onClose={closeRowMenu}

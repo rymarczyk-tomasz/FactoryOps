@@ -5,6 +5,7 @@ import { formatClockDuration, formatDateTime, formatHours, programmerName, STATU
 import { blockStatus } from '../domain/schedule';
 import { Block, BlockStatus, Id } from '../domain/types';
 import { projectColorVar } from './projectColor';
+import { READINESS } from './Readiness';
 
 /** Warianty Badge dla listy zleceń (do etapu 4 redesignu). */
 export const STATUS_VARIANTS: Record<BlockStatus, string> = { done: 'secondary', in_progress: 'success', planned: 'primary', unassigned: 'danger' };
@@ -160,6 +161,20 @@ const BlockDetailsPanel = ({ block, onSelect, onEdit, onDelete, onShow, onClose 
 								</option>
 							))}
 						</Form.Select>
+					</dd>
+					<dt>Gotowość</dt>
+					<dd className="readiness-toggles">
+						{READINESS.map(({ flag, label, Icon }) => (
+							<button
+								key={flag}
+								type="button"
+								className={`readiness-pill ${block[flag] ? 'is-on' : ''}`}
+								aria-pressed={!!block[flag]}
+								onClick={() => updateBlock(block.id, { [flag]: !block[flag] })}>
+								<Icon size={13} aria-hidden="true" />
+								{label}
+							</button>
+						))}
 					</dd>
 					{block.note && (
 						<>
