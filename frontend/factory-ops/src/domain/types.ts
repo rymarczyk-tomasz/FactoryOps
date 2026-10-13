@@ -104,11 +104,6 @@ export interface Block {
 	 * Bez niego zlecenie „przykleja się” do poprzedniego i cofa się razem z kolejką.
 	 */
 	pinnedStart?: number;
-	/**
-	 * Część zlecenia (1, 2, …) - rozpoczęte zlecenie przeniesione w inne miejsce dzieli się: zrobiona część
-	 * zostaje, dalej idzie tylko reszta godzin. Brak = zlecenie w całości.
-	 */
-	part?: number;
 	programmerId?: Id;
 	note?: string;
 	/** Materiał na zlecenie jest gotowy (brak = nie). */
