@@ -3,13 +3,11 @@ import { CapacityAt, endAfterWork, firstProductiveHourFrom, nearestHourStart } f
 import { Block, BlockDraft, BlockStatus, Id } from './types';
 
 const HOUR = 3600_000;
-/** Upuszczone tak blisko końca poprzedniego zlecenia „przykleja się” do niego zamiast zostawiać przerwę. */
-export const ATTACH_WITHIN_HOURS = 3;
 
 /** Zlecenie postawione w nowym miejscu (dodane, przeniesione, ze zmienionym startem). */
 interface Placement {
 	id: Id;
-	/** Przerwa krótsza niż tyle godzin nie jest traktowana jako celowa. */
+	/** Przerwa krótsza niż tyle godzin nie jest traktowana jako celowa; brak - każda przerwa jest celowa. */
 	attachWithin?: number;
 	/** Może stanąć przed `now` - planista przenosi zlecenie tam, gdzie faktycznie poszło (np. w nocy na inną maszynę). */
 	allowPast?: boolean;
@@ -29,7 +27,7 @@ function reflowMachine(blocks: Block[], capacityAt: CapacityAt, placement?: Plac
 	return sorted.map((block) => {
 		let pinnedStart = block.pinnedStart;
 		if (block.id === placedId) {
-			// przerwa przed upuszczonym zleceniem jest celowa tylko wtedy, gdy jest wyraźna
+			// zlecenie zostaje tam, gdzie je postawiono; upuszczone na poprzednie (albo tuż za nim) dosuwa się do niego
 			const gap = cursor === undefined ? Infinity : block.start - cursor;
 			pinnedStart = gap > (placement?.attachWithin ?? 0) * HOUR ? block.start : undefined;
 		}
@@ -159,7 +157,7 @@ export function moveBlock(blocks: Block[], id: Id, start: number, machineId: Id,
 	const from = blocks.find((b) => b.id === id)?.machineId;
 	const updated = keepGapAfter(blocks, id, now).map((b) => (b.id === id ? { ...b, start: nearestHourStart(start), machineId } : b));
 	// zlecenie bez maszyny upuszczone na wiersz dostaje maszynę; całe zlecenie można upuścić też przed linią „teraz”
-	return reflow(updated, resources, { id, attachWithin: ATTACH_WITHIN_HOURS, allowPast: true }, now, from ? [from, machineId] : [machineId]);
+	return reflow(updated, resources, { id, allowPast: true }, now, from ? [from, machineId] : [machineId]);
 }
 
 /** Przypisuje zlecenie (np. bez maszyny) do zasobu - na koniec jego kolejki, bez terminu. */
