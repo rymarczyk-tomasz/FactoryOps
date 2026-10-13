@@ -281,9 +281,9 @@ describe('harmonogram', () => {
 			expect(byId(blocks, 'b1')).toMatchObject({ start: at(5, 15), pinnedStart: at(5, 15) });
 		});
 
-		it('za ostatnim zrobionym zleceniem maszyny staje zaraz po nim', () => {
+		it('upuszczone na zrobione zlecenie maszyny staje zaraz po nim', () => {
 			const done = addBlock([], { ...draft(3, 'm2'), start: at(5, 0) }, 'd', capacities, at(5, 0));
-			const blocks = moveBlock([...plan(8, 8), ...done], 'b0', at(5, 4), 'm2', capacities, during);
+			const blocks = moveBlock([...plan(8, 8), ...done], 'b0', at(5, 2), 'm2', capacities, during);
 			expect(byId(blocks, 'b0')).toMatchObject({ start: at(5, 3), end: at(5, 11) });
 			expect(byId(blocks, 'd')).toMatchObject({ start: at(5, 0), end: at(5, 3) });
 		});
@@ -324,9 +324,14 @@ describe('harmonogram', () => {
 		expect(byId(blocks, 'b2').start).toBe(at(6, 17));
 	});
 
-	it('upuszczone blisko końca poprzedniego zlecenia przykleja się do niego', () => {
-		// koniec b1 o 23:00, upuszczone o 1:00 - 2 h przerwy to raczej niedokładne upuszczenie
-		const blocks = moveBlock(plan(8, 8, 8), 'b2', at(6, 1), 'm1', capacities);
+	it('upuszczone godzinę za poprzednim zleceniem zostaje w tym miejscu', () => {
+		// koniec b1 o 23:00 - b2 (23-7) przesunięte o godzinę na 24:00 i o dwie na 1:00
+		expect(byId(moveBlock(plan(8, 8, 8), 'b2', at(6, 0), 'm1', capacities), 'b2')).toMatchObject({ start: at(6, 0), pinnedStart: at(6, 0) });
+		expect(byId(moveBlock(plan(8, 8, 8), 'b2', at(6, 1), 'm1', capacities), 'b2')).toMatchObject({ start: at(6, 1), pinnedStart: at(6, 1) });
+	});
+
+	it('upuszczone na poprzednie zlecenie dosuwa się za nie', () => {
+		const blocks = moveBlock(plan(8, 8, 8), 'b2', at(5, 20), 'm1', capacities);
 		expect(byId(blocks, 'b2')).toMatchObject({ start: at(5, 23) });
 		expect(byId(blocks, 'b2').pinnedStart).toBeUndefined();
 	});
