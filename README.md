@@ -31,3 +31,27 @@ in terminal:
 - local database, run by Powershell scrypt ```. ./run-database.ps1```
 - backend, run by command ```dotnet run``` in folder ```./FactoryOps/backend/FactoryOps.Api/```
 - frontend, run by command ```npm start``` in folder ```./FactoryOps/frontend/factory-ops/```
+
+## Ideas
+
+Feature ideas, partly inspired by MRPeasy, Katana, Odoo, Prodio, PlanetTogether and Siemens Opcenter APS.
+
+### Before the client demo
+
+- **Excel import** - load the client's own spreadsheet and show their real orders on the plan.
+- **Customer due date** - add a due date to an order and warn when the plan finishes it late.
+- **Export and print** - export the plan to Excel / PDF and print it for the shift supervisor.
+
+### First production version
+
+- **Stage order within a project (routing)** - stage 2 cannot start before stage 1 ends; moving one stage shows the effect on the next ones.
+- **Users, roles and change history** - the planner edits, production and sales only view; every change records who moved what and when.
+- **Backend and on-premise deployment** - API, database, login, backups; replaces the browser storage used by the demo.
+- **KPI dashboard** - machine utilisation, share of orders finished on time, downtime hours from breakdowns.
+- **Shop floor view (tablet / TV)** - "what runs on my machine now and next" with a "done" button (simple MES).
+
+### Later
+
+- **Automatic scheduling** by priority or due date (APS).
+- **What-if scenarios** - a copy of the plan for testing changes before applying them.
+- **ERP integration** (e.g. SAP).
