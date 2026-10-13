@@ -134,12 +134,6 @@ const BlockDetailsPanel = ({ block, onSelect, onEdit, onDelete, onShow, onClose 
 						{line && <span className="text-secondary"> · {line.machineIds.length} maszyny</span>}
 						{parentLine && <span className="text-secondary"> · z {parentLine.name}</span>}
 					</dd>
-					{block.orderNo && (
-						<>
-							<dt>Nr zamówienia</dt>
-							<dd className="mono">{block.orderNo}</dd>
-						</>
-					)}
 					<dt>Czas techn.</dt>
 					<dd title={line ? `${formatHours(block.hours)} pracy jednej maszyny; linia dzieli zlecenie między ${line.machineIds.length} maszyny` : undefined}>
 						{formatHours(block.hours)}
