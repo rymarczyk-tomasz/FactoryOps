@@ -1,0 +1,457 @@
+/* Obciążenie (#2b): kafelki, mapa cieplna i awarie w kolumnie obok */
+
+.load-layout {
+	display: flex;
+	align-items: flex-start;
+	gap: 20px;
+}
+
+.load-main {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+/* ---- kafelki ---- */
+
+.load-tiles {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 12px;
+}
+
+.load-tile {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 14px 16px;
+	border: 1px solid var(--line);
+	border-radius: var(--radius-md);
+	background: var(--surface);
+}
+
+.load-tile.is-danger {
+	border-color: oklch(0.9 0.04 25);
+}
+
+.load-tile-label {
+	font-size: 12.5px;
+	color: oklch(0.5 0.02 260);
+}
+
+.load-tile-value {
+	font-size: 28px;
+	font-weight: 600;
+	line-height: 1;
+}
+
+.load-tile.is-danger .load-tile-value {
+	color: var(--danger);
+}
+
+.load-tile-bar {
+	display: flex;
+	height: 4px;
+	border-radius: 2px;
+	background: oklch(0.94 0.006 255);
+	overflow: hidden;
+}
+
+.load-tile-bar > span {
+	background: var(--accent);
+}
+
+.load-tile-note {
+	font-size: 12px;
+	color: oklch(0.45 0.12 25);
+}
+
+.load-tile:not(.is-danger) .load-tile-note {
+	color: var(--ink-3);
+}
+
+/* ---- mapa cieplna ---- */
+
+.heatmap {
+	display: flex;
+	flex-direction: column;
+	border: 1px solid var(--line);
+	border-radius: var(--radius-md);
+	background: var(--surface);
+	overflow: hidden;
+}
+
+.heat-grid {
+	display: grid;
+	grid-template-columns: 200px repeat(var(--days), minmax(0, 1fr)) 150px 80px;
+	align-items: center;
+	gap: 6px;
+	padding: 0 14px;
+}
+
+.heatmap.is-dense .heat-grid {
+	gap: 2px;
+}
+
+.heat-head {
+	height: 44px;
+	border-bottom: 1px solid oklch(0.92 0.006 255);
+}
+
+.heat-day {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	line-height: 1.2;
+	white-space: nowrap;
+}
+
+.heat-day-sub {
+	font-size: 11px;
+	color: oklch(0.55 0.02 260);
+}
+
+.heat-day.is-today .heat-day-sub {
+	color: var(--danger);
+}
+
+.heat-day-date {
+	font-size: 12.5px;
+	font-weight: 500;
+}
+
+.heatmap.is-dense .heat-day-date {
+	font-size: 11px;
+}
+
+.heat-group {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	height: 30px;
+	padding: 0 14px;
+	border-bottom: 1px solid oklch(0.93 0.006 255);
+	background: var(--subtle);
+	font-size: 12.5px;
+	white-space: nowrap;
+}
+
+.heat-group-avg {
+	color: oklch(0.52 0.02 260);
+}
+
+.heat-row {
+	height: 38px;
+	border-bottom: 1px solid var(--line-2);
+}
+
+.heat-row:last-child {
+	border-bottom: none;
+}
+
+.heat-name {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+}
+
+.heat-resource {
+	min-width: 0;
+	overflow: hidden;
+	font-size: 13px;
+	font-weight: 500;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.heat-meta {
+	flex: none;
+	font-size: 11px;
+	color: oklch(0.58 0.02 260);
+}
+
+.heat-cell {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 28px;
+	border-radius: 5px;
+	font-size: 12px;
+	color: oklch(0.3 0.03 260);
+	white-space: nowrap;
+	overflow: hidden;
+}
+
+.heatmap.is-dense .heat-cell {
+	height: 24px;
+	border-radius: 3px;
+}
+
+.heat-cell.is-off {
+	background: repeating-linear-gradient(-45deg, oklch(0.975 0.004 255) 0 4px, oklch(0.94 0.006 255) 4px 8px);
+	font-family: var(--font-sans);
+	font-size: 11.5px;
+	color: oklch(0.6 0.02 260);
+}
+
+/* dzisiejsza kolumna: delikatna ramka; zasób z trwającą awarią - czerwona */
+.heat-cell.is-today {
+	box-shadow: inset 0 0 0 1px oklch(0.25 0.02 260 / 0.25);
+}
+
+.heat-cell.is-today.is-down {
+	box-shadow: inset 0 0 0 2px var(--danger);
+}
+
+.heat-free {
+	padding-left: 12px;
+	font-size: 12px;
+	color: oklch(0.4 0.02 260);
+	white-space: nowrap;
+}
+
+.heat-queue {
+	font-size: 12.5px;
+	text-align: right;
+}
+
+/* ---- awarie ---- */
+
+.load-side {
+	flex: none;
+	width: 340px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.load-side-cards {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+/* ---- węższy ekran (< 1440 px): awarie jako zwarte wiersze między kafelkami a mapą ---- */
+
+.breakdown-strip {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.breakdown-strip-head {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+}
+
+.breakdown-strip-head .load-side-head {
+	flex: 1;
+}
+
+.breakdown-rows {
+	border: 1px solid var(--line);
+	border-radius: var(--radius-md);
+	background: var(--surface);
+	overflow: hidden;
+}
+
+.breakdown-row {
+	display: grid;
+	grid-template-columns: 8px minmax(150px, 0.9fr) 190px 110px minmax(0, 1.6fr) auto;
+	align-items: center;
+	gap: 14px;
+	height: 44px;
+	padding: 0 12px 0 16px;
+	border-bottom: 1px solid var(--line-2);
+	font-size: 13px;
+	white-space: nowrap;
+}
+
+.breakdown-row:last-child {
+	border-bottom: none;
+}
+
+.breakdown-row.is-done {
+	color: var(--ink-3);
+}
+
+.breakdown-row .status-dot {
+	width: 8px;
+	height: 8px;
+}
+
+.breakdown-row-name {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	min-width: 0;
+	overflow: hidden;
+}
+
+.breakdown-row-since {
+	font-size: 12.5px;
+}
+
+.breakdown-row-impact {
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.breakdown-row-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 6px;
+}
+
+/* nagłówek mapy ze skalą po prawej */
+.heat-caption {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 14px 0;
+}
+
+.heat-scale.is-compact {
+	flex-direction: row;
+	align-items: center;
+	gap: 8px;
+	width: 380px;
+	margin: 0 0 0 auto;
+}
+
+.heat-scale.is-compact .heat-scale-row {
+	flex: 1;
+}
+
+.load-side-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.load-side-title {
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.load-side-count {
+	font-size: 12px;
+	color: oklch(0.5 0.02 260);
+	white-space: nowrap;
+}
+
+.load-side-switch {
+	margin: 0;
+	font-size: 13px;
+	color: var(--ink-2);
+}
+
+.load-side-empty {
+	margin: 0;
+	padding: 14px 16px;
+	border: 1px dashed var(--line);
+	border-radius: var(--radius-md);
+	font-size: 13px;
+	color: var(--ink-3);
+}
+
+.breakdown-card {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 14px 16px;
+	border: 1px solid var(--line);
+	border-radius: var(--radius-md);
+	background: var(--surface);
+}
+
+.breakdown-card.is-active {
+	border-color: oklch(0.88 0.05 25);
+}
+
+.breakdown-card.is-done {
+	opacity: 0.75;
+}
+
+.breakdown-card-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.breakdown-card-head .status-dot {
+	width: 8px;
+	height: 8px;
+}
+
+.breakdown-card-name {
+	font-size: 14px;
+	font-weight: 500;
+}
+
+.breakdown-card-where {
+	font-size: 12.5px;
+	color: oklch(0.5 0.02 260);
+}
+
+.breakdown-card-list {
+	display: grid;
+	grid-template-columns: max-content minmax(0, 1fr);
+	gap: 4px 14px;
+	margin: 0;
+	font-size: 13px;
+}
+
+.breakdown-card-list dt {
+	font-weight: 400;
+	color: oklch(0.52 0.02 260);
+}
+
+.breakdown-card-list dd {
+	margin: 0;
+}
+
+.breakdown-card-list dd.mono {
+	font-size: 12.5px;
+}
+
+.breakdown-card-actions {
+	display: flex;
+	gap: 8px;
+}
+
+.heat-scale {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-top: 4px;
+}
+
+.heat-scale-row {
+	display: flex;
+	gap: 3px;
+}
+
+.heat-scale-row > span.is-full {
+	flex: 1.3;
+	color: #fff;
+}
+
+.heat-scale-note {
+	font-size: 12px;
+	color: var(--ink-3);
+}
+
+.heat-scale-row > span {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 18px;
+	border-radius: 3px;
+	font-size: 10px;
+}

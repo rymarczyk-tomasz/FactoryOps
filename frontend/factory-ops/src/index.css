@@ -1,10 +1,437 @@
-body {
-	margin: 0;
-	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-	-webkit-font-smoothing: antialiased;
-	-moz-osx-font-smoothing: grayscale;
+/* ---- układ aplikacji: menu boczne + obszar treści ---- */
+
+/* cienkie, jasne paski przewijania w obszarach roboczych (systemowe, grube obok siebie były za ciężkie) */
+.page-body,
+.plan-timeline,
+.plan-timeline .rct-scroll,
+.details-body,
+.rail-breakdown-list {
+	scrollbar-width: thin;
+	scrollbar-color: oklch(0.85 0.01 255) transparent;
 }
 
-code {
-	font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+:root {
+	--rail-width: 200px;
+	--page-header-height: 60px;
+}
+
+.app-shell {
+	display: flex;
+	height: 100vh;
+	overflow: hidden;
+}
+
+/* obszar treści się nie przewija - przewija się tylko treść strony pod paskiem górnym */
+.app-main {
+	position: relative;
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	background: var(--canvas);
+}
+
+.page-header {
+	flex: none;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	height: var(--page-header-height);
+	padding: 0 20px;
+	border-bottom: 1px solid var(--line);
+	background: var(--surface);
+}
+
+.page-title {
+	margin: 0;
+	font-size: 19px;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.page-context {
+	font-size: 12.5px;
+	color: var(--ink-3);
+	white-space: nowrap;
+}
+
+.page-header-actions {
+	margin-left: auto;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.page-body {
+	flex: 1;
+	min-height: 0;
+	overflow: auto;
+	padding: 20px 24px;
+}
+
+.app-rail {
+	flex: none;
+	width: var(--rail-width);
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+	padding: 18px 12px;
+	border-right: 1px solid var(--line);
+	background: var(--rail);
+}
+
+.rail-brand {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 0 8px;
+	font-size: 15px;
+	font-weight: 600;
+	color: var(--ink);
+	text-decoration: none;
+}
+
+.rail-brand:hover {
+	color: var(--ink);
+}
+
+.rail-nav {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.rail-link {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 10px;
+	border-radius: var(--radius);
+	color: oklch(0.42 0.02 260);
+	text-decoration: none;
+	transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.rail-link:hover {
+	color: var(--ink);
+	background: oklch(0.94 0.006 255);
+}
+
+.rail-link.active {
+	background: var(--surface);
+	color: var(--ink);
+	font-weight: 500;
+	box-shadow: var(--shadow-card);
+}
+
+.rail-short {
+	display: none;
+}
+
+/* lista awarii przewija się sama, żeby nie wypychała „Resetuj demo” */
+.rail-breakdowns {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	min-height: 0;
+}
+
+.rail-section-label {
+	padding: 0 10px;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--danger-ink);
+}
+
+.rail-breakdown-list {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-height: 0;
+	overflow-y: auto;
+	padding: 0 2px 2px;
+}
+
+.rail-breakdown {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 8px 10px;
+	border: 1px solid oklch(0.9 0.04 25);
+	border-radius: var(--radius);
+	background: var(--surface);
+	text-align: left;
+	transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.rail-breakdown:hover {
+	border-color: oklch(0.8 0.08 25);
+	box-shadow: var(--shadow-card);
+}
+
+.rail-breakdown:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.rail-breakdown-head {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	min-width: 0;
+}
+
+.rail-breakdown-name {
+	font-size: 12.5px;
+	font-weight: 500;
+	color: var(--ink);
+	white-space: nowrap;
+}
+
+.rail-breakdown-where {
+	overflow: hidden;
+	font-size: 12px;
+	color: var(--ink-3);
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.rail-breakdown-since {
+	font-size: 12px;
+	color: oklch(0.45 0.12 25);
+}
+
+.rail-conflict {
+	border-style: dashed;
+}
+
+/* co się z czym gryzie: zlecenie linii ↔ zlecenie maszyny */
+.rail-conflict-pair {
+	overflow: hidden;
+	font-size: 11.5px;
+	line-height: 1.35;
+	color: var(--ink-2);
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.rail-more {
+	padding: 2px 10px;
+	border: none;
+	background: transparent;
+	font-size: 12px;
+	color: var(--accent);
+	text-align: left;
+}
+
+.rail-more:hover {
+	text-decoration: underline;
+}
+
+/* czerwony znacznik konfliktu linii (menu boczne, wiersz linii na planie) */
+.conflict-badge {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 3px;
+	min-width: 16px;
+	height: 16px;
+	padding: 0 4px;
+	border-radius: 999px;
+	background: var(--danger);
+	color: #fff;
+	font-family: var(--font-mono);
+	font-size: 10.5px;
+	font-weight: 600;
+	line-height: 1;
+}
+
+.rail-reset {
+	margin-top: auto;
+	padding: 0 10px;
+	border: none;
+	background: transparent;
+	font-size: 12.5px;
+	color: var(--ink-3);
+	text-align: left;
+}
+
+.rail-reset:hover {
+	color: var(--ink);
+}
+
+/* paleta kolorów projektu (formularz zlecenia, panel) */
+.swatch-note {
+	margin-top: 4px;
+	font-size: 11.5px;
+	color: var(--ink-3);
+}
+
+.color-swatches {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.color-swatch {
+	width: 20px;
+	height: 20px;
+	padding: 0;
+	border: 2px solid var(--surface);
+	border-radius: 50%;
+	box-shadow: 0 0 0 1px oklch(0.88 0.008 255);
+	transition: box-shadow var(--transition-fast);
+}
+
+.color-swatches.is-small .color-swatch {
+	width: 16px;
+	height: 16px;
+}
+
+.color-swatch:hover {
+	box-shadow: 0 0 0 1px var(--ink-3);
+}
+
+.color-swatch.is-checked {
+	box-shadow: 0 0 0 2px var(--ink);
+}
+
+.color-swatch:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+/* daty zlecenia bez maszyny - zostały z ostatniego planu, nic ich nie przelicza */
+.last-plan {
+	margin-left: 6px;
+	padding: 0 5px;
+	border-radius: 4px;
+	background: var(--danger-tint);
+	font-family: var(--font-sans);
+	font-size: 11px;
+	color: var(--danger-ink);
+	white-space: nowrap;
+}
+
+.list-dates .last-plan {
+	align-self: flex-start;
+	margin: 2px 0 0;
+}
+
+.status-dot {
+	flex: none;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: oklch(0.85 0.01 255);
+}
+
+.status-dot.danger {
+	background: var(--danger);
+}
+
+/* poniżej md: wąski pasek z inicjałami */
+@media (max-width: 767.98px) {
+	:root {
+		--rail-width: 56px;
+	}
+
+	.app-rail {
+		padding: 18px 6px;
+		align-items: center;
+	}
+
+	.rail-brand,
+	.rail-link {
+		justify-content: center;
+		padding: 8px 0;
+		width: 40px;
+	}
+
+	.rail-label,
+	.rail-breakdown-where,
+	.rail-breakdown-since,
+	.rail-conflict-pair,
+	.rail-more {
+		display: none;
+	}
+
+	.rail-short {
+		display: inline;
+	}
+
+	.rail-section-label {
+		padding: 0;
+		text-align: center;
+	}
+
+	.rail-breakdown {
+		align-items: center;
+		width: 44px;
+		padding: 6px 2px;
+	}
+
+	.rail-breakdown-name {
+		font-size: 10px;
+		overflow: hidden;
+		max-width: 38px;
+		text-overflow: ellipsis;
+	}
+
+	.rail-reset {
+		padding: 0;
+		text-align: center;
+	}
+
+	.page-header {
+		padding: 0 12px;
+	}
+
+	.page-body {
+		padding: 12px;
+	}
+}
+
+.text-pre-wrap {
+	white-space: pre-wrap;
+}
+
+/* komunikaty po zmianach: prawy dolny róg obszaru treści, 16px od krawędzi (!important - klasy pozycji Bootstrapa) */
+.notice-container {
+	z-index: 1090;
+	--notice-bottom: 16px;
+	--notice-right: 16px;
+	bottom: var(--notice-bottom) !important;
+	right: var(--notice-right) !important;
+}
+
+/* plan: nad stopką z legendą i paskiem przewijania; przy otwartym panelu zlecenia - obok niego */
+.app-main:has(.plan-footer) .notice-container {
+	--notice-bottom: calc(32px + 17px + 16px);
+}
+
+.app-main:has(.details-panel) .notice-container {
+	--notice-right: calc(var(--details-panel-width) + 16px);
+}
+
+/* lista: nad paskiem na dole (56px + 16px marginesu) */
+.app-main:has(.list-bar) .notice-container {
+	--notice-bottom: calc(72px + 16px);
+}
+
+.notice-container .toast {
+	width: auto;
+	max-width: min(720px, calc(100vw - 32px));
+}
+
+.notice-container .toast-body {
+	white-space: nowrap;
+}
+
+.notice-container .notice-text {
+	overflow: hidden;
+	text-overflow: ellipsis;
 }

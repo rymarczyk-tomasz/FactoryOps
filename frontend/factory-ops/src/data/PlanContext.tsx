@@ -1,0 +1,388 @@
+import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { archiveOld } from '../domain/archive';
+import { isOngoing, resourceName } from '../domain/calendar';
+import { formatDateTime, orderLabel } from '../domain/format';
+import * as schedule from '../domain/schedule';
+import { newId } from '../domain/ids';
+import { applyLineDraft, applyMachineDraft, pendingBlocks, removeLine, removeMachine } from '../domain/machines';
+import { projectKey, withProjectColor } from '../domain/projects';
+import { addHours, nearestHourStart } from '../domain/shifts';
+import { Block, BlockDraft, DayOverride, Id, LineDraft, MachineDraft, PlanState, ReadinessFlag } from '../domain/types';
+import { LocalStoragePlanRepository, PlanRepository } from './PlanRepository';
+import { useHourClock } from './useHourClock';
+
+const HISTORY_LIMIT = 50;
+
+/** Po zmianie kalendarza, awarii lub liczby maszyn zlecenia trzeba ułożyć od nowa. */
+/** `scope` - maszyny, których dotyczy zmiana (bez niej cały plan). */
+const withReflow = (s: PlanState, scope?: Id[]): PlanState => ({ ...s, blocks: schedule.reflow(s.blocks, s, undefined, Date.now(), scope) });
+
+/** Harmonogram zwraca te same obiekty dla zleceń, które się nie zmieniły (kolejność może być inna). */
+const sameBlocks = (a: Block[], b: Block[]) => {
+	if (a.length !== b.length) return false;
+	const previous = new Set(a);
+	return b.every((block) => previous.has(block));
+};
+
+const machineName = (s: PlanState, id: Id | undefined) => resourceName(s, id);
+const breakdownMachine = (s: PlanState, id: Id) => s.breakdowns.filter((b) => b.id === id).map((b) => b.machineId);
+const orderName = (s: PlanState, id: Id) => {
+	const block = s.blocks.find((b) => b.id === id);
+	return block ? orderLabel(block) : '';
+};
+/** „zlecenia” / „zleceń” po liczbie (2-4 zlecenia, 5 zleceń, 22 zlecenia, 12 zleceń). */
+const ordersWord = (n: number) => (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'zlecenia' : 'zleceń');
+
+/** Co zmieniła zmiana gotowości: „materiał gotowy”, „brak programu”; `undefined` - zmiana nie dotyczy gotowości. */
+const READINESS_TEXT: Record<ReadinessFlag, [string, string]> = {
+	materialReady: ['materiał gotowy', 'brak materiału'],
+	programReady: ['program gotowy', 'brak programu']
+};
+function readinessChange(patch: Partial<Block>): string | undefined {
+	const flags = (Object.keys(READINESS_TEXT) as ReadinessFlag[]).filter((flag) => patch[flag] !== undefined);
+	return flags.length ? flags.map((flag) => READINESS_TEXT[flag][patch[flag] ? 0 : 1]).join(' · ') : undefined;
+}
+
+/** Zlecenie, przed którym zmiana zostawiła nową przerwę (dostało termin) - dla przycisku „Domknij przerwę”. */
+const openedGap = (before: PlanState, after: PlanState, movedId: Id) => {
+	const pinned = new Set(before.blocks.filter((b) => b.pinnedStart !== undefined).map((b) => b.id));
+	return after.blocks.find((b) => b.id !== movedId && b.pinnedStart !== undefined && !pinned.has(b.id) && schedule.gapBefore(after.blocks, b.id) > 0);
+};
+
+/** Dopisek do komunikatu o usunięciu zasobu: ile zleceń trafiło do grupy „Bez maszyny”. */
+const detachedNotice = (s: PlanState, id: Id) => {
+	const n = pendingBlocks(s.blocks, id, Date.now()).length;
+	return n === 0 ? '' : ` · ${n === 1 ? '1 zlecenie' : `${n} ${ordersWord(n)}`} bez maszyny`;
+};
+
+/** Zmiana ustawienia dnia: `value` undefined usuwa wyjątek. */
+export interface DayChange {
+	machineId?: Id;
+	value: DayOverride | undefined;
+}
+
+/** Ustawia wyjątki dnia w kalendarzu zakładu i maszyn. */
+function withDayChanges(s: PlanState, dayKey: string, changes: DayChange[]): PlanState {
+	const apply = (overrides: Record<string, DayOverride> = {}, value: DayOverride | undefined) => {
+		const next = { ...overrides };
+		if (value === undefined) delete next[dayKey];
+		else next[dayKey] = value;
+		return next;
+	};
+	const plant = changes.find((c) => c.machineId === undefined);
+	const byMachine = new Map(changes.filter((c) => c.machineId !== undefined).map((c) => [c.machineId, c.value]));
+	return {
+		...s,
+		calendar: plant ? { overrides: apply(s.calendar.overrides, plant.value) } : s.calendar,
+		machines: s.machines.map((m) => (byMachine.has(m.id) ? { ...m, overrides: apply(m.overrides, byMachine.get(m.id)) } : m))
+	};
+}
+
+/** Komunikat po zmianie planu (z możliwością cofnięcia). `id` rośnie, żeby ten sam tekst pokazał się ponownie. */
+export interface Notice {
+	id: number;
+	text: string;
+	undoable: boolean;
+	/** Dodatkowy przycisk w komunikacie, np. „Domknij przerwę”. */
+	action?: NoticeAction;
+}
+
+export interface NoticeAction {
+	label: string;
+	run: () => void;
+}
+
+/** Opis zmiany w komunikacie - sam tekst albo tekst z przyciskiem. */
+type Describe = (before: PlanState, after: PlanState) => string | { text: string; action?: NoticeAction };
+
+interface PlanActions {
+	/** `color` - kolor projektu wybrany w formularzu (zapisywany na projekcie, w tym samym kroku cofania). */
+	addBlock(draft: BlockDraft, color?: string): Id;
+	updateBlock(id: Id, patch: Partial<Omit<Block, 'id' | 'end'>>, color?: string): void;
+	/** Kolor projektu - zmienia wszystkie jego zlecenia. */
+	setProjectColor(key: string, color: string): void;
+	/** Ta sama zmiana dla kilku zleceń (np. przypisanie programisty) - jeden krok cofania. */
+	updateBlocks(ids: Id[], patch: Partial<Omit<Block, 'id' | 'end'>>): void;
+	moveBlock(id: Id, start: number, machineId: Id): void;
+	/** Przypisuje zlecenie (np. bez maszyny) do maszyny lub linii - na koniec kolejki. */
+	assignBlock(id: Id, machineId: Id): void;
+	deleteBlock(id: Id): void;
+	compactMachine(machineId: Id): void;
+	/** Domyka przerwę przed zleceniem - zlecenie i kolejne dosuwają się do poprzedniego. */
+	closeGap(id: Id): void;
+	/** Dodaje (bez `id`) albo zapisuje istniejącą maszynę. */
+	saveMachine(draft: MachineDraft, id?: Id): Id;
+	deleteMachine(id: Id): void;
+	/** Dodaje (bez `id`) albo zapisuje istniejącą linię. */
+	saveLine(draft: LineDraft, id?: Id): Id;
+	deleteLine(id: Id): void;
+	/** Zgłasza awarię maszyny trwającą od `start` (pełna godzina) - bez końca, dopóki ktoś jej nie zakończy. */
+	reportBreakdown(machineId: Id, start: number): Id;
+	/** Kończy trwającą awarię o najbliższej pełnej godzinie (albo o `end`). */
+	endBreakdown(id: Id, end?: number): void;
+	removeBreakdown(id: Id): void;
+	/**
+	 * Wyjątek w kalendarzu maszyny (`machineId`) albo całego zakładu (bez `machineId`).
+	 * `undefined` usuwa wyjątek - dzień wraca do ustawienia domyślnego.
+	 */
+	setDayWorking(dayKey: string, working: DayOverride | undefined, machineId?: Id): void;
+	/** Kilka zmian kalendarza jednego dnia naraz (jeden krok cofania). Bez `machineId` - cały zakład. */
+	saveDay(dayKey: string, changes: DayChange[]): void;
+	undo(): void;
+	resetDemo(): Promise<void>;
+	dismissNotice(): void;
+}
+
+interface PlanContextValue extends PlanActions {
+	state: PlanState;
+	/** „Teraz” dla statusów i widoków, odświeżane co pełną godzinę. Akcje liczą plan od bieżącej chwili. */
+	now: number;
+	canUndo: boolean;
+	notice?: Notice;
+}
+
+const PlanContext = createContext<PlanContextValue | undefined>(undefined);
+
+export function PlanProvider({ children, repository }: { children: ReactNode; repository?: PlanRepository }) {
+	const repo = useMemo(() => repository ?? new LocalStoragePlanRepository(), [repository]);
+	const [state, setState] = useState<PlanState>();
+	const [history, setHistory] = useState<PlanState[]>([]);
+	const [notice, setNotice] = useState<Notice>();
+	// aktualny stan dla akcji, które muszą zwrócić wynik synchronicznie (np. id nowego bloczka)
+	const stateRef = useRef<PlanState>();
+	stateRef.current = state;
+	const noticeId = useRef(0);
+	const now = useHourClock();
+
+	useEffect(() => {
+		repo.load().then(setState);
+	}, [repo]);
+
+	useEffect(() => {
+		if (state) repo.save(state);
+	}, [repo, state]);
+
+	// po wczytaniu planu i co pełną godzinę: stare zlecenia idą do archiwum, a trwające awarie rosną, więc przeliczamy zlecenia
+	const loaded = state !== undefined;
+	useEffect(() => {
+		const current = stateRef.current;
+		if (!current) return;
+		const archived = archiveOld(current, Date.now());
+		// rosną tylko trwające awarie, więc wystarczy przeliczyć ich maszyny
+		const ongoing = archived.breakdowns.filter(isOngoing).map((b) => b.machineId);
+		const blocks = ongoing.length ? schedule.reflow(archived.blocks, archived, undefined, Date.now(), ongoing) : archived.blocks;
+		if (archived === current && sameBlocks(current.blocks, blocks)) return;
+		const next = { ...archived, blocks };
+		stateRef.current = next;
+		setState(next);
+	}, [now, loaded]);
+
+	const notify = useCallback(
+		(text: string, undoable: boolean, action?: NoticeAction) => setNotice({ id: ++noticeId.current, text, undoable, action }),
+		[]
+	);
+
+	/** Zmienia plan, zapamiętuje poprzedni stan do cofnięcia i pokazuje komunikat opisany przez `describe`. */
+	const apply = useCallback(
+		(change: (current: PlanState) => PlanState, describe?: Describe) => {
+			const current = stateRef.current;
+			if (!current) return;
+			const next = change(current);
+			if (next === current) return;
+			stateRef.current = next;
+			setHistory((h) => [...h.slice(-(HISTORY_LIMIT - 1)), current]);
+			setState(next);
+			if (!describe) return;
+			const described = describe(current, next);
+			if (typeof described === 'string') notify(described, true);
+			else notify(described.text, true, described.action);
+		},
+		[notify]
+	);
+
+	const withBlocks = useCallback(
+		(change: (s: PlanState) => Block[], describe?: Describe) =>
+			apply((s) => {
+				const blocks = change(s);
+				// nic się nie zmieniło (np. domknięcie przerw bez przerw) - bez komunikatu i kroku do cofnięcia
+				return sameBlocks(s.blocks, blocks) ? s : { ...s, blocks };
+			}, describe),
+		[apply]
+	);
+
+	const undo = useCallback(() => {
+		const previous = history[history.length - 1];
+		if (!previous) return;
+		stateRef.current = previous;
+		setState(previous);
+		setHistory(history.slice(0, -1));
+		notify('Cofnięto ostatnią zmianę', false);
+	}, [history, notify]);
+
+	const actions = useMemo<Omit<PlanActions, 'undo'>>(() => {
+		const closeGap = (id: Id) =>
+			withBlocks(
+				(s) => schedule.closeGap(s.blocks, id, s, Date.now()),
+				(before) => `Domknięto przerwę · ${orderName(before, id)}`
+			);
+		/** Komunikat z przyciskiem „Domknij przerwę”, gdy zmiana zostawiła przerwę w planie. */
+		const withGapAction = (text: string, before: PlanState, after: PlanState, movedId: Id) => {
+			const gap = openedGap(before, after, movedId);
+			return gap ? { text: `${text} · została przerwa`, action: { label: 'Domknij przerwę', run: () => closeGap(gap.id) } } : text;
+		};
+		return {
+			addBlock(draft, color) {
+				const id = newId();
+				apply(
+					(s) => withProjectColor({ ...s, blocks: schedule.addBlock(s.blocks, draft, id, s, Date.now()) }, projectKey(draft), color),
+					(_, after) => `Dodano ${orderLabel(draft)} · ${machineName(after, draft.machineId)}`
+				);
+				return id;
+			},
+			updateBlock: (id, patch, color) =>
+				apply(
+					(s) => {
+						const blocks = schedule.updateBlock(s.blocks, id, patch, s, Date.now());
+						const block = blocks.find((b) => b.id === id);
+						return withProjectColor(sameBlocks(s.blocks, blocks) ? s : { ...s, blocks }, block ? projectKey(block) : '', color);
+					},
+					(before, after) => {
+						const change = readinessChange(patch);
+						return change ? `${orderName(before, id)} · ${change}` : withGapAction(`Zapisano ${orderName(before, id)}`, before, after, id);
+					}
+				),
+			setProjectColor: (key, color) =>
+				apply(
+					(s) => withProjectColor(s, key, color),
+					() => `Zmieniono kolor projektu ${key}`
+				),
+			updateBlocks: (ids, patch) =>
+				withBlocks(
+					(s) => ids.reduce((blocks, id) => schedule.updateBlock(blocks, id, patch, s, Date.now()), s.blocks),
+					(before) => {
+						const change = readinessChange(patch);
+						if (change && ids.length === 1) return `${orderName(before, ids[0])} · ${change}`;
+						const count = ids.length === 1 ? '1 zlecenie' : `${ids.length} ${ordersWord(ids.length)}`;
+						// „Materiał gotowy · 3 zlecenia”
+						return change ? `${change.charAt(0).toUpperCase()}${change.slice(1)} · ${count}` : `Zapisano ${count}`;
+					}
+				),
+			moveBlock: (id, start, machineId) =>
+				withBlocks(
+					(s) => schedule.moveBlock(s.blocks, id, start, machineId, s, Date.now()),
+					(before, after) => {
+						const block = after.blocks.find((b) => b.id === id);
+						const text = `Przeniesiono ${block ? orderLabel(block) : ''} · ${machineName(after, machineId)} · start ${block ? formatDateTime(block.start) : ''}`;
+						return withGapAction(text, before, after, id);
+					}
+				),
+			assignBlock: (id, machineId) =>
+				withBlocks(
+					(s) => schedule.assignBlock(s.blocks, id, machineId, s, Date.now()),
+					(before, after) => withGapAction(`Przypisano ${orderName(before, id)} · ${machineName(after, machineId)}`, before, after, id)
+				),
+			deleteBlock: (id) =>
+				withBlocks(
+					(s) => schedule.removeBlock(s.blocks, id, s, Date.now()),
+					(before, after) => withGapAction(`Usunięto ${orderName(before, id)}`, before, after, id)
+				),
+			compactMachine(machineId) {
+				const before = stateRef.current;
+				withBlocks(
+					(s) => schedule.compactMachine(s.blocks, machineId, s, Date.now()),
+					(previous) => `Domknięto przerwy · ${machineName(previous, machineId)}`
+				);
+				if (before && stateRef.current === before) notify(`Brak przerw do domknięcia · ${machineName(before, machineId)}`, false);
+			},
+			closeGap,
+			saveMachine(draft, existingId) {
+				const id = existingId ?? newId();
+				// system pracy i przynależność do linii zmieniają czas zleceń
+				apply(
+					(s) => withReflow({ ...s, ...applyMachineDraft(s, draft, id) }),
+					() => `${existingId ? 'Zapisano' : 'Dodano'} ${draft.name}`
+				);
+				return id;
+			},
+			deleteMachine: (id) =>
+				apply(
+					(s) => withReflow(removeMachine(s, id, Date.now())),
+					(before) => `Usunięto ${machineName(before, id)}${detachedNotice(before, id)}`
+				),
+			saveLine(draft, existingId) {
+				const id = existingId ?? newId();
+				apply(
+					(s) => withReflow({ ...s, ...applyLineDraft(s, draft, id, newId) }),
+					() => `${existingId ? 'Zapisano' : 'Dodano'} ${draft.name}`
+				);
+				return id;
+			},
+			deleteLine: (id) =>
+				apply(
+					(s) => withReflow(removeLine(s, id, Date.now())),
+					(before) => `Usunięto ${machineName(before, id)}${detachedNotice(before, id)}`
+				),
+			reportBreakdown(machineId, start) {
+				const id = newId();
+				apply(
+					(s) => withReflow({ ...s, breakdowns: [...s.breakdowns, { id, machineId, start: nearestHourStart(start) }] }, [machineId]),
+					(before) => `Zgłoszono awarię · ${machineName(before, machineId)} · plan przeliczony`
+				);
+				return id;
+			},
+			endBreakdown: (id, end) =>
+				apply(
+					(s) =>
+						withReflow(
+							{
+								...s,
+								breakdowns: s.breakdowns.map((b) => (b.id === id ? { ...b, end: Math.max(nearestHourStart(end ?? Date.now()), addHours(b.start, 1)) } : b))
+							},
+							breakdownMachine(s, id)
+						),
+					(before) => `Zakończono awarię · ${machineName(before, before.breakdowns.find((b) => b.id === id)?.machineId)} · plan przeliczony`
+				),
+			removeBreakdown: (id) =>
+				apply(
+					(s) => withReflow({ ...s, breakdowns: s.breakdowns.filter((b) => b.id !== id) }, breakdownMachine(s, id)),
+					(before) => `Usunięto awarię · ${machineName(before, before.breakdowns.find((b) => b.id === id)?.machineId)}`
+				),
+			setDayWorking: (dayKey, working, machineId) =>
+				apply(
+					(s) => withReflow(withDayChanges(s, dayKey, [{ machineId, value: working }]), machineId ? [machineId] : undefined),
+					(before) => `Zmieniono kalendarz · ${machineId ? machineName(before, machineId) : 'cały zakład'} · ${dayKey}`
+				),
+			saveDay: (dayKey, changes) =>
+				apply(
+					(s) => {
+						if (!changes.length) return s;
+						// zmiana dla całego zakładu dotyczy wszystkich maszyn
+						const plantChanged = changes.some((c) => c.machineId === undefined);
+						return withReflow(withDayChanges(s, dayKey, changes), plantChanged ? undefined : changes.map((c) => c.machineId!));
+					},
+					() => `Zapisano kalendarz · ${dayKey}`
+				),
+			async resetDemo() {
+				const fresh = await repo.reset();
+				stateRef.current = fresh;
+				setHistory([]);
+				setState(fresh);
+				notify('Przywrócono dane przykładowe', false);
+			},
+			dismissNotice: () => setNotice(undefined)
+		};
+	}, [apply, withBlocks, repo, notify]
+	);
+
+	if (!state) {
+		return <div className="d-flex justify-content-center align-items-center vh-100 text-secondary">Wczytywanie planu…</div>;
+	}
+
+	return <PlanContext.Provider value={{ state, now, canUndo: history.length > 0, notice, undo, ...actions }}>{children}</PlanContext.Provider>;
+}
+
+export function usePlan(): PlanContextValue {
+	const context = useContext(PlanContext);
+	if (!context) throw new Error('usePlan musi być użyty wewnątrz <PlanProvider>');
+	return context;
+}

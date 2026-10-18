@@ -1,46 +1,49 @@
-# Getting Started with Create React App
+# FactoryOps frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Standalone demo of the production planner. It currently runs without the backend: the plan is stored in the browser's `localStorage` and seeded with sample data ("Resetuj demo" restores it).
 
-## Available Scripts
+## Scripts
 
-In the project directory, you can run:
+- `npm start` – dev server on <http://localhost:5173>
+- `npm run build` – type check and production build to `dist/`
+- `npm run lint` – ESLint
+- `npm test` – unit tests (Vitest)
 
-### `npm start`
+## Structure
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+- `src/domain/` – pure planning logic, no React:
+  - `shifts.ts` – planning in full hours; the plant day starts at 6:00, so the 22–6 night shift belongs to the day it starts. Each hour has a capacity: how many machines work in it (0 = stopped)
+  - `calendar.ts` – capacity per machine row: working days (Mon–Fri or 4-brigade 24/7, day exceptions or working hours such as Saturday 6:00–18:00, right-click on the plan), number of identical machines (a production line has 3, so an order takes a third of the time) and breakdowns of some or all of them
+  - `schedule.ts` – orders on a machine run one after another. An order without a date follows the previous one both ways (pushed when it grows, pulled back when it shrinks or is removed); an order dropped with a clear gap keeps that date but is still pushed. Nothing is moved before "now", and started orders are not pulled back. Order length comes from the hours in the form (one machine's hours), not from dragging
+  - `load.ts` – daily load per machine (busy vs available machine-hours) for the "Obciążenie" page
+  - `machines.ts` – saving a machine/line from the dialog, keeping breakdowns attached to the right line machines
+- `src/data/` – `PlanRepository` (swap `LocalStoragePlanRepository` for an API implementation later), sample data, `PlanContext` with all plan actions and undo
+- `src/components/`, `src/pages/` – UI (see below). Presentation helpers that compute from the plan without changing it (load per day, breakdown impact, removal impact, placement preview for the order form) live in `src/components/planSelectors.ts`
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## UI
 
-### `npm test`
+The design follows the Claude Design handoff "1b · Pulpit planisty" (`docs/design/1b/`). Styles are plain CSS: design tokens and Bootstrap overrides in `src/theme.css`, app shell in `src/index.css`, and one CSS file per component or page. Fonts: IBM Plex Sans / Mono.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- **Shell** – left rail with navigation and "Awarie teraz" (ongoing breakdowns with duration and the number of orders they extend; a click opens the plan at that row). Each page has its own top bar. Messages after a change appear bottom-right with "Cofnij".
+- **Plan** – timeline with plant days starting at 6:00, a "now" line, load per row for the next 7 days, a 32px footer with the legend (or the drop position while dragging). Clicking an order opens the details panel (docked; below 1360px wide it overlays the plan). Hovering an order shows a card with its details. Right-click on a row: add an order, end/remove breakdowns, report a breakdown, day calendar.
+- **Lista zleceń** – status tabs with counts, multi-select filters, "Bez programisty", row selection (Shift+click for a range) with bulk programmer assignment, CSV export and "Pokaż na planie" (several orders are highlighted on the plan and can be stepped through).
+- **Obciążenie** – tiles, heatmap for 7/14/30 days (full days ≥98% in one colour without a label, so free capacity stands out), breakdown cards with impact.
+- **Maszyny** – lines as cards (members, load, orders, "⋯" menu), standalone machines in a table.
+- **Dialogs** – order form with a placement preview computed on the draft, breakdown report with "what happens", day calendar with per-line/machine exceptions, line and machine forms, confirmations with the impact of the change.
 
-### `npm run build`
+## Keyboard
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+| Key | Where | Action |
+| --- | --- | --- |
+| `/` | plan, list | focus search |
+| `Enter` / `Shift+Enter` | plan search | next / previous match |
+| `Esc` | plan | close the hover card, then the order panel; clear search when in the field |
+| `Esc` | menus, dialogs | close |
+| `Ctrl+Z` / `⌘Z` | anywhere outside text fields and dialogs | undo the last change |
+| `Ctrl+Enter` | new order form | save and add another |
+| arrows, `Home`, `End` | segmented controls, work-mode cards | change the choice |
+| double-click | plan | new order at that hour (on an order: edit it) |
+| right-click | plan row | row menu |
+| Shift+click | list row | select a range |
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+All controls are reachable with Tab and show a visible focus outline.

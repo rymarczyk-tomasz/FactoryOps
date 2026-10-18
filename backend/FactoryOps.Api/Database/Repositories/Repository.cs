@@ -18,7 +18,7 @@ public class Repository<T> : IRepository<T> where T : BaseEntity
 
 	public IQueryable<T> GetAll() => this.entities.AsQueryable();
 
-	public async Task<T?> InsertOrUpdate(T entity)
+	public async Task<T> InsertOrUpdate(T entity)
 	{
 		ArgumentNullException.ThrowIfNull(entity);
 

@@ -1,4 +1,4 @@
-using FactoryOps.Api.Database.Models;
+﻿using FactoryOps.Api.Database.Models;
 using FactoryOps.Api.Database.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,10 +15,10 @@ public class ProgrammesController(IRepository<Programmer> programmersRepository)
 	[Route("{id}")]
 	public async Task<ActionResult<Programmer>> Get(int id) => Ok(await programmersRepository.Get(id));
 
-	
+
 	[HttpPost]
 	[Route("insertOrUpdate")]
-	public async Task<IActionResult> InsertOrUpdate ([FromBody] Programmer programmer)
+	public async Task<IActionResult> InsertOrUpdate([FromBody] Programmer programmer)
 	{
 		await programmersRepository.InsertOrUpdate(programmer);
 		return Ok();
